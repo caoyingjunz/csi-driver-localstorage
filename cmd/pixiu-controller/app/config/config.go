@@ -14,19 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package config
 
 import (
-	"flag"
-	"fmt"
+	"path/filepath"
 
-	"k8s.io/klog/v2"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 )
 
-func main() {
+const (
+	defaultConfig = ".kube/config"
+)
 
-	klog.InitFlags(nil)
-	flag.Parse()
+// Build the kubeconfig from inClusterConfig, falling back to default config if failed.
+func BuildKubeConfig() (*rest.Config, error) {
+	var config *rest.Config
+	var err error
 
-	fmt.Println("Start the Pixiu project")
+	config, err = rest.InClusterConfig()
+	if err == nil {
+		return config, nil
+	}
+
+	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), defaultConfig))
 }
