@@ -14,12 +14,12 @@ COPY cmd/ cmd/
 COPY pkg/ pkg/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on GOPROXY=https://goproxy.cn go build -a -o kubez-autoscaler-controller cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on GOPROXY=https://goproxy.cn go build -a -o pixiu-controller cmd/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 #FROM gcr.io/distroless/static:nonroot
 FROM jacky06/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/kubez-autoscaler-controller /usr/local/bin/kubez-autoscaler-controller
-USER 65532:65532
+COPY --from=builder /workspace/pixiu-controller /usr/local/bin/pixiu-controller
+USER 65530:65530
