@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package app implements a Server object for running the autoscaler.
+// Package app implements a Server object for running the pixiu.
 package app
 
 import (
@@ -30,7 +30,7 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 )
 
-// ControllerContext defines the context obj for kubez-autoscaler
+// ControllerContext defines the context obj for pixiu
 type ControllerContext struct {
 
 	// ClientBuilder will provide a client for this controller to use

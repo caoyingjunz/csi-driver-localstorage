@@ -17,12 +17,15 @@ limitations under the License.
 package main
 
 import (
+	"flag"
+
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller/app"
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller/app/config"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/pixiu"
+	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
 const (
@@ -30,15 +33,15 @@ const (
 )
 
 func main() {
-
 	klog.InitFlags(nil)
+	flag.Parse()
 
-	stopCh := make(chan struct{})
-	defer close(stopCh)
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
 
 	kubeConfig, err := config.BuildKubeConfig()
 	if err != nil {
-		klog.Fatalf("Create kube config failed: %v", err)
+		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
 	clientBuilder := controller.SimpleControllerClientBuilder{

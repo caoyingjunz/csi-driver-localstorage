@@ -55,7 +55,7 @@ type PixiuController struct {
 	// Added as a member to the struct to allow injection for testing.
 	podListerSynced cache.InformerSynced
 
-	// AutoscalerController that need to be synced
+	// PixiuController that need to be synced
 	queue workqueue.RateLimitingInterface
 }
 
@@ -95,8 +95,8 @@ func (pc *PixiuController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer pc.queue.ShutDown()
 
-	klog.Infof("Starting Autoscaler Controller")
-	defer klog.Infof("Shutting down Autoscaler Controller")
+	klog.Infof("Starting Pixiu Controller")
+	defer klog.Infof("Shutting down Pixiu Controller")
 
 	// Wait for all involved caches to be synced, before processing items from the queue is started
 	if !cache.WaitForNamedCacheSync("pixiu-controller", stopCh, pc.podListerSynced) {
