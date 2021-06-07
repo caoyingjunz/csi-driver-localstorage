@@ -14,4 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package apis
+// +k8s:deepcopy-gen=package
+// +groupName=apps.pixiu.io
+
+package v1alpha1
