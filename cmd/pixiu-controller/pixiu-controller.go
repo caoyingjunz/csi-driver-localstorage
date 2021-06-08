@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	"k8s.io/klog/v2"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller/app/config"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/pixiu"
+	clientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
+	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
@@ -48,6 +51,13 @@ func main() {
 		ClientConfig: kubeConfig,
 	}
 
+	clientSet, err := clientset.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Fatalf("Error building pixiu clientset: %s", err)
+	}
+
+	pixiuInformerFactory := informers.NewSharedInformerFactory(clientset, time.Second+30)
+
 	controllerContext, err := app.CreateControllerContext(clientBuilder, clientBuilder, stopCh)
 	if err != nil {
 		klog.Fatalf("Create contoller context failed: %v", err)
@@ -65,6 +75,7 @@ func main() {
 
 	controllerContext.InformerFactory.Start(stopCh)
 	controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
+	pixiuInformerFactory.Start(stopCh)
 
 	// always wait
 	select {}
