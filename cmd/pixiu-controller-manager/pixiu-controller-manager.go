@@ -22,13 +22,14 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller/app"
-	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller/app/config"
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app/config"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
-	"github.com/caoyingjunz/pixiu/pkg/controller/pixiu"
-	clientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
-	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
+	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
 	"github.com/caoyingjunz/pixiu/pkg/signals"
+
+	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
+	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 )
 
 const (
@@ -51,19 +52,21 @@ func main() {
 		ClientConfig: kubeConfig,
 	}
 
-	clientSet, err := clientset.NewForConfig(kubeConfig)
+	clientSet, err := dClientset.NewForConfig(kubeConfig)
 	if err != nil {
 		klog.Fatalf("Error building pixiu clientset: %s", err)
 	}
 
-	pixiuInformerFactory := informers.NewSharedInformerFactory(clientset, time.Second+30)
+	pixiuInformerFactory := informers.NewSharedInformerFactory(clientSet, time.Second+30)
 
 	controllerContext, err := app.CreateControllerContext(clientBuilder, clientBuilder, stopCh)
 	if err != nil {
 		klog.Fatalf("Create contoller context failed: %v", err)
 	}
 
-	pc, err := pixiu.NewPixiuController(
+	pc, err := advanceddeployment.NewPixiuController(
+		clientSet,
+		pixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
 		controllerContext.InformerFactory.Core().V1().Pods(),
 		clientBuilder.ClientOrDie("shared-informers"),
 	)
@@ -71,11 +74,11 @@ func main() {
 		klog.Fatalf("New pixiu controller failed %v", err)
 	}
 
-	go pc.Run(workers, stopCh)
-
 	controllerContext.InformerFactory.Start(stopCh)
 	controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
 	pixiuInformerFactory.Start(stopCh)
+
+	go pc.Run(workers, stopCh)
 
 	// always wait
 	select {}
