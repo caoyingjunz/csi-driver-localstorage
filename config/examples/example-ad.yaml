@@ -1,0 +1,22 @@
+apiVersion: apps.pixiu.io/v1alpha1
+kind: AdvancedDeployment
+metadata:
+  annotations:
+    kind: advanceddeployment
+  name: example-ad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+      controller: example-ad
+  template:
+    metadata:
+      labels:
+        app: nginx
+        controller: example-ad
+    spec:
+      containers:
+      - image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        name: nginx
