@@ -17,6 +17,7 @@ limitations under the License.
 package advanceddeployment
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -43,7 +46,11 @@ import (
 	adListers "github.com/caoyingjunz/pixiu/pkg/generated/listers/advanceddeployment/v1alpha1"
 )
 
-const maxRetries = 15
+const (
+	maxRetries = 15
+
+	BurstReplicas = 500
+)
 
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = apps.SchemeGroupVersion.WithKind("Pixiu")
@@ -52,6 +59,7 @@ var controllerKind = apps.SchemeGroupVersion.WithKind("Pixiu")
 // in the system.
 type PixiuController struct {
 	client        clientset.Interface
+	podControl    controller.PodControlInterface
 	eventRecorder record.EventRecorder
 
 	adClient adClientset.Interface
@@ -62,6 +70,7 @@ type PixiuController struct {
 	// podLister can list/get pods from the shared informer's store
 	podLister corelisters.PodLister
 
+	// adLister can list/get AdvancedDeployments from the shared informer's store
 	adLister adListers.AdvancedDeploymentLister
 
 	// podListerSynced returns true if the pod store has been synced at least once.
@@ -74,6 +83,7 @@ type PixiuController struct {
 	queue workqueue.RateLimitingInterface
 }
 
+// NewPixiuController creates a new PixiuController.
 func NewPixiuController(
 	adClient adClientset.Interface,
 	adInformer adInformers.AdvancedDeploymentInformer,
@@ -84,13 +94,17 @@ func NewPixiuController(
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: client.CoreV1().Events("")})
 
 	if client != nil && client.CoreV1().RESTClient().GetRateLimiter() != nil {
-		if err := ratelimiter.RegisterMetricAndTrackRateLimiterUsage("deployment_controller", client.CoreV1().RESTClient().GetRateLimiter()); err != nil {
+		if err := ratelimiter.RegisterMetricAndTrackRateLimiterUsage("pixiu_controller", client.CoreV1().RESTClient().GetRateLimiter()); err != nil {
 			return nil, err
 		}
 	}
 
 	pc := &PixiuController{
-		client:        client,
+		client: client,
+		podControl: controller.RealPodControl{
+			KubeClient: client,
+			Recorder:   eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "pixiu-controller"}),
+		},
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "pixiu-controller"}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pixiu"),
 		adClient:      adClient,
@@ -120,7 +134,7 @@ func NewPixiuController(
 
 func (pc *PixiuController) addAdvancedDeployment(obj interface{}) {
 	ad := obj.(*appsv1alpha1.AdvancedDeployment)
-	klog.V(0).Infof("AdvancedDeployment %s added.", ad.Name)
+	klog.V(4).Infof("AdvancedDeployment %s added.", ad.Name)
 
 	pc.enqueueAdvancedDeployment(ad)
 }
@@ -132,19 +146,19 @@ func (pc *PixiuController) updateAdvancedDeployment(old, cur interface{}) {
 		return
 	}
 
-	klog.V(0).Infof("AdvancedDeployment %s updated.", curAd.Name)
+	klog.V(4).Infof("AdvancedDeployment %s updated.", curAd.Name)
 	pc.enqueueAdvancedDeployment(curAd)
 }
 
 func (pc *PixiuController) deleteAdvancedDeployment(obj interface{}) {
 	ad := obj.(*appsv1alpha1.AdvancedDeployment)
-	klog.V(0).Infof("AdvancedDeployment %s deleted.", ad.Name)
+	klog.V(4).Infof("AdvancedDeployment %s deleted.", ad.Name)
 	pc.enqueueAdvancedDeployment(ad)
 }
 
 func (pc *PixiuController) deletePod(obj interface{}) {
 	pod := obj.(*v1.Pod)
-	klog.V(0).Infof("Pod %s deleted.", pod.Name)
+	klog.V(4).Infof("Pod %s deleted.", pod.Name)
 }
 
 func (pc *PixiuController) enqueue(advancedDeployment *appsv1alpha1.AdvancedDeployment) {
@@ -166,7 +180,7 @@ func (pc *PixiuController) Run(workers int, stopCh <-chan struct{}) {
 	defer klog.Infof("Shutting down Pixiu Controller")
 
 	// Wait for all involved caches to be synced, before processing items from the queue is started
-	if !cache.WaitForNamedCacheSync("pixiu-controller", stopCh, pc.podListerSynced) {
+	if !cache.WaitForNamedCacheSync("pixiu-controller", stopCh, pc.podListerSynced, pc.adListerSynced) {
 		return
 	}
 
@@ -211,11 +225,13 @@ func (pc *PixiuController) handleErr(err error, key interface{}) {
 	pc.queue.Forget(key)
 }
 
+// syncAdvancedDeployment will sync the advancedDeployment with the given key.
+// This function is not meant to be invoked concurrently with the same key.
 func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 	startTime := time.Now()
-	klog.V(0).Infof("Started syncing advanced deployment %q (%v)", key, startTime)
+	klog.V(4).Infof("Started syncing advanced deployment %q (%v)", key, startTime)
 	defer func() {
-		klog.V(0).Infof("Finished syncing advanced deployment %q (%v)", key, time.Since(startTime))
+		klog.V(4).Infof("Finished syncing advanced deployment %q (%v)", key, time.Since(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -223,17 +239,63 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 		return err
 	}
 
-	adDeployment, err := pc.adLister.AdvancedDeployments(namespace).Get(name)
+	ad, err := pc.adLister.AdvancedDeployments(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		klog.V(0).Infof("Advanced Deployment %v has been deleted", key)
+		klog.V(4).Infof("Advanced Deployment %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	ad := adDeployment.DeepCopy()
-	klog.V(0).Infof(ad.Name)
+	selector, err := metav1.LabelSelectorAsSelector(ad.Spec.Selector)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("error converting pod selector to selector: %v", err))
+		return nil
+	}
 
+	// list all pods to include the pods that don't match the ad`s selector
+	allPods, err := pc.podLister.Pods(ad.Namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	// Ignore inactive pods.
+	filteredPods := controller.FilterActivePods(allPods)
+	filteredPods, err = pc.claimPods(ad, selector, filteredPods)
+	if err != nil {
+		return err
+	}
+
+	return pc.manageReplicas(filteredPods, ad)
+}
+
+func (pc *PixiuController) claimPods(ad *appsv1alpha1.AdvancedDeployment, selector labels.Selector, filteredPods []*v1.Pod) ([]*v1.Pod, error) {
+	// If any adoptions are attempted, we should first recheck for deletion with
+	// an uncached quorum read sometime after listing Pods (see #42639).
+	canAdoptFunc := controller.RecheckDeletionTimestamp(func() (metav1.Object, error) {
+		fresh, err := pc.adClient.AppsV1alpha1().AdvancedDeployments(ad.Namespace).Get(context.TODO(), ad.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		if fresh.UID != ad.UID {
+			return nil, fmt.Errorf("original %v %v/%v is gone: got uid %v, wanted %v", ad.Kind, ad.Namespace, ad.Name, fresh.UID, ad.UID)
+		}
+		return fresh, nil
+	})
+	cm := controller.NewPodControllerRefManager(pc.podControl, ad, selector, controllerKind, canAdoptFunc)
+	return cm.ClaimPods(filteredPods)
+}
+
+// manageReplicas checks and updates replicas for the given AdvancedDeployment.
+// Does NOT modify <filteredPods>.
+// It will requeue the replica set in case of an error while creating/deleting pods.
+func (pc *PixiuController) manageReplicas(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
+	diff := len(filteredPods) - int(*(ad.Spec.Replicas))
+	adKey, err := controller.KeyFunc(ad)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for %v %#v: %v", "Pixiu", ad, err))
+		return nil
+	}
+	// TODO
 	return nil
 }
