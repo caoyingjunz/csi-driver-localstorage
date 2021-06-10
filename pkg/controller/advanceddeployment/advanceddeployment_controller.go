@@ -157,7 +157,19 @@ func (pc *PixiuController) updateAdvancedDeployment(old, cur interface{}) {
 }
 
 func (pc *PixiuController) deleteAdvancedDeployment(obj interface{}) {
-	ad := obj.(*appsv1alpha1.AdvancedDeployment)
+	ad, ok := obj.(*appsv1alpha1.AdvancedDeployment)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		ad, ok = tombstone.Obj.(*appsv1alpha1.AdvancedDeployment)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a ReplicaSet %#v", obj))
+			return
+		}
+	}
 	klog.V(4).Infof("AdvancedDeployment %s deleted.", ad.Name)
 	pc.enqueueAdvancedDeployment(ad)
 }
@@ -311,7 +323,7 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 
 	ad, err := pc.adLister.AdvancedDeployments(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		klog.V(4).Infof("Advanced Deployment %v has been deleted", key)
+		klog.V(0).Infof("Advanced Deployment %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -336,7 +348,12 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 		return err
 	}
 
-	return pc.manageAdvancedDeployments(filteredPods, ad)
+	var manageAdErr error
+	if ad.DeletionTimestamp == nil {
+		manageAdErr = pc.manageAdvancedDeployments(filteredPods, ad)
+	}
+
+	return manageAdErr
 }
 
 func (pc *PixiuController) claimPods(ad *appsv1alpha1.AdvancedDeployment, selector labels.Selector, filteredPods []*v1.Pod) ([]*v1.Pod, error) {
