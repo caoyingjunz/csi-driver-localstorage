@@ -19,9 +19,11 @@ package advanceddeployment
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
+	"sort"
+	"sync"
 	"time"
 
-	"github.com/caoyingjunz/pixiu/pkg/controller"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,8 +41,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/component-base/metrics/prometheus/ratelimiter"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/integer"
 
 	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/advanceddeployment/v1alpha1"
+	"github.com/caoyingjunz/pixiu/pkg/controller"
 	adClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
 	adInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions/advanceddeployment/v1alpha1"
 	adListers "github.com/caoyingjunz/pixiu/pkg/generated/listers/advanceddeployment/v1alpha1"
@@ -53,7 +57,7 @@ const (
 )
 
 // controllerKind contains the schema.GroupVersionKind for this controller type.
-var controllerKind = apps.SchemeGroupVersion.WithKind("Pixiu")
+var controllerKind = apps.SchemeGroupVersion.WithKind("AdvancedDeployment")
 
 // PixiuController is responsible for synchronizing pixiu objects stored
 // in the system.
@@ -117,6 +121,8 @@ func NewPixiuController(
 	})
 
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    pc.addPod,
+		UpdateFunc: pc.updatePod,
 		DeleteFunc: pc.deletePod,
 	})
 
@@ -156,9 +162,73 @@ func (pc *PixiuController) deleteAdvancedDeployment(obj interface{}) {
 	pc.enqueueAdvancedDeployment(ad)
 }
 
-func (pc *PixiuController) deletePod(obj interface{}) {
+// When a pod is created, enqueue the AdvancedDeployment that manages it
+func (pc *PixiuController) addPod(obj interface{}) {
 	pod := obj.(*v1.Pod)
-	klog.V(4).Infof("Pod %s deleted.", pod.Name)
+
+	if pod.DeletionTimestamp != nil {
+		// on a restart of the controller manager, it's possible a new pod shows up in a state that
+		// is already pending deletion. Prevent the pod from being a creation observation.
+		pc.deletePod(pod)
+		return
+	}
+
+	controllerRef := metav1.GetControllerOf(pod)
+	if controllerRef == nil {
+		return
+	}
+	ad := pc.resolveControllerRef(pod.Namespace, controllerRef)
+	if ad == nil {
+		return
+	}
+	pc.enqueueAdvancedDeployment(ad)
+}
+
+func (pc *PixiuController) updatePod(obj, cur interface{}) {}
+
+func (pc *PixiuController) deletePod(obj interface{}) {
+	pod, ok := obj.(*v1.Pod)
+	klog.V(2).Infof("Pod %s deleted.", pod.Name)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %+v", obj))
+			return
+		}
+		pod, ok = tombstone.Obj.(*v1.Pod)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a pod %#v", obj))
+			return
+		}
+	}
+
+	controllerRef := metav1.GetControllerOf(pod)
+	if controllerRef == nil {
+		return
+	}
+	ad := pc.resolveControllerRef(pod.Namespace, controllerRef)
+	pc.enqueueAdvancedDeployment(ad)
+}
+
+// resolveControllerRef returns the controller referenced by a ControllerRef,
+// or nil if the ControllerRef could not be resolved to a matching controller
+// of the correct Kind.
+func (pc *PixiuController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *appsv1alpha1.AdvancedDeployment {
+	// We can't look up by UID, so look up by Name and then verify UID.
+	// Don't even try to look up by Name if it's the wrong Kind.
+	if controllerRef.Kind != controllerKind.Kind {
+		return nil
+	}
+	ad, err := pc.adLister.AdvancedDeployments(namespace).Get(controllerRef.Name)
+	if err != nil {
+		return nil
+	}
+	if ad.UID != controllerRef.UID {
+		// The controller we found with this Name is not the same one that the
+		// ControllerRef points to.
+		return nil
+	}
+	return ad
 }
 
 func (pc *PixiuController) enqueue(advancedDeployment *appsv1alpha1.AdvancedDeployment) {
@@ -266,7 +336,7 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 		return err
 	}
 
-	return pc.manageReplicas(filteredPods, ad)
+	return pc.manageAdvancedDeployments(filteredPods, ad)
 }
 
 func (pc *PixiuController) claimPods(ad *appsv1alpha1.AdvancedDeployment, selector labels.Selector, filteredPods []*v1.Pod) ([]*v1.Pod, error) {
@@ -286,16 +356,180 @@ func (pc *PixiuController) claimPods(ad *appsv1alpha1.AdvancedDeployment, select
 	return cm.ClaimPods(filteredPods)
 }
 
-// manageReplicas checks and updates replicas for the given AdvancedDeployment.
+func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, error) {
+	remaining := count
+	successes := 0
+	for batchSize := integer.IntMin(remaining, initialBatchSize); batchSize > 0; batchSize = integer.IntMin(2*batchSize, remaining) {
+		errCh := make(chan error, batchSize)
+		var wg sync.WaitGroup
+		wg.Add(batchSize)
+		for i := 0; i < batchSize; i++ {
+			go func() {
+				defer wg.Done()
+				if err := fn(); err != nil {
+					errCh <- err
+				}
+			}()
+		}
+		wg.Wait()
+		curSuccesses := batchSize - len(errCh)
+		successes += curSuccesses
+		if len(errCh) > 0 {
+			return successes, <-errCh
+		}
+		remaining -= batchSize
+	}
+	return successes, nil
+}
+
+// manageAdvancedDeployments checks and updates replicas for the given AdvancedDeployment.
 // Does NOT modify <filteredPods>.
 // It will requeue the replica set in case of an error while creating/deleting pods.
-func (pc *PixiuController) manageReplicas(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
+func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
 	diff := len(filteredPods) - int(*(ad.Spec.Replicas))
-	adKey, err := controller.KeyFunc(ad)
-	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for %v %#v: %v", "Pixiu", ad, err))
+	// 小于 0 以为这需要增加 pod
+	if diff < 0 {
+		diff *= -1
+		if diff > BurstReplicas {
+			diff = BurstReplicas
+		}
+		klog.V(2).Infof("Too few replicas for %v %s/%s, need %d, creating %d", controllerKind.Kind, ad.Namespace, ad.Name, *(ad.Spec.Replicas), diff)
+
+		fn := func() error {
+			template := &ad.Spec.Template
+			if template.Labels == nil {
+				template.Labels = make(map[string]string)
+				template.Labels["app"] = "nginx"
+				template.Labels["controller"] = "example-ad"
+			}
+
+			err := pc.podControl.CreatePodsWithControllerRef(ad.Namespace, template, ad, metav1.NewControllerRef(ad, controllerKind))
+			if errors.HasStatusCause(err, v1.NamespaceTerminatingCause) {
+				return nil
+			}
+			return err
+		}
+
+		if _, err := slowStartBatch(diff, controller.SlowStartInitialBatchSize, fn); err != nil {
+			return err
+		}
+	} else if diff > 0 {
+		if diff > BurstReplicas {
+			diff = BurstReplicas
+		}
+		klog.V(2).Infof("Too many replicas for %v %s/%s, need %d, deleting %d", controllerKind.Kind, ad.Namespace, ad.Name, *(ad.Spec.Replicas), diff)
+
+		relatedPods, err := pc.getRelatedPods(ad)
+		if err != nil {
+			return err
+		}
+
+		// Choose which Pods to delete, preferring those in earlier phases of startup.
+		podsToDelete := getPodsToDelete(filteredPods, relatedPods, diff)
+
+		errCh := make(chan error, diff)
+		var wg sync.WaitGroup
+		wg.Add(diff)
+		for _, p := range podsToDelete {
+			go func(p *v1.Pod) {
+				defer wg.Done()
+				if err := pc.podControl.DeletePod(p.Namespace, p.Name, ad); err != nil {
+					errCh <- err
+				}
+			}(p)
+		}
+		wg.Wait()
+
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		default:
+		}
+
+	}
+
+	return nil
+}
+
+// getRelatedPods returns a list of pods with the same owner as the given AdvancedDeployments.
+func (pc *PixiuController) getRelatedPods(ad *appsv1alpha1.AdvancedDeployment) ([]*v1.Pod, error) {
+	relatedPods := make([]*v1.Pod, 0)
+	founds := make(map[types.UID]struct{})
+
+	for _, relatedAD := range pc.getRelatedAdvancedDeployments(ad) {
+		selector, err := metav1.LabelSelectorAsSelector(relatedAD.Spec.Selector)
+		if err != nil {
+			return nil, err
+		}
+
+		pods, err := pc.podLister.Pods(ad.Namespace).List(selector)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range pods {
+			if _, exits := founds[p.UID]; exits {
+				continue
+			}
+			founds[p.UID] = struct{}{}
+			relatedPods = append(relatedPods, p)
+		}
+	}
+
+	return relatedPods, nil
+}
+
+// getRelatedAdvancedDeployments returns a list of AdvancedDeployments with the same
+// owner as the given AdvancedDeployments.
+func (pc *PixiuController) getRelatedAdvancedDeployments(ad *appsv1alpha1.AdvancedDeployment) []*appsv1alpha1.AdvancedDeployment {
+	controllerRef := metav1.GetControllerOf(ad)
+	if controllerRef == nil {
+		utilruntime.HandleError(fmt.Errorf("AdvancedDeployment has no controller: %v", ad))
 		return nil
 	}
-	// TODO
-	return nil
+
+	allADs, err := pc.adLister.AdvancedDeployments(ad.Namespace).List(labels.Everything())
+	if err != nil {
+		utilruntime.HandleError(err)
+		return nil
+	}
+
+	var relatedADs []*appsv1alpha1.AdvancedDeployment
+	for _, d := range allADs {
+		if ref := metav1.GetControllerOf(d); ref != nil && ref.UID == ad.UID {
+			relatedADs = append(relatedADs, d)
+		}
+	}
+
+	return relatedADs
+}
+
+func getPodsToDelete(filteredPods, relatedPods []*v1.Pod, diff int) []*v1.Pod {
+	// No need to sort pods if we are about to delete all of them.
+	// diff will always be <= len(filteredPods), so not need to handle > case.
+	if diff < len(filteredPods) {
+		podsWithRanks := getPodsRankedByRelatedPodsOnSameNode(filteredPods, relatedPods)
+		sort.Sort(podsWithRanks)
+	}
+	return filteredPods[:diff]
+}
+
+// getPodsRankedByRelatedPodsOnSameNode returns an ActivePodsWithRanks value
+// that wraps podsToRank and assigns each pod a rank equal to the number of
+// active pods in relatedPods that are colocated on the same node with the pod.
+// relatedPods generally should be a superset of podsToRank.
+func getPodsRankedByRelatedPodsOnSameNode(podsToRank, relatedPods []*v1.Pod) controller.ActivePodsWithRanks {
+	podsOnNode := make(map[string]int)
+	for _, pod := range relatedPods {
+		if controller.IsPodActive(pod) {
+			podsOnNode[pod.Spec.NodeName]++
+		}
+	}
+	ranks := make([]int, len(podsToRank))
+	for i, pod := range podsToRank {
+		ranks[i] = podsOnNode[pod.Spec.NodeName]
+	}
+	return controller.ActivePodsWithRanks{Pods: podsToRank, Rank: ranks}
 }

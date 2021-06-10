@@ -11,8 +11,9 @@ require (
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.21.1
 	k8s.io/code-generator v0.21.1
-	k8s.io/component-base v0.19.2
+	k8s.io/component-base v0.21.1
 	k8s.io/klog/v2 v2.9.0
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 replace k8s.io/code-generator => k8s.io/code-generator v0.0.0-20210604114248-ed0f8d04eed3
