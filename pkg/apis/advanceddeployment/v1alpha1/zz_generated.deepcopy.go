@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -117,7 +118,13 @@ func (in *AdvancedDeploymentSpec) DeepCopyInto(out *AdvancedDeploymentSpec) {
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Template.DeepCopyInto(&out.Template)
+	if in.Templates != nil {
+		in, out := &in.Templates, &out.Templates
+		*out = make([]corev1.PodTemplateSpec, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	out.Strategy = in.Strategy
 	if in.RevisionHistoryLimit != nil {
 		in, out := &in.RevisionHistoryLimit, &out.RevisionHistoryLimit
@@ -129,6 +136,7 @@ func (in *AdvancedDeploymentSpec) DeepCopyInto(out *AdvancedDeploymentSpec) {
 		*out = new(int32)
 		**out = **in
 	}
+	out.PartitionSurge = in.PartitionSurge
 	return
 }
 

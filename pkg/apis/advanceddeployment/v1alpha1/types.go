@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // +genclient
@@ -63,8 +64,8 @@ type AdvancedDeploymentSpec struct {
 	// It must match the pod template's labels.
 	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 
-	// Template describes the pods that will be created.
-	Template v1.PodTemplateSpec `json:"template" protobuf:"bytes,3,opt,name=template"`
+	// Templates describes the pods that will be created.
+	Templates []v1.PodTemplateSpec `json:"templates" protobuf:"bytes,3,opt,name=templates"`
 
 	// The AdvancedDeployment strategy to use to replace existing pods with new ones.
 	// +optional
@@ -93,6 +94,8 @@ type AdvancedDeploymentSpec struct {
 	// reason will be surfaced in the deployment status. Note that progress will
 	// not be estimated during the time a deployment is paused. Defaults to 600s.
 	ProgressDeadlineSeconds *int32 `json:"progressDeadlineSeconds,omitempty" protobuf:"varint,9,opt,name=progressDeadlineSeconds"`
+
+	PartitionSurge intstr.IntOrString `json:"partitionSurge,omitempty"`
 }
 
 // AdvancedDeploymentStatus defines the observed state of AdvancedDeployment

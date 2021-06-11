@@ -19,8 +19,9 @@ package advanceddeployment
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -196,7 +198,9 @@ func (pc *PixiuController) addPod(obj interface{}) {
 	pc.enqueueAdvancedDeployment(ad)
 }
 
-func (pc *PixiuController) updatePod(obj, cur interface{}) {}
+func (pc *PixiuController) updatePod(obj, cur interface{}) {
+	// TODO
+}
 
 func (pc *PixiuController) deletePod(obj interface{}) {
 	pod, ok := obj.(*v1.Pod)
@@ -219,6 +223,9 @@ func (pc *PixiuController) deletePod(obj interface{}) {
 		return
 	}
 	ad := pc.resolveControllerRef(pod.Namespace, controllerRef)
+	if ad == nil {
+		return
+	}
 	pc.enqueueAdvancedDeployment(ad)
 }
 
@@ -288,8 +295,8 @@ func (pc *PixiuController) processNextWorkItem() bool {
 
 	err := pc.syncHandler(key.(string))
 	pc.handleErr(err, key)
-	return true
 
+	return true
 }
 
 func (pc *PixiuController) handleErr(err error, key interface{}) {
@@ -323,7 +330,7 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 
 	ad, err := pc.adLister.AdvancedDeployments(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		klog.V(0).Infof("Advanced Deployment %v has been deleted", key)
+		klog.V(4).Infof("Advanced Deployment %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -399,28 +406,69 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 	return successes, nil
 }
 
-// manageAdvancedDeployments checks and updates replicas for the given AdvancedDeployment.
-// Does NOT modify <filteredPods>.
-// It will requeue the replica set in case of an error while creating/deleting pods.
-func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
-	diff := len(filteredPods) - int(*(ad.Spec.Replicas))
-	// 小于 0 以为这需要增加 pod
+func (pc *PixiuController) getExpectPartitions(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) (int, int, error) {
+	var exp1, exp2 int
+	if len(ad.Spec.Templates) > 2 {
+		return 0, 0, fmt.Errorf("ad.Spec.Templates is too larger than 2")
+	}
+
+	if len(ad.Spec.Templates) == 1 {
+		return len(filteredPods), 0, nil
+	}
+
+	replicas := int(*ad.Spec.Replicas)
+	ps := ad.Spec.PartitionSurge
+	switch ps.Type {
+	case 0:
+		// PartitionSurge is int
+		exp2 = int(ps.IntVal)
+		exp1 = replicas - exp2
+	case 1:
+		// PartitionSurge is percent
+		pSlice := strings.Split(ps.StrVal, "%")
+		if len(pSlice) != 2 {
+			return exp1, exp2, fmt.Errorf("partitionSurge %v is percent type but invalid", ps.StrVal)
+		}
+		p, err := strconv.Atoi(pSlice[0])
+		if err != nil {
+			return exp1, exp2, err
+		}
+		exp2 = replicas * p / 100
+		exp1 = replicas - exp2
+	}
+
+	return exp1, exp2, nil
+}
+
+func (pc *PixiuController) getPartitionPods(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) ([]*v1.Pod, []*v1.Pod) {
+	partitionPods := make([][]*v1.Pod, 2)
+	templates := ad.Spec.Templates
+	// 第一阶段，只对比 image
+	for _, pod := range filteredPods {
+		container := pod.Spec.Containers[0]
+		for i := 0; i < len(templates); i++ {
+			if templates[i].Spec.Containers[0].Image == container.Image {
+				partitionPods[i] = append(partitionPods[i], pod)
+			}
+		}
+	}
+
+	return partitionPods[0], partitionPods[1]
+}
+
+func (pc *PixiuController) reconcilePartitionPods(expection int, pods []*v1.Pod, template v1.PodTemplateSpec, ad *appsv1alpha1.AdvancedDeployment) error {
+	diff := len(pods) - expection
 	if diff < 0 {
 		diff *= -1
 		if diff > BurstReplicas {
 			diff = BurstReplicas
 		}
-		klog.V(2).Infof("Too few replicas for %v %s/%s, need %d, creating %d", controllerKind.Kind, ad.Namespace, ad.Name, *(ad.Spec.Replicas), diff)
+		klog.V(2).Infof("Too few expect replicas for %v %s/%s, need %d, creating %d", controllerKind.Kind, ad.Namespace, ad.Name, expection, diff)
 
 		fn := func() error {
-			template := &ad.Spec.Template
-			if template.Labels == nil {
-				template.Labels = make(map[string]string)
-				template.Labels["app"] = "nginx"
-				template.Labels["controller"] = "example-ad"
-			}
-
-			err := pc.podControl.CreatePodsWithControllerRef(ad.Namespace, template, ad, metav1.NewControllerRef(ad, controllerKind))
+			// TODO： labels is missing, get it from MatchLabels
+			template.Labels = ad.Spec.Selector.MatchLabels
+			err := pc.podControl.CreatePodsWithControllerRef(ad.Namespace, &template, ad, metav1.NewControllerRef(ad, controllerKind))
 			if errors.HasStatusCause(err, v1.NamespaceTerminatingCause) {
 				return nil
 			}
@@ -434,7 +482,7 @@ func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad 
 		if diff > BurstReplicas {
 			diff = BurstReplicas
 		}
-		klog.V(2).Infof("Too many replicas for %v %s/%s, need %d, deleting %d", controllerKind.Kind, ad.Namespace, ad.Name, *(ad.Spec.Replicas), diff)
+		klog.V(2).Infof("Too many replicas for %v %s/%s, need %d, deleting %d", controllerKind.Kind, ad.Namespace, ad.Name, expection, diff)
 
 		relatedPods, err := pc.getRelatedPods(ad)
 		if err != nil {
@@ -442,7 +490,7 @@ func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad 
 		}
 
 		// Choose which Pods to delete, preferring those in earlier phases of startup.
-		podsToDelete := getPodsToDelete(filteredPods, relatedPods, diff)
+		podsToDelete := getPodsToDelete(pods, relatedPods, diff)
 
 		errCh := make(chan error, diff)
 		var wg sync.WaitGroup
@@ -464,7 +512,29 @@ func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad 
 			}
 		default:
 		}
+	}
 
+	return nil
+}
+
+// manageAdvancedDeployments checks and updates replicas for the given AdvancedDeployment.
+// Does NOT modify <filteredPods>.
+// It will requeue the replica set in case of an error while creating/deleting pods.
+func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
+	exp1, exp2, err := pc.getExpectPartitions(filteredPods, ad)
+	if err != nil {
+		return err
+	}
+	p1Pods, p2Pods := pc.getPartitionPods(filteredPods, ad)
+	klog.Infof("exp1: %v, exp2: %v, p1Pods: %v, p2Pods: %v", exp1, exp2, len(p1Pods), len(p2Pods))
+
+	if len(ad.Spec.Templates) == 2 {
+		if err := pc.reconcilePartitionPods(exp2, p2Pods, ad.Spec.Templates[1], ad); err != nil {
+			return err
+		}
+	}
+	if err := pc.reconcilePartitionPods(exp1, p1Pods, ad.Spec.Templates[0], ad); err != nil {
+		return err
 	}
 
 	return nil

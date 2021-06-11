@@ -5,18 +5,28 @@ metadata:
     kind: advanceddeployment
   name: example-ad
 spec:
-  replicas: 1
+  replicas: 3
+  partitionSurge: 1
   selector:
     matchLabels:
       app: nginx
       controller: example-ad
-  template:
-    metadata:
-      labels:
-        app: nginx
-        controller: example-ad
-    spec:
-      containers:
-      - image: nginx:latest
-        imagePullPolicy: IfNotPresent
-        name: nginx
+  templates:
+    - metadata:
+        labels:
+          app: nginx
+          controller: example-ad
+      spec:
+        containers:
+        - image: nginx:latest
+          imagePullPolicy: IfNotPresent
+          name: nginx
+    - metadata:
+        labels:
+          app: nginx
+          controller: example-ad
+      spec:
+        containers:
+        - image: nginx:1.9.2
+          imagePullPolicy: IfNotPresent
+          name: nginx
