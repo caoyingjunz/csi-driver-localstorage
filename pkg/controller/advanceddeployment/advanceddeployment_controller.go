@@ -57,6 +57,9 @@ const (
 	maxRetries = 15
 
 	BurstReplicas = 500
+
+	// The number of times we retry updating a AdvancedDeployment's status.
+	statusUpdateRetries = 1
 )
 
 // controllerKind contains the schema.GroupVersionKind for this controller type.
@@ -372,8 +375,11 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 
 	ad = ad.DeepCopy()
 	newStatus := calculateStatus(ad, filteredPods, manageAdErr)
-	fmt.Println(newStatus)
 
+	// Always updates status
+	if _, err := updateAdvancedDeploymentStatus(pc.adClient.AppsV1alpha1().AdvancedDeployments(ad.Namespace), ad, newStatus); err != nil {
+		return err
+	}
 	return manageAdErr
 }
 
