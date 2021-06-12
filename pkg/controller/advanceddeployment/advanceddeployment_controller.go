@@ -377,9 +377,18 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 	newStatus := calculateStatus(ad, filteredPods, manageAdErr)
 
 	// Always updates status
-	if _, err := updateAdvancedDeploymentStatus(pc.adClient.AppsV1alpha1().AdvancedDeployments(ad.Namespace), ad, newStatus); err != nil {
+	updateAD, err := updateAdvancedDeploymentStatus(pc.adClient.AppsV1alpha1().AdvancedDeployments(ad.Namespace), ad, newStatus)
+	if err != nil {
 		return err
 	}
+
+	if manageAdErr == nil &&
+		updateAD.Spec.MinReadySeconds > 0 &&
+		updateAD.Status.ReadyReplicas == *(updateAD.Spec.Replicas) &&
+		updateAD.Status.AvailableReplicas != *(updateAD.Spec.Replicas) {
+		pc.queue.AddAfter(key, time.Duration(updateAD.Spec.MinReadySeconds)*time.Second)
+	}
+
 	return manageAdErr
 }
 
