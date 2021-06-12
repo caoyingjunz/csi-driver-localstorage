@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
@@ -187,6 +188,7 @@ func (pc *PixiuController) addPod(obj interface{}) {
 		return
 	}
 
+	// If it has a ControllerRef, that's all that matters.
 	controllerRef := metav1.GetControllerOf(pod)
 	if controllerRef == nil {
 		return
@@ -195,6 +197,8 @@ func (pc *PixiuController) addPod(obj interface{}) {
 	if ad == nil {
 		return
 	}
+
+	klog.V(4).Infof("Pod %s/%s created, labels: %+v", pod.Namespace, pod.Name, pod.Labels)
 	pc.enqueueAdvancedDeployment(ad)
 }
 
@@ -204,7 +208,10 @@ func (pc *PixiuController) updatePod(obj, cur interface{}) {
 
 func (pc *PixiuController) deletePod(obj interface{}) {
 	pod, ok := obj.(*v1.Pod)
-	klog.V(2).Infof("Pod %s deleted.", pod.Name)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value. Note that this value might be stale.
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
@@ -220,12 +227,15 @@ func (pc *PixiuController) deletePod(obj interface{}) {
 
 	controllerRef := metav1.GetControllerOf(pod)
 	if controllerRef == nil {
+		// No controller should care about orphans being deleted.
 		return
 	}
 	ad := pc.resolveControllerRef(pod.Namespace, controllerRef)
 	if ad == nil {
 		return
 	}
+
+	klog.V(4).Infof("Pod %s/%s deleted.", pod.Namespace, pod.Name)
 	pc.enqueueAdvancedDeployment(ad)
 }
 
@@ -360,6 +370,10 @@ func (pc *PixiuController) syncAdvancedDeployment(key string) error {
 		manageAdErr = pc.manageAdvancedDeployments(filteredPods, ad)
 	}
 
+	ad = ad.DeepCopy()
+	newStatus := calculateStatus(ad, filteredPods, manageAdErr)
+	fmt.Println(newStatus)
+
 	return manageAdErr
 }
 
@@ -406,38 +420,44 @@ func slowStartBatch(count int, initialBatchSize int, fn func() error) (int, erro
 	return successes, nil
 }
 
-func (pc *PixiuController) getExpectPartitions(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) (int, int, error) {
-	var exp1, exp2 int
-	if len(ad.Spec.Templates) > 2 {
-		return 0, 0, fmt.Errorf("ad.Spec.Templates is too larger than 2")
+func (pc *PixiuController) needPartition(ps intstr.IntOrString) bool {
+	if ps.StrVal == "" && ps.IntVal == 0 {
+		return false
 	}
+	return true
+}
 
-	if len(ad.Spec.Templates) == 1 {
-		return len(filteredPods), 0, nil
-	}
+func (pc *PixiuController) getExpectReplicas(ad *appsv1alpha1.AdvancedDeployment) (int, int, bool, error) {
+	var exReplicas1, exReplicas2 int
 
 	replicas := int(*ad.Spec.Replicas)
 	ps := ad.Spec.PartitionSurge
+
+	if !pc.needPartition(ps) {
+		return replicas, 0, false, nil
+	}
+
 	switch ps.Type {
-	case 0:
+	case intstr.Int:
 		// PartitionSurge is int
-		exp2 = int(ps.IntVal)
-		exp1 = replicas - exp2
-	case 1:
+		exReplicas2 = int(ps.IntVal)
+		exReplicas1 = replicas - exReplicas2
+	case intstr.String:
 		// PartitionSurge is percent
 		pSlice := strings.Split(ps.StrVal, "%")
 		if len(pSlice) != 2 {
-			return exp1, exp2, fmt.Errorf("partitionSurge %v is percent type but invalid", ps.StrVal)
+			return exReplicas1, exReplicas2, true, fmt.Errorf("partitionSurge %v is percent type but invalid", ps.StrVal)
 		}
 		p, err := strconv.Atoi(pSlice[0])
 		if err != nil {
-			return exp1, exp2, err
+			return exReplicas1, exReplicas2, true, err
 		}
-		exp2 = replicas * p / 100
-		exp1 = replicas - exp2
+
+		exReplicas2 = replicas * p / 100
+		exReplicas1 = replicas - exReplicas2
 	}
 
-	return exp1, exp2, nil
+	return exReplicas1, exReplicas2, true, nil
 }
 
 func (pc *PixiuController) getPartitionPods(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) ([]*v1.Pod, []*v1.Pod) {
@@ -521,21 +541,29 @@ func (pc *PixiuController) reconcilePartitionPods(expection int, pods []*v1.Pod,
 // Does NOT modify <filteredPods>.
 // It will requeue the replica set in case of an error while creating/deleting pods.
 func (pc *PixiuController) manageAdvancedDeployments(filteredPods []*v1.Pod, ad *appsv1alpha1.AdvancedDeployment) error {
-	exp1, exp2, err := pc.getExpectPartitions(filteredPods, ad)
+	exReplicas1, exReplicas2, isPartition, err := pc.getExpectReplicas(ad)
 	if err != nil {
 		return err
 	}
 	p1Pods, p2Pods := pc.getPartitionPods(filteredPods, ad)
-	klog.Infof("exp1: %v, exp2: %v, p1Pods: %v, p2Pods: %v", exp1, exp2, len(p1Pods), len(p2Pods))
+	klog.Infof("exp1: %v, exp2: %v, p1Pods: %v, p2Pods: %v, isPartition: %v", exReplicas1, exReplicas2, len(p1Pods), len(p2Pods), isPartition)
 
-	if len(ad.Spec.Templates) == 2 {
-		if err := pc.reconcilePartitionPods(exp2, p2Pods, ad.Spec.Templates[1], ad); err != nil {
+	if !isPartition {
+		// TODO 需要清理之前的分批发布残留
+		template := ad.Spec.Templates[0]
+		if err := pc.reconcilePartitionPods(exReplicas1, p1Pods, template, ad); err != nil {
 			return err
 		}
 	}
-	if err := pc.reconcilePartitionPods(exp1, p1Pods, ad.Spec.Templates[0], ad); err != nil {
-		return err
-	}
+
+	//if len(ad.Spec.Templates) == 2 {
+	//	if err := pc.reconcilePartitionPods(exp2, p2Pods, ad.Spec.Templates[1], ad); err != nil {
+	//		return err
+	//	}
+	//}
+	//if err := pc.reconcilePartitionPods(exp1, p1Pods, ad.Spec.Templates[0], ad); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -571,6 +599,10 @@ func (pc *PixiuController) getRelatedPods(ad *appsv1alpha1.AdvancedDeployment) (
 // getRelatedAdvancedDeployments returns a list of AdvancedDeployments with the same
 // owner as the given AdvancedDeployments.
 func (pc *PixiuController) getRelatedAdvancedDeployments(ad *appsv1alpha1.AdvancedDeployment) []*appsv1alpha1.AdvancedDeployment {
+	if ad == nil {
+		klog.V(0).Infof("AdvancedDeployments is nil")
+		return nil
+	}
 	controllerRef := metav1.GetControllerOf(ad)
 	if controllerRef == nil {
 		utilruntime.HandleError(fmt.Errorf("AdvancedDeployment has no controller: %v", ad))
