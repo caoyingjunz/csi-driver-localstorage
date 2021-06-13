@@ -16,6 +16,8 @@ spec:
     singular: advanceddeployment
     shortNames:
       - ad
+    categories:
+      - all
   scope: Namespaced
   versions:
   - name: v1alpha1
