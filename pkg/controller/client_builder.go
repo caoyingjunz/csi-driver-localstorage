@@ -29,7 +29,11 @@ const (
 )
 
 // Build the kubeconfig from inClusterConfig, falling back to default config if failed.
-func BuildKubeConfig() (*rest.Config, error) {
+func BuildKubeConfig(kubeconfig string) (*rest.Config, error) {
+	if len(kubeconfig) != 0 {
+		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
+
 	var config *rest.Config
 	var err error
 

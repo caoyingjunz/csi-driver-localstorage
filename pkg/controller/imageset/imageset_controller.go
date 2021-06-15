@@ -49,6 +49,7 @@ var controllerKind = v1.SchemeGroupVersion.WithKind("ImageSet")
 type ImageSetController struct {
 	client        clientset.Interface
 	eventRecorder record.EventRecorder
+	hostName      string
 
 	isClient isClientset.Interface
 
@@ -66,7 +67,8 @@ type ImageSetController struct {
 func NewImageSetController(
 	isClient isClientset.Interface,
 	isInformer isInformers.ImageSetInformer,
-	client clientset.Interface) (*ImageSetController, error) {
+	client clientset.Interface,
+	hostName string) (*ImageSetController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: client.CoreV1().Events("")})
@@ -80,6 +82,7 @@ func NewImageSetController(
 	isc := &ImageSetController{
 		client:        client,
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "imageset-controller"}),
+		hostName:      hostName,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
 
