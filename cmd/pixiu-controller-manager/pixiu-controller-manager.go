@@ -41,7 +41,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	kubeConfig, err := controller.BuildKubeConfig()
+	kubeConfig, err := controller.BuildKubeConfig("")
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
