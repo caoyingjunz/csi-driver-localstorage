@@ -41,17 +41,17 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := controller.BuildKubeConfig(kubeconfig)
+	clientConfig, err := controller.BuildKubeConfig(kubeconfig)
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
-	clientSet, err := clientset.NewForConfig(cfg)
+	clientSet, err := clientset.NewForConfig(clientConfig)
 	if err != nil {
 		klog.Fatalf("Error building imageset clientset: %v", err)
 	}
 
-	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: cfg}
+	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 	isInformerFactory := informer.NewSharedInformerFactory(clientSet, time.Second+30)
 
 	hostName, err := imageset.GetHostName(hostnameOverride)
