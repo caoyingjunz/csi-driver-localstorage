@@ -23,13 +23,11 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
-	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app/config"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
-	"github.com/caoyingjunz/pixiu/pkg/signals"
-
 	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
 	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
+	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
 const (
@@ -43,7 +41,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	kubeConfig, err := config.BuildKubeConfig()
+	kubeConfig, err := controller.BuildKubeConfig()
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}

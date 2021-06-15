@@ -14,4 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package config
+package controller
+
+import (
+	"path/filepath"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+)
+
+const (
+	defaultConfig = ".kube/config"
+)
+
+// Build the kubeconfig from inClusterConfig, falling back to default config if failed.
+func BuildKubeConfig() (*rest.Config, error) {
+	var config *rest.Config
+	var err error
+
+	config, err = rest.InClusterConfig()
+	if err == nil {
+		return config, nil
+	}
+
+	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), defaultConfig))
+}
