@@ -56,8 +56,7 @@ type ImageSetController struct {
 	syncHandler     func(iKey string) error
 	enqueueImageSet func(imageSet *appsv1alpha1.ImageSet)
 
-	isLister isListers.ImageSetLister
-
+	isLister       isListers.ImageSetLister
 	isListerSynced cache.InformerSynced
 
 	// ImageSet that need to be synced
