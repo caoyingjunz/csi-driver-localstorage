@@ -38,6 +38,7 @@ import (
 	isInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/imageset/v1alpha1"
 	isListers "github.com/caoyingjunz/pixiu/pkg/client/listers/imageset/v1alpha1"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
+	"github.com/caoyingjunz/pixiu/pkg/controller/libdocker"
 )
 
 const maxRetries = 15
@@ -51,6 +52,7 @@ type ImageSetController struct {
 	eventRecorder record.EventRecorder
 	hostName      string
 
+	dc       libdocker.Interface
 	isClient isClientset.Interface
 
 	syncHandler     func(iKey string) error
@@ -84,6 +86,8 @@ func NewImageSetController(
 		hostName:      hostName,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
+
+	isc.dc = libdocker.ConnectToDokcerOrDie()
 
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    isc.addImageSet,
