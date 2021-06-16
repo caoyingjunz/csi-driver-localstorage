@@ -456,7 +456,6 @@ func (pc *PixiuController) getExpectReplicas(ad *appsv1alpha1.AdvancedDeployment
 	case intstr.Int:
 		// PartitionSurge is int
 		exReplicas2 = int(ps.IntVal)
-		exReplicas1 = replicas - exReplicas2
 	case intstr.String:
 		// PartitionSurge is percent
 		pSlice := strings.Split(ps.StrVal, "%")
@@ -469,9 +468,11 @@ func (pc *PixiuController) getExpectReplicas(ad *appsv1alpha1.AdvancedDeployment
 		}
 
 		exReplicas2 = replicas * p / 100
-		exReplicas1 = replicas - exReplicas2
 	}
-
+	if replicas < exReplicas2 {
+		return exReplicas1, exReplicas2, true, fmt.Errorf("replicas must grater than partitionSurge")
+	}
+	exReplicas1 = replicas - exReplicas2
 	return exReplicas1, exReplicas2, true, nil
 }
 
