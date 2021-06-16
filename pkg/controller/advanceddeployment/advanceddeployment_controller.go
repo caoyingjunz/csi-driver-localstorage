@@ -471,7 +471,9 @@ func (pc *PixiuController) getExpectReplicas(ad *appsv1alpha1.AdvancedDeployment
 		exReplicas2 = replicas * p / 100
 		exReplicas1 = replicas - exReplicas2
 	}
-
+	if exReplicas1<0 {
+		exReplicas1 = 0
+	}
 	return exReplicas1, exReplicas2, true, nil
 }
 
