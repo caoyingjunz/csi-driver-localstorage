@@ -15,3 +15,72 @@ limitations under the License.
 */
 
 package config
+
+import (
+	"path/filepath"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
+	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/homedir"
+	componentbaseconfig "k8s.io/component-base/config"
+)
+
+const (
+	defaultConfig = ".kube/config"
+)
+
+// PixiuLeaderElectionConfiguration expands LeaderElectionConfiguration
+// to include scheduler specific configuration.
+type PixiuLeaderElectionConfiguration struct {
+	componentbaseconfig.LeaderElectionConfiguration
+}
+
+type PixiuConfiguration struct {
+	metav1.TypeMeta
+
+	LeaderClient    clientset.Interface
+	InformerFactory informers.SharedInformerFactory
+
+	// LeaderElection defines the configuration of leader election client.
+	LeaderElection PixiuLeaderElectionConfiguration
+
+	// event sink
+	EventRecorder record.EventRecorder
+
+	// Pixiu pprof
+	PixiuPprof PixiuPprof
+
+	// Healthz Configuration
+	Healthz HealthzConfiguration
+}
+
+
+type PixiuPprof struct {
+	// Whether the ppof is started for main process
+	Start bool
+	// The port used for pprof
+	Port string
+}
+
+type HealthzConfiguration struct {
+	HealthzHost string
+	HealthzPort string
+}
+
+// Build the kubeconfig from inClusterConfig, falling back to default config if failed.
+func BuildKubeConfig() (*rest.Config, error) {
+	var config *rest.Config
+	var err error
+
+	config, err = rest.InClusterConfig()
+	if err == nil {
+		return config, nil
+	}
+
+	//klog.Warning("error creating inClusterConfig, falling back to default config: ", err)
+	return clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), defaultConfig))
+}
