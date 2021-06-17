@@ -93,9 +93,9 @@ func Run(c *config.PixiuConfiguration) error {
 
 		// 后续优化控制器的初始化方式
 		adc, err := advanceddeployment.NewPixiuController(
-			pixiuCtx.InformerFactory.Apps().V1().Deployments(),
+			pixiuCtx.InformerFactory.Apps().V1alpha1().AppsV1alpha1Client(),
 			pixiuCtx.InformerFactory.Apps().V1().Pods(),
-			pixiuCtx.InformerFactory.Autoscaling().V2beta2().HorizontalPodAutoscalers(),
+			pixiuCtx.InformerFactory.Apps().V1alpha1().AdvancedDeployments(),
 			clientBuilder.ClientOrDie("shared-informers"),
 		)
 		if err != nil {
