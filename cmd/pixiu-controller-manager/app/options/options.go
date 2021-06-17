@@ -16,7 +16,6 @@ limitations under the License.
 
 package options
 
-
 import (
 	"time"
 
@@ -30,20 +29,20 @@ import (
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/kubez-autoscaler/cmd/app/config"
-	"github.com/caoyingjunz/kubez-autoscaler/pkg/controller"
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app/config"
+	"github.com/caoyingjunz/pixiu/pkg/controller"
 )
 
 const (
-	// KubezControllerManagerUserAgent is the userAgent name when starting kubez-autoscaler managers.
-	KubezControllerManagerUserAgent = "kubez-autoscaler-manager"
+	// AdvanceddeploymentControllerManagerUserAgent is the userAgent name when starting kubez-autoscaler managers.
+	AdvanceddeploymentControllerManagerUserAgent = "advanceddeployment-manager"
 )
 
 // Options has all the params needed to run a Autoscaler
 type Options struct {
-	ComponentConfig config.KubezConfiguration
+	ComponentConfig config.PixiuConfiguration
 
-	// ConfigFile is the location of the autoscaler's configuration file.
+	// ConfigFile is the location of the pixiu's configuration file.
 	ConfigFile string
 
 	Master string
@@ -51,7 +50,7 @@ type Options struct {
 
 func NewOptions() (*Options, error) {
 
-	cfg := config.KubezConfiguration{}
+	cfg := config.PixiuConfiguration{}
 	o := &Options{
 		ComponentConfig: cfg,
 	}
@@ -86,15 +85,15 @@ const (
 	RetryPeriod   = 2
 
 	ResourceLock      = "endpointsleases"
-	ResourceName      = "kubez-autoscaler-manager"
+	ResourceName      = "advanceddeployment-manager"
 	ResourceNamespace = "kube-system"
 
 	HealthzHost = "127.0.0.1"
 	HealthzPort = "10256"
-	PPort       = "6060"
+	PPort       = "8848"
 )
 
-// BindFlags binds the KubezConfiguration struct fields
+// BindFlags binds the PixiuConfiguration struct fields
 func (o *Options) BindFlags(cmd *cobra.Command) {
 	// LeaderElection configuration
 	cmd.Flags().BoolVarP(&leaderElect, "leader-elect", "l", true, ""+
@@ -145,7 +144,7 @@ func createRecorder(kubeClient clientset.Interface, userAgent string) record.Eve
 }
 
 // Config return a kubez controller manager config objective
-func (o *Options) Config() (*config.KubezConfiguration, error) {
+func (o *Options) Config() (*config.PixiuConfiguration, error) {
 	kubeConfig, err := config.BuildKubeConfig()
 	if err != nil {
 		return nil, err
@@ -158,9 +157,9 @@ func (o *Options) Config() (*config.KubezConfiguration, error) {
 	}
 
 	client := clientBuilder.ClientOrDie("leader-client")
-	eventRecorder := createRecorder(client, KubezControllerManagerUserAgent)
+	eventRecorder := createRecorder(client, AdvanceddeploymentControllerManagerUserAgent)
 
-	le := config.KubezLeaderElectionConfiguration{
+	le := config.PixiuLeaderElectionConfiguration{
 		componentbaseconfig.LeaderElectionConfiguration{
 			LeaderElect:       leaderElect,
 			LeaseDuration:     metav1.Duration{time.Duration(leaseDuration) * time.Second},
@@ -172,19 +171,20 @@ func (o *Options) Config() (*config.KubezConfiguration, error) {
 		},
 	}
 
-	pp := config.KubezPprof{
+	pp := config.PixiuPprof{
 		Start: startPprof,
 		Port:  pprofPort,
 	}
 
-	return &config.KubezConfiguration{
+	return &config.PixiuConfiguration{
 		LeaderClient:   client,
 		EventRecorder:  eventRecorder,
 		LeaderElection: le,
-		KubezPprof:     pp,
+		PixiuPprof:     pp,
 		Healthz: config.HealthzConfiguration{
 			HealthzHost: healthzHost,
 			HealthzPort: healthzPort,
 		},
 	}, nil
 }
+
