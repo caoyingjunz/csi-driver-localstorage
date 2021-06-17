@@ -53,10 +53,16 @@ type ImageSetList struct {
 
 // ImageSetSpec defines the desired state of ImageSet
 type ImageSetSpec struct {
-	// Number of desired pods. This is a pointer to distinguish between explicit
-	// zero and not specified. Defaults to 1.
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+	// Image to pull
+	Image string `json:"image"`
+
+	Selector NodeSelector `json:"selector"`
+}
+
+type NodeSelector struct {
+	Nodes []string `json:"nodes"`
+
+	metav1.LabelSelector `json:",inline"`
 }
 
 // ImageSetStatus defines the observed state of ImageSet
@@ -65,9 +71,7 @@ type ImageSetStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 
-	// Total number of non-terminated pods targeted by this deployment (their labels match the selector).
-	// +optional
-	Replicas int32 `json:"replicas,omitempty" protobuf:"varint,2,opt,name=replicas"`
+	Message string `json:"message,omitempty"`
 }
 
 // DeploymentCondition describes the state of a deployment at a certain point.

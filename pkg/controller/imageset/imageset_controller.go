@@ -75,7 +75,7 @@ func NewImageSetController(
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: client.CoreV1().Events("")})
 
 	if client != nil && client.CoreV1().RESTClient().GetRateLimiter() != nil {
-		if err := ratelimiter.RegisterMetricAndTrackRateLimiterUsage("pixiu_controller", client.CoreV1().RESTClient().GetRateLimiter()); err != nil {
+		if err := ratelimiter.RegisterMetricAndTrackRateLimiterUsage("imageset_controller", client.CoreV1().RESTClient().GetRateLimiter()); err != nil {
 			return nil, err
 		}
 	}
@@ -87,7 +87,7 @@ func NewImageSetController(
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
 
-	isc.dc = libdocker.ConnectToDokcerOrDie()
+	//isc.dc = libdocker.ConnectToDockerOrDie(dockerSocket, 300, 300)
 
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    isc.addImageSet,

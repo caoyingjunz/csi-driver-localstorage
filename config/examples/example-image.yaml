@@ -1,0 +1,9 @@
+apiVersion: apps.pixiu.io/v1alpha1
+kind: ImageSet
+metadata:
+  name: image-test
+spec:
+  image: nginx:1.9.2
+  selector:
+    nodes:
+      - kube-master

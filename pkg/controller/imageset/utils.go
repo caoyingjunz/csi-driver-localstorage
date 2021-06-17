@@ -42,3 +42,18 @@ func GetHostName(hostnameOverride string) (string, error) {
 
 	return strings.ToLower(hostName), nil
 }
+
+const (
+	dockerSocket     = "/var/run/docker.sock"
+	containerdSocket = "/run/containerd/containerd.sock"
+)
+
+// isExistingSocket checks if path exists and is domain socket
+func isExistingSocket(path string) bool {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return fileInfo.Mode()&os.ModeSocket != 0
+}
