@@ -48,6 +48,15 @@ func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
 		return true, nil
 	})
 
+func StartHealthzServer(healthzHost string, healthzPort string) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("ok"))
+	})
+
+	klog.Infof("Starting Healthz Server...")
+	klog.Fatal(http.ListenAndServe(healthzHost+":"+healthzPort, nil))
+
 	if err != nil {
 		return fmt.Errorf("%v: %v", err, lastErr)
 	}
