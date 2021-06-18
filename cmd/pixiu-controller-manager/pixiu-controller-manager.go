@@ -39,6 +39,8 @@ var (
 
 const (
 	workers = 5
+        HealthzHost = "127.0.0.1"
+	HealthzPort = "10256"
 )
 
 func main() {
@@ -91,6 +93,6 @@ func main() {
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&healthzHost, "healthzHost", "", "The host of Healthz")
-	flag.StringVar(&healthzPort, "healthzPort", "", "The port of Healthz to listen on")
+	flag.StringVar(&healthzHost, "healthzHost",HealthzHost , "The host of Healthz")
+	flag.StringVar(&healthzPort, "healthzPort",HealthzPort, "The port of Healthz to listen on")
 }
