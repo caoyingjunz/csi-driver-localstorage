@@ -83,7 +83,7 @@ func main() {
 	go pc.Run(workers, stopCh)
 
 	// Heathz Check
-	go StartHealthzServer(healthzHost,healthzPort)
+	go app.StartHealthzServer(healthzHost,healthzPort)
 	
 	// always wait
 	select {}
