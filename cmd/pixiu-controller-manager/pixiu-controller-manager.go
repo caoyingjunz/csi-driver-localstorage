@@ -30,6 +30,11 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
+var (
+	// Path to a kubeconfig. Only required if out-of-cluster
+	kubeconfig string
+)
+
 const (
 	workers = 5
 )
@@ -41,20 +46,17 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	kubeConfig, err := controller.BuildKubeConfig("")
+	clientConfig, err := controller.BuildKubeConfig(kubeconfig)
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
-	clientBuilder := controller.SimpleControllerClientBuilder{
-		ClientConfig: kubeConfig,
-	}
-
-	clientSet, err := dClientset.NewForConfig(kubeConfig)
+	clientSet, err := dClientset.NewForConfig(clientConfig)
 	if err != nil {
 		klog.Fatalf("Error building pixiu clientset: %s", err)
 	}
 
+	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 	pixiuInformerFactory := informers.NewSharedInformerFactory(clientSet, time.Second+30)
 
 	controllerContext, err := app.CreateControllerContext(clientBuilder, clientBuilder, stopCh)
@@ -80,4 +82,8 @@ func main() {
 
 	// always wait
 	select {}
+}
+
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 }

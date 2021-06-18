@@ -21,3 +21,8 @@ testbin/*
 .idea
 *.swp
 *.swo
+
+# output
+dist
+
+vendor
