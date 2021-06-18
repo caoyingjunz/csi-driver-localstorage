@@ -33,6 +33,8 @@ import (
 var (
 	// Path to a kubeconfig. Only required if out-of-cluster
 	kubeconfig string
+	healthzHost string
+	healthzPort string
 )
 
 const (
@@ -80,10 +82,26 @@ func main() {
 
 	go pc.Run(workers, stopCh)
 
+	// Heathz Check
+	go StartHealthzServer(healthzHost,healthzPort)
+	
 	// always wait
 	select {}
 }
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&healthzHost, "healthzHost", "", "The host of Healthz")
+	flag.StringVar(&healthzPort, "healthzPort", "", "The port of Healthz to listen on")
+}
+
+
+func StartHealthzServer(healthzHost string, healthzPort string) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("ok"))
+	})
+
+	klog.Infof("Starting Healthz Server...")
+	klog.Fatal(http.ListenAndServe(healthzHost+":"+healthzPort, nil))
 }
