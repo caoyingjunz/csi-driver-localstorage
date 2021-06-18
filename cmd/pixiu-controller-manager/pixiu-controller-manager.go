@@ -93,6 +93,6 @@ func main() {
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&healthzHost, "healthzHost",HealthzHost , "The host of Healthz")
-	flag.StringVar(&healthzPort, "healthzPort",HealthzPort, "The port of Healthz to listen on")
+	flag.StringVar(&healthzHost, "healthzHost", HealthzHost, "The host of Healthz")
+	flag.StringVar(&healthzPort, "healthzPort", HealthzPort, "The port of Healthz to listen on")
 }
