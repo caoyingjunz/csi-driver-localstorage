@@ -19,21 +19,16 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
+CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null)}
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-
-#  ../../code-generator/generate-groups.sh "deepcopy,client,informer,lister" \
-#  github.com/caoyingjunz/pixiu/pkg/generated github.com/caoyingjunz/pixiu/pkg/apis \
-#  advanceddeployment:v1alpha1 \
-#  --output-base $(pwd)/../../ \
-#  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
-
-  ../../code-generator/generate-groups.sh "deepcopy,client,informer,lister" \
+bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
   github.com/caoyingjunz/pixiu/pkg/client github.com/caoyingjunz/pixiu/pkg/apis \
   imageset:v1alpha1 \
-  --output-base $(pwd)/../../ \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+
+# To use your own boilerplate text append:
+#   --go-header-file "${SCRIPT_ROOT}"/hack/custom-boilerplate.go.txt
