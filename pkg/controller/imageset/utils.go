@@ -22,15 +22,12 @@ import (
 	"strings"
 )
 
-// GetHostname returns OS's hostname if 'hostnameOverride' is empty; otherwise, return 'hostnameOverride'.
+// GetHostname returns env's hostname if 'hostnameOverride' is empty; otherwise, return 'hostnameOverride'.
 func GetHostName(hostnameOverride string) (string, error) {
 	hostName := hostnameOverride
+
 	if len(hostName) == 0 {
-		nodeName, err := os.Hostname()
-		if err != nil {
-			return "", err
-		}
-		hostName = nodeName
+		hostName = os.Getenv("NODE_NAME")
 	}
 
 	// Trim whitespaces first to avoid getting an empty hostname

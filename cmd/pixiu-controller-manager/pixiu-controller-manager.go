@@ -30,16 +30,10 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
-var (
-	// Path to a kubeconfig. Only required if out-of-cluster
-	kubeconfig string
-	healthzHost string
-	healthzPort string
-)
-
 const (
 	workers = 5
-    HealthzHost = "127.0.0.1"
+
+	HealthzHost = "127.0.0.1"
 	HealthzPort = "10256"
 )
 
@@ -85,11 +79,18 @@ func main() {
 	go pc.Run(workers, stopCh)
 
 	// Heathz Check
-	go app.StartHealthzServer(healthzHost,healthzPort)
-	
+	go app.StartHealthzServer(healthzHost, healthzPort)
+
 	// always wait
 	select {}
 }
+
+var (
+	// Path to a kubeconfig. Only required if out-of-cluster
+	kubeconfig  string
+	healthzHost string
+	healthzPort string
+)
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
