@@ -33,10 +33,14 @@ import (
 var (
 	// Path to a kubeconfig. Only required if out-of-cluster
 	kubeconfig string
+	healthzHost string
+	healthzPort string
 )
 
 const (
 	workers = 5
+    HealthzHost = "127.0.0.1"
+	HealthzPort = "10256"
 )
 
 func main() {
@@ -80,10 +84,15 @@ func main() {
 
 	go pc.Run(workers, stopCh)
 
+	// Heathz Check
+	go app.StartHealthzServer(healthzHost,healthzPort)
+	
 	// always wait
 	select {}
 }
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&healthzHost, "healthzHost", HealthzHost, "The host of Healthz")
+	flag.StringVar(&healthzPort, "healthzPort", HealthzPort, "The port of Healthz to listen on")
 }
