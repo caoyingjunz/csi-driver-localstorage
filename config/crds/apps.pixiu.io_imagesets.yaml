@@ -40,11 +40,30 @@ spec:
             spec:
               description: ImageSetSpec defines the desired state of ImageSet
               properties:
+                auth:
+                  description: authorization for registry
+                  properties:
+                    auth:
+                      type: string
+                    identitytoken:
+                      description: IdentityToken is used to authenticate the user and
+                        get an access token for the registry.
+                      type: string
+                    password:
+                      type: string
+                    registrytoken:
+                      description: RegistryToken is a bearer token to be sent to a registry
+                      type: string
+                    serveraddress:
+                      type: string
+                    username:
+                      type: string
+                  type: object
                 image:
-                  description: Foo is an example field of ImageSet. Edit ImageSet_types.go
-                    to remove/update
+                  description: The image should to be pulled
                   type: string
                 selector:
+                  description: nodes to pull the special images
                   properties:
                     matchExpressions:
                       description: matchExpressions is a list of label selector requirements.
@@ -94,6 +113,7 @@ spec:
                     - nodes
                   type: object
               required:
+                - auth
                 - image
                 - selector
               type: object

@@ -29,11 +29,6 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
-var (
-	kubeconfig       string
-	hostnameOverride string
-)
-
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
@@ -78,6 +73,11 @@ func main() {
 	// always wait
 	select {}
 }
+
+var (
+	kubeconfig       string
+	hostnameOverride string
+)
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")

@@ -75,7 +75,7 @@ func getDockerClient(dockerEndpoint string) (*dockerapi.Client, error) {
 	return dockerapi.NewClientWithOpts(dockerapi.FromEnv)
 }
 
-func ConnectToDokcerOrDie(dockerEndpoint string, requestTimeout, imagePullProgressDeadline time.Duration) Interface {
+func ConnectToDockerOrDie(dockerEndpoint string, requestTimeout, imagePullProgressDeadline time.Duration) Interface {
 	dockerEndpointclient, err := getDockerClient(dockerEndpoint)
 	if err != nil {
 		klog.Fatalf("Could not connect to docker: %v", err)
