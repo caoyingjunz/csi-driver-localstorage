@@ -39,7 +39,7 @@ var (
 
 const (
 	workers = 5
-        HealthzHost = "127.0.0.1"
+    HealthzHost = "127.0.0.1"
 	HealthzPort = "10256"
 )
 
