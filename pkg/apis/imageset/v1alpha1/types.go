@@ -39,6 +39,8 @@ type ImageSet struct {
 	Status ImageSetStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // AdvancedDeploymentList contains a list of AdvancedDeployment
 type ImageSetList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -48,8 +50,6 @@ type ImageSetList struct {
 	// Items is the list of AdvancedDeployments.
 	Items []ImageSet `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ImageSetSpec defines the desired state of ImageSet
 type ImageSetSpec struct {
