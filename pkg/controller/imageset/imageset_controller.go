@@ -88,7 +88,7 @@ func NewImageSetController(
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
 
-	isc.dc = libdocker.ConnectToDockerOrDie(dockerSocket, 300, 300)
+	isc.dc = libdocker.ConnectToDockerOrDie(dockerHost, 300, 300)
 
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    isc.addImageSet,
@@ -192,11 +192,14 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		authConfig.RegistryToken = auth.RegistryToken
 	}
 
-	if err := isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{}); err != nil {
+	klog.Infof("image %s pulling: %v/%v", ims.Namespace, ims.Name, image)
+	imageId, err := isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+	if err != nil {
+		klog.Errorf("%v", err)
 		return err
 	}
 
-	klog.Infof("image is pulled: %v/%v, %v", ims.Namespace, ims.Name, ims.Spec.Image)
+	klog.Infof("image is pulled: %v/%v, %v", ims.Namespace, ims.Name, imageId)
 	return nil
 }
 

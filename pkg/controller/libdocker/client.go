@@ -22,6 +22,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -44,10 +46,10 @@ const (
 
 // Interface is an abstract interface for testability. It abstracts the interface of docker client.
 type Interface interface {
-	PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) error
+	PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error)
 	RemoveImage(image string, opts dockertypes.ImageRemoveOptions) ([]dockertypes.ImageDeleteResponseItem, error)
+	InspectImageByRef(imageRef string) (*dockertypes.ImageInspect, error)
 	//ListImages(opts dockertypes.ImageListOptions) ([]dockertypes.ImageSummary, error)
-	//InspectImageByRef(imageRef string) (*dockertypes.ImageInspect, error)
 	//InspectImageByID(imageID string) (*dockertypes.ImageInspect, error)
 }
 
@@ -139,23 +141,48 @@ func base64EncodeAuth(auth dockertypes.AuthConfig) (string, error) {
 	return base64.URLEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-func (dc *DockerClient) PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) error {
+// getImageRef returns the image digest if exists, or else returns the image ID.
+func (dc *DockerClient) getImageRef(image string) (string, error) {
+	img, err := dc.InspectImageByRef(image)
+	if err != nil {
+		return "", err
+	}
+	if img == nil {
+		return "", fmt.Errorf("unable to inspect image %s", image)
+	}
+
+	// Returns the digest if it exist.
+	if len(img.RepoDigests) > 0 {
+		return img.RepoDigests[0], nil
+	}
+
+	return img.ID, nil
+}
+
+func (dc *DockerClient) PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error) {
 	// RegistryAuth is the base64 encoded credentials for the registry
 	authBase64, err := base64EncodeAuth(auth)
 	if err != nil {
-		return err
+		return "", err
 	}
+
 	opts.RegistryAuth = authBase64
 
 	ctx, cancel := dc.getCancelableContext()
 	defer cancel()
 	resp, err := dc.client.ImagePull(ctx, image, opts)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Close()
+	io.Copy(os.Stdout, resp)
 
-	return nil
+	//imageRef, err := dc.getImageRef(image)
+	//if err != nil {
+	//	return "", err
+	//}
+
+	return "", nil
 }
 
 func (dc *DockerClient) RemoveImage(image string, opts dockertypes.ImageRemoveOptions) ([]dockertypes.ImageDeleteResponseItem, error) {
@@ -170,4 +197,39 @@ func (dc *DockerClient) RemoveImage(image string, opts dockertypes.ImageRemoveOp
 	}
 
 	return resp, nil
+}
+
+// ImageNotFoundError is the error returned by InspectImage when image not found.
+// Expose this to inject error in dockershim for testing.
+type ImageNotFoundError struct {
+	ID string
+}
+
+func (e ImageNotFoundError) Error() string {
+	return fmt.Sprintf("no such image: %q", e.ID)
+}
+
+// IsImageNotFoundError checks whether the error is image not found error. This is exposed
+// to share with dockershim.
+func IsImageNotFoundError(err error) bool {
+	_, ok := err.(ImageNotFoundError)
+	return ok
+}
+
+func (dc *DockerClient) InspectImageByRef(imageRef string) (*dockertypes.ImageInspect, error) {
+	ctx, cancel := dc.getTimeoutContext()
+	defer cancel()
+	resp, _, err := dc.client.ImageInspectWithRaw(ctx, imageRef)
+	if ctxErr := contextError(ctx); ctxErr != nil {
+		return nil, ctxErr
+	}
+	if err != nil {
+		if dockerapi.IsErrNotFound(err) {
+			err = ImageNotFoundError{ID: imageRef}
+		}
+		return nil, err
+	}
+
+	// TODO: need to check tag or sha match
+	return &resp, nil
 }

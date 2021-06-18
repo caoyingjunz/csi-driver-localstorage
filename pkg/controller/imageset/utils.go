@@ -41,7 +41,9 @@ func GetHostName(hostnameOverride string) (string, error) {
 }
 
 const (
-	dockerSocket     = "/var/run/docker.sock"
+	dockerSocket = "/var/run/docker.sock"
+	dockerHost   = "unix://" + dockerSocket
+
 	containerdSocket = "/run/containerd/containerd.sock"
 )
 
