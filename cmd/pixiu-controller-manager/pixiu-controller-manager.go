@@ -23,17 +23,18 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
-	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app/config"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
-	"github.com/caoyingjunz/pixiu/pkg/signals"
-
 	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
 	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
+	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
 const (
 	workers = 5
+
+	HealthzHost = "127.0.0.1"
+	HealthzPort = "10256"
 )
 
 func main() {
@@ -43,20 +44,17 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	kubeConfig, err := config.BuildKubeConfig()
+	clientConfig, err := controller.BuildKubeConfig(kubeconfig)
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
-	clientBuilder := controller.SimpleControllerClientBuilder{
-		ClientConfig: kubeConfig,
-	}
-
-	clientSet, err := dClientset.NewForConfig(kubeConfig)
+	clientSet, err := dClientset.NewForConfig(clientConfig)
 	if err != nil {
 		klog.Fatalf("Error building pixiu clientset: %s", err)
 	}
 
+	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 	pixiuInformerFactory := informers.NewSharedInformerFactory(clientSet, time.Second+30)
 
 	controllerContext, err := app.CreateControllerContext(clientBuilder, clientBuilder, stopCh)
@@ -80,6 +78,22 @@ func main() {
 
 	go pc.Run(workers, stopCh)
 
+	// Heathz Check
+	go app.StartHealthzServer(healthzHost, healthzPort)
+
 	// always wait
 	select {}
+}
+
+var (
+	// Path to a kubeconfig. Only required if out-of-cluster
+	kubeconfig  string
+	healthzHost string
+	healthzPort string
+)
+
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&healthzHost, "healthzHost", HealthzHost, "The host of Healthz")
+	flag.StringVar(&healthzPort, "healthzPort", HealthzPort, "The port of Healthz to listen on")
 }

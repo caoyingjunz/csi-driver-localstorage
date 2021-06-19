@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
@@ -60,48 +59,6 @@ const (
 )
 
 const SlowStartInitialBatchSize = 1
-
-type ControllerClientBuilder interface {
-	Config(name string) (*restclient.Config, error)
-	ConfigOrDie(name string) *restclient.Config
-	Client(name string) (clientset.Interface, error)
-	ClientOrDie(name string) clientset.Interface
-}
-
-// SimpleControllerClientBuilder returns a fixed client with different user agents
-type SimpleControllerClientBuilder struct {
-	// ClientConfig is a skeleton config to clone and use as the basis for each controller client
-	ClientConfig *restclient.Config
-}
-
-func (b SimpleControllerClientBuilder) Config(name string) (*restclient.Config, error) {
-	clientConfig := *b.ClientConfig
-	return restclient.AddUserAgent(&clientConfig, name), nil
-}
-
-func (b SimpleControllerClientBuilder) ConfigOrDie(name string) *restclient.Config {
-	clientConfig, err := b.Config(name)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	return clientConfig
-}
-
-func (b SimpleControllerClientBuilder) Client(name string) (clientset.Interface, error) {
-	clientConfig, err := b.Config(name)
-	if err != nil {
-		return nil, err
-	}
-	return clientset.NewForConfig(clientConfig)
-}
-
-func (b SimpleControllerClientBuilder) ClientOrDie(name string) clientset.Interface {
-	client, err := b.Client(name)
-	if err != nil {
-		klog.Fatal(err)
-	}
-	return client
-}
 
 // PodControlInterface is an interface that knows how to add or delete pods
 // created as an interface to allow testing.

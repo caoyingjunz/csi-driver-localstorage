@@ -16,6 +16,8 @@ spec:
     singular: advanceddeployment
     shortNames:
       - ad
+    categories:
+      - all
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -6595,6 +6597,27 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+    - name: READY
+      type: string
+      jsonPath: .spec.replicas
+    - name: UP-TO-DATE
+      type: integer
+      jsonPath: .status.replicas
+    - name: AVAILABLE
+      type: integer
+      jsonPath: .status.replicas
+    - name: AGE
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    - name: CONTAINERS
+      type: string
+      priority: 1
+      jsonPath: .spec.templates[*].spec.containers[*].name
+    - name: IMAGES
+      type: string
+      priority: 1
+      jsonPath: .spec.templates[*].spec.containers[*].image
 status:
   acceptedNames:
     kind: ""
