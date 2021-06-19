@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -70,16 +71,27 @@ func main() {
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
 	isInformerFactory.Start(stopCh)
 
+	// Heathz Check
+	go app.StartHealthzServer(healthzHost, healthzPort)
 	// always wait
 	select {}
 }
 
+const (
+	HealthzHost = "127.0.0.1"
+	HealthzPort = "10258"
+)
+
 var (
 	kubeconfig       string
 	hostnameOverride string
+	healthzHost       string
+	healthzPort       string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&hostnameOverride, "hostnameOverride", "", "The name of the host")
+	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
+	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
 }
