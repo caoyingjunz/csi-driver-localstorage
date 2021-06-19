@@ -56,10 +56,14 @@ type ImageSetSpec struct {
 	// The image should to be pulled
 	Image string `json:"image"`
 
-	// authorization for registry
+	// Equal to docker command, support pull and remove for now
+	Action string `json:"action"`
+
+	// Authorization for registry
+	// +optional
 	Auth *AuthConfig `json:"auth"`
 
-	// nodes to pull the special images
+	// Nodes to pull the special images
 	Selector NodeSelector `json:"selector"`
 }
 

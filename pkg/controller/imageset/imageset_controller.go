@@ -42,7 +42,13 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/controller/libdocker"
 )
 
-const maxRetries = 15
+const (
+	maxRetries = 15
+
+	// images action, only should pull and remove action, is equal to docker command
+	PullAction   = "pull"
+	RemoveAction = "remove"
+)
 
 var controllerKind = v1.SchemeGroupVersion.WithKind("ImageSet")
 
@@ -181,25 +187,30 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 	}
 
 	image := ims.Spec.Image
-	auth := ims.Spec.Auth
 
-	authConfig := dockertypes.AuthConfig{}
-	if auth != nil {
-		authConfig.Username = auth.Username
-		authConfig.Password = auth.Password
-		authConfig.ServerAddress = auth.ServerAddress
-		authConfig.IdentityToken = auth.IdentityToken
-		authConfig.RegistryToken = auth.RegistryToken
+	switch ims.Spec.Action {
+	case PullAction:
+		auth := ims.Spec.Auth
+		authConfig := dockertypes.AuthConfig{}
+		if auth != nil {
+			authConfig.Username = auth.Username
+			authConfig.Password = auth.Password
+			authConfig.ServerAddress = auth.ServerAddress
+			authConfig.IdentityToken = auth.IdentityToken
+			authConfig.RegistryToken = auth.RegistryToken
+		}
+		// TODO, add event supported
+
+		_, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+	case RemoveAction:
+		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
+	default:
+		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
 	}
-
-	klog.Infof("image %s pulling: %v/%v", ims.Namespace, ims.Name, image)
-	imageId, err := isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	if err != nil {
-		klog.Errorf("%v", err)
 		return err
 	}
 
-	klog.Infof("image is pulled: %v/%v, %v", ims.Namespace, ims.Name, imageId)
 	return nil
 }
 
