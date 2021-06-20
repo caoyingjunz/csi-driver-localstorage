@@ -18,16 +18,21 @@ package main
 
 import (
 	"flag"
-	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	"time"
 
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	clientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
 	informer "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/imageset"
 	"github.com/caoyingjunz/pixiu/pkg/signals"
+)
+
+const (
+	HealthzHost = "127.0.0.1"
+	HealthzPort = "10258"
 )
 
 func main() {
@@ -73,20 +78,16 @@ func main() {
 
 	// Heathz Check
 	go app.StartHealthzServer(healthzHost, healthzPort)
+
 	// always wait
 	select {}
 }
 
-const (
-	HealthzHost = "127.0.0.1"
-	HealthzPort = "10258"
-)
-
 var (
-	kubeconfig       string
-	hostnameOverride string
-	healthzHost       string
-	healthzPort       string
+	kubeconfig       string // Path to a kubeconfig. Only required if out-of-cluster
+	hostnameOverride string // The name of the host
+	healthzHost      string // The host of Healthz
+	healthzPort      string // The port of Healthz to listen on
 )
 
 func init() {
