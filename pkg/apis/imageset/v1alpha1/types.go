@@ -53,9 +53,17 @@ type ImageSetList struct {
 
 // ImageSetSpec defines the desired state of ImageSet
 type ImageSetSpec struct {
-	// Image to pull
+	// The image should to be pulled
 	Image string `json:"image"`
 
+	// Equal to docker command, support pull and remove for now
+	Action string `json:"action"`
+
+	// Authorization for registry
+	// +optional
+	Auth *AuthConfig `json:"auth"`
+
+	// Nodes to pull the special images
 	Selector NodeSelector `json:"selector"`
 }
 
@@ -63,6 +71,22 @@ type NodeSelector struct {
 	Nodes []string `json:"nodes"`
 
 	metav1.LabelSelector `json:",inline"`
+}
+
+// AuthConfig contains authorization information for connecting to a Registry
+type AuthConfig struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Auth     string `json:"auth,omitempty"`
+
+	ServerAddress string `json:"serveraddress,omitempty"`
+
+	// IdentityToken is used to authenticate the user and get
+	// an access token for the registry.
+	IdentityToken string `json:"identitytoken,omitempty"`
+
+	// RegistryToken is a bearer token to be sent to a registry
+	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
 // ImageSetStatus defines the observed state of ImageSet

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -41,11 +42,17 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/controller/libdocker"
 )
 
-const maxRetries = 15
+const (
+	maxRetries = 15
+
+	// images action, only should pull and remove action, is equal to docker command
+	PullAction   = "pull"
+	RemoveAction = "remove"
+)
 
 var controllerKind = v1.SchemeGroupVersion.WithKind("ImageSet")
 
-// ImageSetController is responsible for synchronizing pixiu objects stored
+// ImageSetController is responsible for synchronizing images objects stored
 // in the system.
 type ImageSetController struct {
 	client        clientset.Interface
@@ -87,7 +94,7 @@ func NewImageSetController(
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
 
-	//isc.dc = libdocker.ConnectToDockerOrDie(dockerSocket, 300, 300)
+	isc.dc = libdocker.ConnectToDockerOrDie(dockerHost, 300, 300)
 
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    isc.addImageSet,
@@ -169,8 +176,9 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
-	image, err := isc.isLister.ImageSets(namespace).Get(name)
+	ims, err := isc.isLister.ImageSets(namespace).Get(name)
 	if errors.IsNotFound(err) {
+		// kubernetes will use finalizers to handler the delete event
 		klog.V(4).Infof("Image Sets %v has been deleted", key)
 		return nil
 	}
@@ -178,7 +186,31 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
-	klog.Infof("image is: %v/%v, %v", image.Namespace, image.Name, image)
+	image := ims.Spec.Image
+
+	switch ims.Spec.Action {
+	case PullAction:
+		auth := ims.Spec.Auth
+		authConfig := dockertypes.AuthConfig{}
+		if auth != nil {
+			authConfig.Username = auth.Username
+			authConfig.Password = auth.Password
+			authConfig.ServerAddress = auth.ServerAddress
+			authConfig.IdentityToken = auth.IdentityToken
+			authConfig.RegistryToken = auth.RegistryToken
+		}
+		// TODO, add event supported
+
+		_, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+	case RemoveAction:
+		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
+	default:
+		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
+	}
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

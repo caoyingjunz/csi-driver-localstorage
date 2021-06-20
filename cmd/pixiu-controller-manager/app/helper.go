@@ -22,8 +22,12 @@ import (
 	"net/http"
 	"time"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
+	clientgokubescheme "k8s.io/client-go/kubernetes/scheme"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 )
 
@@ -53,4 +57,21 @@ func WaitForAPIServer(client clientset.Interface, timeout time.Duration) error {
 	}
 
 	return nil
+}
+
+func StartHealthzServer(healthzHost string, healthzPort string) {
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte("ok"))
+	})
+
+	klog.Infof("Starting Healthz Server...")
+	klog.Fatal(http.ListenAndServe(healthzHost+":"+healthzPort, nil))
+}
+
+func CreateRecorder(kubeClient clientset.Interface, userAgent string) record.EventRecorder {
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
+	return eventBroadcaster.NewRecorder(clientgokubescheme.Scheme, v1.EventSource{Component: userAgent})
 }
