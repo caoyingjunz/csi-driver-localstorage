@@ -17,12 +17,14 @@ limitations under the License.
 package imageset
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -89,6 +91,7 @@ func NewImageSetController(
 
 	isc := &ImageSetController{
 		client:        client,
+		isClient:      isClient,
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "imageset-controller"}),
 		hostName:      hostName,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
@@ -187,6 +190,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
+	var imageRef string
 	image := ims.Spec.Image
 
 	switch ims.Spec.Action {
@@ -201,7 +205,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		_, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
@@ -212,7 +216,32 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
+	// TODO, lock
+	nodes := ims.Status.Nodes
+	if nodes == nil {
+		nodes = make([]appsv1alpha1.ImageSetNodes, 0)
+	}
+	nodes = append(nodes, appsv1alpha1.ImageSetNodes{
+		NodeName:       isc.hostName,
+		LastUpdateTime: metav1.Now(),
+		ImageId:        imageRef,
+		Message:        fmt.Sprintf("imageset"),
+	})
+
+	newStatus := appsv1alpha1.ImageSetStatus{
+		Image: image,
+		Nodes: nodes,
+	}
+
+	ims.Status = newStatus
+	_, err = isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace).UpdateStatus(context.TODO(), ims, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
+		return err
+	}
+
 	klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
+
 	return nil
 }
 
@@ -237,6 +266,10 @@ func (isc *ImageSetController) updateImageSet(old, cur interface{}) {
 	oldImageSet := old.(*appsv1alpha1.ImageSet)
 	curImageSet := cur.(*appsv1alpha1.ImageSet)
 	if oldImageSet.ResourceVersion == curImageSet.ResourceVersion {
+		return
+	}
+	// Just update the status
+	if oldImageSet.Generation == curImageSet.Generation {
 		return
 	}
 

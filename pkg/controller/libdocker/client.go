@@ -177,12 +177,12 @@ func (dc *DockerClient) PullImage(image string, auth dockertypes.AuthConfig, opt
 	defer resp.Close()
 	io.Copy(os.Stdout, resp)
 
-	//imageRef, err := dc.getImageRef(image)
-	//if err != nil {
-	//	return "", err
-	//}
+	imageRef, err := dc.getImageRef(image)
+	if err != nil {
+		return "", err
+	}
 
-	return "", nil
+	return imageRef, nil
 }
 
 func (dc *DockerClient) RemoveImage(image string, opts dockertypes.ImageRemoveOptions) ([]dockertypes.ImageDeleteResponseItem, error) {
