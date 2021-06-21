@@ -15,7 +15,7 @@ spec:
     plural: imagesets
     singular: imageset
     shortNames:
-      - images
+      - ims
     categories:
       - all
   scope: Namespaced

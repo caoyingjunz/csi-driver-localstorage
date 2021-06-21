@@ -1,7 +1,7 @@
 apiVersion: apps.pixiu.io/v1alpha1
 kind: ImageSet
 metadata:
-  name: image-test
+  name: example-ims
 spec:
   image: nginx:1.9.2
   action: pull

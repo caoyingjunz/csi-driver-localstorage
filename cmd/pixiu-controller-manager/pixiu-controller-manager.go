@@ -21,17 +21,17 @@ import (
 	"flag"
 	"os"
 	"time"
-	
+
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
 
-	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
-	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
+	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
+	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
@@ -45,7 +45,7 @@ const (
 	RenewDeadline                   = 10
 	RetryPeriod                     = 2
 	ResourceLock                    = "endpointsleases"
-	ResourceName                    = "kubez-autoscaler-manager"
+	ResourceName                    = "pixiu-controller-manager"
 	ResourceNamespace               = "kube-system"
 	LeaderElect                     = true
 	PixiuControllerManagerUserAgent = "pixiu-controller-manager"
@@ -62,13 +62,14 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
-	clientBuilder := controller.SimpleControllerClientBuilder{
-		ClientConfig: clientConfig,
-	}
+
+	// TODO: will init all the controllers here
+	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 	clientSet, err := dClientset.NewForConfig(clientConfig)
 	if err != nil {
 		klog.Fatalf("Error building pixiu clientset: %s", err)
 	}
+
 	run := func(ctx context.Context) {
 		clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 		pixiuInformerFactory := informers.NewSharedInformerFactory(clientSet, time.Second+30)
@@ -147,17 +148,16 @@ func main() {
 }
 
 var (
-	// Path to a kubeconfig. Only required if out-of-cluster
-	kubeconfig        string
-	healthzHost       string
-	healthzPort       string
-	leaderElect       bool
-	leaseDuration     int
-	renewDeadline     int
-	retryPeriod       int
-	resourceLock      string
-	resourceName      string
-	resourceNamespace string
+	kubeconfig        string // Path to a kubeconfig. Only required if out-of-cluster
+	healthzHost       string // The host of Healthz
+	healthzPort       string // The port of Healthz to listen on
+	leaderElect       bool   // Leader election switch
+	leaseDuration     int    // Leader Lease time
+	renewDeadline     int    // Leader Renewal of lease
+	retryPeriod       int    // Non-leader node retry time
+	resourceLock      string // The type of resource object that is used for locking during leader election. Supported options are `endpoints` (default) and `configmaps`
+	resourceName      string // The name of resource object that is used for locking during leader election
+	resourceNamespace string // The namespace of resource object that is used for locking during leader election
 )
 
 func init() {

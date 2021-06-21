@@ -94,7 +94,7 @@ func NewImageSetController(
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
 	}
 
-	isc.dc = libdocker.ConnectToDockerOrDie(dockerHost, 300, 300)
+	isc.dc = libdocker.ConnectToDockerOrDie(dockerHost, time.Duration(60)*time.Second, 1800)
 
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    isc.addImageSet,
@@ -183,6 +183,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return nil
 	}
 	if err != nil {
+		klog.Errorf("Get imageSet from index failed: %v", err)
 		return err
 	}
 
@@ -200,7 +201,6 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-
 		_, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
@@ -208,9 +208,11 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
 	}
 	if err != nil {
+		klog.Errorf("%s imageset: %s failed: %v", ims.Spec.Action, image, err)
 		return err
 	}
 
+	klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
 	return nil
 }
 
@@ -226,8 +228,8 @@ func (isc *ImageSetController) enqueue(imageSet *appsv1alpha1.ImageSet) {
 
 func (isc *ImageSetController) addImageSet(obj interface{}) {
 	is := obj.(*appsv1alpha1.ImageSet)
-	klog.V(0).Infof("ImageSet %s added.", is.Name)
 
+	klog.V(2).Infof("Adding ImageSet %s/%s", is.Namespace, is.Name)
 	isc.enqueueImageSet(is)
 }
 
@@ -237,9 +239,12 @@ func (isc *ImageSetController) updateImageSet(old, cur interface{}) {
 	if oldImageSet.ResourceVersion == curImageSet.ResourceVersion {
 		return
 	}
-	klog.V(0).Infof("ImageSet updated.")
+
+	klog.V(2).Infof("Updating ImageSet %s/%s", curImageSet.Namespace, curImageSet.Name)
+	isc.enqueueImageSet(curImageSet)
 }
 
-func (isc *ImageSetController) deleteImageSet(cur interface{}) {
-	klog.V(0).Infof("ImageSet deleted.")
+func (isc *ImageSetController) deleteImageSet(obj interface{}) {
+	is := obj.(*appsv1alpha1.ImageSet)
+	klog.V(2).Infof("deleting ImageSet %s/%s", is.Namespace, is.Name)
 }
