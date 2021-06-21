@@ -17,14 +17,12 @@ limitations under the License.
 package imageset
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -216,32 +214,18 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
-	// TODO, lock
-	nodes := ims.Status.Nodes
-	if nodes == nil {
-		nodes = make([]appsv1alpha1.ImageSetNodes, 0)
-	}
-	nodes = append(nodes, appsv1alpha1.ImageSetNodes{
-		NodeName:       isc.hostName,
-		LastUpdateTime: metav1.Now(),
-		ImageId:        imageRef,
-		Message:        fmt.Sprintf("imageset"),
-	})
+	// TODO: need complete lock here
+	newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
 
-	newStatus := appsv1alpha1.ImageSetStatus{
-		Image: image,
-		Nodes: nodes,
-	}
-
-	ims.Status = newStatus
-	_, err = isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace).UpdateStatus(context.TODO(), ims, metav1.UpdateOptions{})
+	ims = ims.DeepCopy()
+	// Always try to update as sync come up or failed.
+	_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
 	if err != nil {
 		klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
 		return err
 	}
 
 	klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
-
 	return nil
 }
 
