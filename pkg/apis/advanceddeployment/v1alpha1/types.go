@@ -40,6 +40,8 @@ type AdvancedDeployment struct {
 	Status AdvancedDeploymentStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // AdvancedDeploymentList contains a list of AdvancedDeployment
 type AdvancedDeploymentList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -49,8 +51,6 @@ type AdvancedDeploymentList struct {
 	// Items is the list of AdvancedDeployments.
 	Items []AdvancedDeployment `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // AdvancedDeploymentSpec defines the desired state of AdvancedDeployment
 type AdvancedDeploymentSpec struct {

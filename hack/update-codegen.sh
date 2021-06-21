@@ -30,5 +30,11 @@ bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
   imageset:v1alpha1 \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
+#  ../../code-generator/generate-groups.sh "deepcopy,client,informer,lister" \
+#  github.com/caoyingjunz/pixiu/pkg/generated github.com/caoyingjunz/pixiu/pkg/apis \
+#  advanceddeployment:v1alpha1 \
+#  --output-base $(pwd)/../../ \
+#  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+
 # To use your own boilerplate text append:
 #   --go-header-file "${SCRIPT_ROOT}"/hack/custom-boilerplate.go.txt

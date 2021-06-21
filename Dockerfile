@@ -22,6 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on GOPROXY=https://goproxy
 #FROM gcr.io/distroless/static:nonroot
 FROM jacky06/static:nonroot
 WORKDIR /
+#COPY --from=builder /workspace/pixiu-controller-manager /usr/local/bin/pixiu-controller-manager
 COPY --from=builder /workspace/pixiu-daemon /usr/local/bin/pixiu-daemon
 #USER 65530:65530
 USER 65531:65531

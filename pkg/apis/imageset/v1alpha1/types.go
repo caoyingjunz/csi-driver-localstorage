@@ -24,42 +24,46 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// AdvancedDeployment enables declarative updates for Pods.
+// ImageSet enables declarative updates for image.
 type ImageSet struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// Specification of the desired behavior of the AdvancedDeployment.
+	// Specification of the desired behavior of the ImageSet.
 	// +optional
 	Spec ImageSetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	// Most recently observed status of the AdvancedDeployment.
+	// Most recently observed status of the ImageSet.
 	// +optional
 	Status ImageSetStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
-// AdvancedDeploymentList contains a list of AdvancedDeployment
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ImageSetList contains a list of ImageSet
 type ImageSetList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Items is the list of AdvancedDeployments.
+	// Items is the list of ImageSet.
 	Items []ImageSet `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ImageSetSpec defines the desired state of ImageSet
 type ImageSetSpec struct {
 	// The image should to be pulled
 	Image string `json:"image"`
 
-	// authorization for registry
+	// Equal to docker command, support pull and remove for now
+	Action string `json:"action"`
+
+	// Authorization for registry
+	// +optional
 	Auth *AuthConfig `json:"auth"`
 
-	// nodes to pull the special images
+	// Nodes to pull the special images
 	Selector NodeSelector `json:"selector"`
 }
 
@@ -87,14 +91,14 @@ type AuthConfig struct {
 
 // ImageSetStatus defines the observed state of ImageSet
 type ImageSetStatus struct {
-	// The generation observed by the deployment controller.
+	// The generation observed by the imageSet controller.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 
 	Message string `json:"message,omitempty"`
 }
 
-// DeploymentCondition describes the state of a deployment at a certain point.
+// ImageSetCondition describes the state of a deployment at a certain point.
 type ImageSetCondition struct {
 	// Type of deployment condition.
 	Type ImageSetConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=DeploymentConditionType"`
