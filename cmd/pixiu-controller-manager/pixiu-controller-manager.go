@@ -29,15 +29,10 @@ import (
 
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
-	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
-	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
-	informers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/signals"
 )
 
 const (
-	workers = 5
-
 	HealthzHost = "127.0.0.1"
 	HealthzPort = "10256"
 
@@ -63,37 +58,22 @@ func main() {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
-	// TODO: will init all the controllers here
 	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
-	clientSet, err := dClientset.NewForConfig(clientConfig)
-	if err != nil {
-		klog.Fatalf("Error building pixiu clientset: %s", err)
-	}
 
 	run := func(ctx context.Context) {
-		clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
-		pixiuInformerFactory := informers.NewSharedInformerFactory(clientSet, time.Second+30)
-
-		controllerContext, err := app.CreateControllerContext(clientBuilder, clientBuilder, stopCh)
+		controllerContext, err := app.CreateControllerContext(clientBuilder, clientConfig, stopCh)
 		if err != nil {
 			klog.Fatalf("Create contoller context failed: %v", err)
 		}
 
-		pc, err := advanceddeployment.NewPixiuController(
-			clientSet,
-			pixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
-			controllerContext.InformerFactory.Core().V1().Pods(),
-			clientBuilder.ClientOrDie("shared-informers"),
-		)
-		if err != nil {
-			klog.Fatalf("New pixiu controller failed %v", err)
+		// Init and start all the controllers.
+		if err := app.StartControllers(controllerContext, app.NewControllerInitializers()); err != nil {
+			klog.Fatalf("error starting controllers: %v", err)
 		}
 
 		controllerContext.InformerFactory.Start(stopCh)
 		controllerContext.ObjectOrMetadataInformerFactory.Start(stopCh)
-		pixiuInformerFactory.Start(stopCh)
-
-		go pc.Run(workers, stopCh)
+		controllerContext.PixiuInformerFactory.Start(stopCh)
 
 		// Heathz Check
 		go app.StartHealthzServer(healthzHost, healthzPort)
