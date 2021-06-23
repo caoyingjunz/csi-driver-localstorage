@@ -18,9 +18,11 @@ package imageset
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
+	kc "github.com/ericchiang/k8s"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -214,18 +216,40 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
-	// TODO: need complete lock here
-	newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
-
-	ims = ims.DeepCopy()
-	// Always try to update as sync come up or failed.
-	_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
+	c, err := kc.NewInClusterClient()
 	if err != nil {
-		klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
-		return err
+		log.Fatalf("Cannot create k8s client: %#v\n", err)
 	}
-
-	klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
+	ttl := time.Second * 30
+	var l PixiuLock
+	l, err = NewDaemonSetLock(ims.Namespace, ims.Name, c, "", "", ttl)
+	if err != nil {
+		log.Fatalf("Cannot create new daemonlock: %#v\n", err)
+	}
+	for {
+		if err := l.Acquire(); err == nil {
+			log.Println("Lock acquired")
+			newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
+			ims = ims.DeepCopy()
+			// Always try to update as sync come up or failed.
+			_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
+			if err != nil {
+				klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
+				return err
+			}
+			// Release lock
+			if err := l.Release(); err != nil {
+				log.Printf("Failed to release lock: %#v\n", err)
+			} else {
+				log.Println("Relesed lock")
+			}
+			klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
+			return nil
+		} else {
+			log.Printf("Cannot acquire lock: %v\n", err)
+			time.Sleep(time.Second * 2)
+		}
+	}
 	return nil
 }
 
