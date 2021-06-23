@@ -25,4 +25,4 @@ WORKDIR /
 #COPY --from=builder /workspace/pixiu-controller-manager /usr/local/bin/pixiu-controller-manager
 COPY --from=builder /workspace/pixiu-daemon /usr/local/bin/pixiu-daemon
 #USER 65530:65530
-USER 65531:65531
+USER root:root
