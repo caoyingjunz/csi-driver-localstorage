@@ -58,7 +58,6 @@ func main() {
 		klog.Fatalf("Build kube config failed: %v", err)
 	}
 
-	// TODO: will init all the controllers here
 	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 
 	run := func(ctx context.Context) {
@@ -67,6 +66,7 @@ func main() {
 			klog.Fatalf("Create contoller context failed: %v", err)
 		}
 
+		// Init and start all the controllers.
 		if err := app.StartControllers(controllerContext, app.NewControllerInitializers()); err != nil {
 			klog.Fatalf("error starting controllers: %v", err)
 		}

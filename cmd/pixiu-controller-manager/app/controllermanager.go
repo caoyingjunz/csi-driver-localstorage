@@ -137,6 +137,6 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 		return true, fmt.Errorf("New pixiu controller failed %v", err)
 	}
 
-	pc.Run(workers, ctx.Stop)
+	go pc.Run(workers, ctx.Stop)
 	return true, nil
 }
