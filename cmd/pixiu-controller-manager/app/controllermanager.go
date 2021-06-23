@@ -121,7 +121,8 @@ type InitFunc func(ctx ControllerContext) (enabled bool, err error)
 // NewControllerInitializers is a public map of named controller groups
 func NewControllerInitializers() map[string]InitFunc {
 	controllers := map[string]InitFunc{}
-	controllers["piuxiu"] = startPixiuController
+	controllers["advancedDeployment"] = startPixiuController
+	controllers["autoscaler"] = startAutoscalerController
 
 	return controllers
 }
@@ -138,5 +139,10 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 	}
 
 	go pc.Run(workers, ctx.Stop)
+	return true, nil
+}
+
+func startAutoscalerController(ctx ControllerContext) (bool, error) {
+
 	return true, nil
 }
