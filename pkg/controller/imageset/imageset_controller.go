@@ -44,8 +44,8 @@ import (
 )
 
 const (
-	maxRetries = 15
-
+	maxRetries     = 15
+	DefaultLockTTL = time.Second * 5
 	// images action, only should pull and remove action, is equal to docker command
 	PullAction   = "pull"
 	RemoveAction = "remove"
@@ -219,37 +219,36 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 	if err != nil {
 		klog.Errorf("Cannot create k8s client: %#v\n", err)
 	}
-	ttl := time.Second * 30
+
 	var l PixiuLock
-	l, err = NewDaemonSetLock(ims.Namespace, ims.Name, c, "", "", ttl)
+	l, err = NewDaemonSetLock(ims.Namespace, ims.Name, c, "", "", DefaultLockTTL)
 	if err != nil {
 		klog.Errorf("Cannot create new daemonlock: %#v\n", err)
 	}
 	for {
-		if err := l.Acquire(); err == nil {
-			klog.Infof("Lock acquired")
-			newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
-			ims = ims.DeepCopy()
-			// Always try to update as sync come up or failed.
-			_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
-			if err != nil {
-				klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
-				return err
-			}
-			// Release lock
-			if err := l.Release(); err != nil {
-				klog.Errorf("Failed to release lock: %#v\n", err)
-			} else {
-				klog.Infof("Relesed lock")
-			}
-			klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
-			return nil
-		} else {
+		err := l.Acquire()
+		if err != nil {
 			klog.Errorf("Cannot acquire lock: %v\n", err)
 			time.Sleep(time.Second * 2)
+			continue
 		}
+		klog.Infof("Lock acquired")
+		newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
+		ims = ims.DeepCopy()
+		// Always try to update as sync come up or failed.
+		_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
+		if err != nil {
+			klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
+			return err
+		}
+		// Release lock
+		err = l.Release()
+		if err != nil {
+			klog.Errorf("Failed to release lock: %#v\n", err)
+		}
+		klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
+		return nil
 	}
-	return nil
 }
 
 func (isc *ImageSetController) enqueue(imageSet *appsv1alpha1.ImageSet) {
