@@ -18,7 +18,6 @@ package imageset
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -218,17 +217,17 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 
 	c, err := kc.NewInClusterClient()
 	if err != nil {
-		log.Fatalf("Cannot create k8s client: %#v\n", err)
+		klog.Errorf("Cannot create k8s client: %#v\n", err)
 	}
 	ttl := time.Second * 30
 	var l PixiuLock
 	l, err = NewDaemonSetLock(ims.Namespace, ims.Name, c, "", "", ttl)
 	if err != nil {
-		log.Fatalf("Cannot create new daemonlock: %#v\n", err)
+		klog.Errorf("Cannot create new daemonlock: %#v\n", err)
 	}
 	for {
 		if err := l.Acquire(); err == nil {
-			log.Println("Lock acquired")
+			klog.Infof("Lock acquired")
 			newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
 			ims = ims.DeepCopy()
 			// Always try to update as sync come up or failed.
@@ -239,14 +238,14 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			}
 			// Release lock
 			if err := l.Release(); err != nil {
-				log.Printf("Failed to release lock: %#v\n", err)
+				klog.Errorf("Failed to release lock: %#v\n", err)
 			} else {
-				log.Println("Relesed lock")
+				klog.Infof("Relesed lock")
 			}
 			klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
 			return nil
 		} else {
-			log.Printf("Cannot acquire lock: %v\n", err)
+			klog.Errorf("Cannot acquire lock: %v\n", err)
 			time.Sleep(time.Second * 2)
 		}
 	}
