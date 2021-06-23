@@ -42,7 +42,7 @@ type PixiuLock interface {
 
 // NewKubeLock creates a new KubeLock.
 // The lock will not be aquired.
-func NewKubeLock(annotationKey, ownerID string, ttl time.Duration, metaGet MetaGetter, metaUpdate MetaUpdater) (PixiuLock, error) {
+func NewPixiuLock(annotationKey, ownerID string, ttl time.Duration, metaGet MetaGetter, metaUpdate MetaUpdater) (PixiuLock, error) {
 	if annotationKey == "" {
 		annotationKey = defaultAnnotationKey
 	}
@@ -172,7 +172,7 @@ func NewDaemonSetLock(namespace, name string, c *kc.Client, annotationKey, owner
 		namespace: namespace,
 		c:         c,
 	}
-	l, err := NewKubeLock(annotationKey, ownerID, ttl, helper.daemonSetGet, helper.daemonSetUpdate)
+	l, err := NewPixiuLock(annotationKey, ownerID, ttl, helper.daemonSetGet, helper.daemonSetUpdate)
 	if err != nil {
 		return nil, maskAny(err)
 	}
