@@ -279,7 +279,7 @@ func NewDaemonSetLock(namespace, name string, c *kc.Client, annotationKey, owner
 		namespace: namespace,
 		c:         c,
 	}
-	l, err := NewPixiuLock(annotationKey, ownerID, ttl, helper.daemonSetGet, helper.daemonSetUpdate)
+	l, err := NewPixiuLock(annotationKey, ownerID, ttl, helper.getDaemonSet, helper.updateDaemonSet)
 	if err != nil {
 		return nil, maskAny(err)
 	}
@@ -292,7 +292,7 @@ type k8sHelper struct {
 	c         *kc.Client
 }
 
-func (h *k8sHelper) daemonSetGet() (annotations map[string]string, resourceVersion string, extra interface{}, err error) {
+func (h *k8sHelper) getDaemonSet() (annotations map[string]string, resourceVersion string, extra interface{}, err error) {
 	var daemonSet v1beta1.DaemonSet
 	ctx := context.Background()
 	if err := h.c.Get(ctx, h.namespace, h.name, &daemonSet); err != nil {
@@ -302,7 +302,7 @@ func (h *k8sHelper) daemonSetGet() (annotations map[string]string, resourceVersi
 	return md.GetAnnotations(), md.GetResourceVersion(), &daemonSet, nil
 }
 
-func (h *k8sHelper) daemonSetUpdate(annotations map[string]string, resourceVersion string, extra interface{}) error {
+func (h *k8sHelper) updateDaemonSet(annotations map[string]string, resourceVersion string, extra interface{}) error {
 	daemonSet, ok := extra.(*v1beta1.DaemonSet)
 	if !ok {
 		return maskAny(fmt.Errorf("extra must be *DaemonSet"))
