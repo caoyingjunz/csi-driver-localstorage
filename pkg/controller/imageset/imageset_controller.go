@@ -225,11 +225,11 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 	if err != nil {
 		klog.Errorf("Cannot create new daemonlock: %#v\n", err)
 	}
-	for {
+	for i := 1; i <= 5; i++ {
 		err := l.Acquire()
 		if err != nil {
 			klog.Errorf("Cannot acquire lock: %v\n", err)
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 1)
 			continue
 		}
 		klog.Infof("Lock acquired")
@@ -248,7 +248,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		err = l.Release()
 		if err != nil {
 			klog.Errorf("Failed to release lock: %#v\n", err)
-		}else{
+		} else {
 			klog.Infof("Lock release")
 		}
 	}()
