@@ -241,14 +241,18 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
 			return err
 		}
-		// Release lock
+		klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
+		break
+	}
+	defer func() {
 		err = l.Release()
 		if err != nil {
 			klog.Errorf("Failed to release lock: %#v\n", err)
+		}else{
+			klog.Infof("Lock release")
 		}
-		klog.Infof("Imageset: %s has been %s success", image, ims.Spec.Action)
-		return nil
-	}
+	}()
+	return nil
 }
 
 func (isc *ImageSetController) enqueue(imageSet *appsv1alpha1.ImageSet) {
