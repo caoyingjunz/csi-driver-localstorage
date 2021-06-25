@@ -89,6 +89,7 @@ func NewImageSetController(
 
 	isc := &ImageSetController{
 		client:        client,
+		isClient:      isClient,
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "imageset-controller"}),
 		hostName:      hostName,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "imageset"),
@@ -187,6 +188,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 
+	var imageRef string
 	image := ims.Spec.Image
 
 	switch ims.Spec.Action {
@@ -201,7 +203,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		_, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
@@ -209,6 +211,17 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 	}
 	if err != nil {
 		klog.Errorf("%s imageset: %s failed: %v", ims.Spec.Action, image, err)
+		return err
+	}
+
+	// TODO: need complete lock here
+	newStatus := calculateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims.Name, isc.hostName, imageRef, err)
+
+	ims = ims.DeepCopy()
+	// Always try to update as sync come up or failed.
+	_, err = updateImageSetStatus(isc.isClient.AppsV1alpha1().ImageSets(ims.Namespace), ims, newStatus)
+	if err != nil {
+		klog.Errorf("update %s imageset: %s  status failed: %v", ims.Spec.Action, image, err)
 		return err
 	}
 
@@ -237,6 +250,10 @@ func (isc *ImageSetController) updateImageSet(old, cur interface{}) {
 	oldImageSet := old.(*appsv1alpha1.ImageSet)
 	curImageSet := cur.(*appsv1alpha1.ImageSet)
 	if oldImageSet.ResourceVersion == curImageSet.ResourceVersion {
+		return
+	}
+	// Just update the status
+	if oldImageSet.Generation == curImageSet.Generation {
 		return
 	}
 

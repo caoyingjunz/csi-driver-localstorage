@@ -5,7 +5,7 @@
 - 提供 `kubernetes` 层面的镜像管理能力
   - 可通过 `kubectl` 或 `client-go` 对集群中的 `images` 进行管理
   ```
-  # kubectl get images
+  # kubectl get imgs
   NAME         AGE   IMAGE
   image-test   33h   nginx:1.9.2
   ```
@@ -18,132 +18,24 @@
   example-ad   3       3            3           4d2h
   ```
 
+- 通过注释的方式，新增 `deployment` 和 `statefulset` 的自动扩缩容能力
+
 ### Installing (demo版)
 
 `pixiu` 安装非常简单，通过 `kubectl` 执行 `apply` 如下文件即可完成安装，真正做到猩猩都能使用.
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: pixiu-system
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: pixiu
-  namespace: pixiu-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: pixiu
-rules:
-  - apiGroups:
-      - apps.pixiu.io
-    resources:
-      - advanceddeployment
-      - imagesets
-    verbs:
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - "*"
-    resources:
-      - endpoints
-      - leases
-    verbs:
-      - get
-      - list
-      - patch
-      - update
-      - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: pixiu
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: pixiu
-subjects:
-- kind: ServiceAccount
-  name: pixiu
-  namespace: default
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pixiu-controller-manager
-  namespace: pixiu-system
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      pixiu.controller.manager: pixiu-controller-manager
-  template:
-    metadata:
-      labels:
-        pixiu.controller.manager: pixiu-controller-manager
-    spec:
-      containers:
-        - image: jacky06/pixiu-controller-manager:v0.0.1
-          command:
-            - pixiu-controller-manager
-            - --leader-elect=true
-          imagePullPolicy: IfNotPresent
-          livenessProbe:
-            failureThreshold: 8
-            httpGet:
-              host: 127.0.0.1
-              path: /healthz
-              port: 10256
-              scheme: HTTP
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 15
-          name: pixiu-controller-manager
-      serviceAccountName: pixiu
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: pixiu-daemon
-  namespace: pixiu-system
-spec:
-  selector:
-    matchLabels:
-      pixiu.daemon: pixiu-daemon
-  template:
-    metadata:
-      labels:
-        pixiu.daemon: pixiu-daemon
-    spec:
-      serviceAccountName: pixiu
-      containers:
-      - command:
-        - pixiu-daemon
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              apiVersion: v1
-              fieldPath: spec.nodeName
-        image: jacky06/pixiu-daemon:v0.0.1
-        imagePullPolicy: IfNotPresent
-        name: pixiu-daemon
-        volumeMounts:
-        - mountPath: /var/run
-          name: socketpath
-      hostNetwork: true
-      volumes:
-      - hostPath:
-          path: /var/run
-          type: ""
-        name: socketpath
+```
+# 安装 crds
+kubectl apply -f config/crds
+
+# 安装控制器
+kubectl apply -f config/deploy
+```
+
+然后通过 `kubectl get pod -n pixiu-system` 能看到 `pixiu` 已经启动成功.
+```
+# kubectl get all -n pixiu-system
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/pixiu-controller-manager-859c8b94f6-9f8bh   1/1     Running   0          10m
+pod/pixiu-daemon-7qf27                          1/1     Running   0          4m40s
 ```

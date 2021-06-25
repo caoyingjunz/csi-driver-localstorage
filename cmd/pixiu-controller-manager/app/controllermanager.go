@@ -18,6 +18,7 @@ limitations under the License.
 package app
 
 import (
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,10 +26,17 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/metadata"
 	"k8s.io/client-go/metadata/metadatainformer"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/pixiu/pkg/controller"
+	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
+	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
+	dInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 )
+
+const workers = 5
 
 // ControllerContext defines the context obj for pixiu
 type ControllerContext struct {
@@ -36,10 +44,14 @@ type ControllerContext struct {
 	// ClientBuilder will provide a client for this controller to use
 	ClientBuilder controller.ControllerClientBuilder
 
+	AdClient dClientset.Interface
+
 	// InformerFactory gives access to informers for the controller.
 	InformerFactory informers.SharedInformerFactory
 
 	ObjectOrMetadataInformerFactory controller.InformerFactory
+
+	PixiuInformerFactory dInformers.SharedInformerFactory
 
 	// Stop is the stop channel
 	Stop <-chan struct{}
@@ -50,19 +62,24 @@ type ControllerContext struct {
 	ResyncPeriod func() time.Duration
 }
 
-func CreateControllerContext(rootClientBuilder, clientBuilder controller.ControllerClientBuilder, stop <-chan struct{}) (ControllerContext, error) {
+func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, kubeConfig *rest.Config, stop <-chan struct{}) (ControllerContext, error) {
 	versionedClient := clientBuilder.ClientOrDie("shared-informers")
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Minute)
 
 	metadataClient := metadata.NewForConfigOrDie(clientBuilder.ConfigOrDie("metadata-informers"))
 	metadataInformers := metadatainformer.NewSharedInformerFactory(metadataClient, time.Minute)
 
+	adClient, err := dClientset.NewForConfig(kubeConfig)
+	if err != nil {
+		return ControllerContext{}, err
+	}
+
 	// If APIServer is not runnint we should wait for some time unless failed
 	if err := WaitForAPIServer(versionedClient, time.Second*8); err != nil {
 		return ControllerContext{}, err
 	}
 
-	discoveryClient := rootClientBuilder.ClientOrDie("controller-discovery")
+	discoveryClient := clientBuilder.ClientOrDie("controller-discovery")
 	cachedClient := cacheddiscovery.NewMemCacheClient(discoveryClient.Discovery())
 	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedClient)
 	go wait.Until(func() {
@@ -71,9 +88,61 @@ func CreateControllerContext(rootClientBuilder, clientBuilder controller.Control
 
 	ctx := ControllerContext{
 		ClientBuilder:                   clientBuilder,
+		AdClient:                        adClient,
 		InformerFactory:                 sharedInformers,
 		ObjectOrMetadataInformerFactory: controller.NewInformerFactory(sharedInformers, metadataInformers),
+		PixiuInformerFactory:            dInformers.NewSharedInformerFactory(adClient, time.Second+30),
 		Stop:                            stop,
 	}
 	return ctx, nil
+}
+
+// StartControllers starts a set of controllers with a specified ControllerContext
+func StartControllers(ctx ControllerContext, controllers map[string]InitFunc) error {
+	for controllerName, intFn := range controllers {
+		klog.V(0).Infof("Starting %q", controllerName)
+
+		started, err := intFn(ctx)
+		if err != nil {
+			klog.Errorf("Starting %q failed", controllerName)
+			return err
+		}
+		if !started {
+			klog.Warningf("Skipping %q", controllerName)
+			continue
+		}
+	}
+
+	return nil
+}
+
+type InitFunc func(ctx ControllerContext) (enabled bool, err error)
+
+// NewControllerInitializers is a public map of named controller groups
+func NewControllerInitializers() map[string]InitFunc {
+	controllers := map[string]InitFunc{}
+	controllers["advancedDeployment"] = startPixiuController
+	controllers["autoscaler"] = startAutoscalerController
+
+	return controllers
+}
+
+func startPixiuController(ctx ControllerContext) (bool, error) {
+	pc, err := advanceddeployment.NewPixiuController(
+		ctx.AdClient,
+		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
+		ctx.InformerFactory.Core().V1().Pods(),
+		ctx.ClientBuilder.ClientOrDie("shared-informers"),
+	)
+	if err != nil {
+		return true, fmt.Errorf("New pixiu controller failed %v", err)
+	}
+
+	go pc.Run(workers, ctx.Stop)
+	return true, nil
+}
+
+func startAutoscalerController(ctx ControllerContext) (bool, error) {
+
+	return true, nil
 }

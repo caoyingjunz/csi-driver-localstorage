@@ -95,7 +95,19 @@ type ImageSetStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 
+	Image string `json:"image"`
+
+	Nodes []ImageSetNodes `json:"nodes"`
+
 	Message string `json:"message,omitempty"`
+}
+
+type ImageSetNodes struct {
+	NodeName       string      `json:"node_name"`
+	ImageId        string      `json:"image_id,omitempty"`
+	SizeBytes      string      `json:"size_bytes,omitempty"`
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
+	Message        string      `json:"message,omitempty"`
 }
 
 // ImageSetCondition describes the state of a deployment at a certain point.

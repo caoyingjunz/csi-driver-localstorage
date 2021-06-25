@@ -3,7 +3,7 @@ kind: ImageSet
 metadata:
   name: example-ims
 spec:
-  image: nginx:1.9.2
+  image: nginx
   action: pull
   selector:
     nodes:

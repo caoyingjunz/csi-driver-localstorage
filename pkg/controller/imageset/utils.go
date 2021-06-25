@@ -17,9 +17,15 @@ limitations under the License.
 package imageset
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
+
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/imageset/v1alpha1"
+	appsClient "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned/typed/imageset/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetHostname returns env's hostname if 'hostnameOverride' is empty; otherwise, return 'hostnameOverride'.
@@ -55,4 +61,56 @@ func isExistingSocket(path string) bool {
 	}
 
 	return fileInfo.Mode()&os.ModeSocket != 0
+}
+
+func updateImageSetStatus(c appsClient.ImageSetInterface, ims *appsv1alpha1.ImageSet, newStatus appsv1alpha1.ImageSetStatus) (*appsv1alpha1.ImageSet, error) {
+	if ims.Status.Image == newStatus.Image &&
+		ims.Status.ObservedGeneration == ims.Generation &&
+		reflect.DeepEqual(ims.Status.Nodes, newStatus.Nodes) {
+		return ims, nil
+	}
+
+	newStatus.ObservedGeneration = ims.Generation
+	ims.Status = newStatus
+
+	return c.UpdateStatus(context.TODO(), ims, metav1.UpdateOptions{})
+}
+
+func calculateImageSetStatus(c appsClient.ImageSetInterface, name, hostName, imageRef string, err error) appsv1alpha1.ImageSetStatus {
+	ims, err := c.Get(context.TODO(), name, metav1.GetOptions{})
+
+	nodes := ims.Status.Nodes
+	if nodes == nil {
+		nodes = make([]appsv1alpha1.ImageSetNodes, 0)
+	}
+
+	sn := appsv1alpha1.ImageSetNodes{
+		LastUpdateTime: metav1.Now(),
+		NodeName:       hostName,
+		ImageId:        imageRef,
+	}
+	if err != nil {
+		sn.Message = err.Error()
+	}
+
+	index := -1
+	for i, node := range nodes {
+		if node.NodeName == hostName {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		nodes = append(nodes, sn)
+	} else {
+		nodes[index] = sn
+	}
+
+	newStatus := appsv1alpha1.ImageSetStatus{
+		Image: ims.Spec.Image,
+		Nodes: nodes,
+	}
+
+	return newStatus
 }

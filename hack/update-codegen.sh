@@ -32,7 +32,7 @@ bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
 
 #  ../../code-generator/generate-groups.sh "deepcopy,client,informer,lister" \
 #  github.com/caoyingjunz/pixiu/pkg/generated github.com/caoyingjunz/pixiu/pkg/apis \
-#  advanceddeployment:v1alpha1 \
+#  imageset:v1alpha1 \
 #  --output-base $(pwd)/../../ \
 #  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
