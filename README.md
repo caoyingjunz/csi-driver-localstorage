@@ -20,7 +20,7 @@
 
 - 通过注释的方式，新增 `deployment` 和 `statefulset` 的自动扩缩容能力
 
-### Installing (demo版)
+## Installing (demo版)
 
 `pixiu` 安装非常简单，通过 `kubectl` 执行 `apply` 如下文件即可完成安装，真正做到猩猩都能使用.
 
@@ -39,3 +39,9 @@ NAME                                            READY   STATUS    RESTARTS   AGE
 pod/pixiu-controller-manager-859c8b94f6-9f8bh   1/1     Running   0          10m
 pod/pixiu-daemon-7qf27                          1/1     Running   0          4m40s
 ```
+
+## 构建
+
+- 代码生成 `make client-gen`
+- 构建二进制执行文件 `make build`
+- 构建镜像 `make image`

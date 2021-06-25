@@ -1,28 +1,15 @@
-# Build the manager binary
-FROM golang:1.15 as builder
+FROM golang:1.15-alpine3.12 as builder
+ARG GOPROXY
+ARG APP
+ENV GOPROXY=${GOPROXY}
+WORKDIR /go/pixiu
+COPY . .
+RUN apk add make && \
+    make vendor && \
+    CGO_ENABLED=0 go build -a -o ./dist/${APP} cmd/${APP}/${APP}.go
 
-WORKDIR /workspace
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-#RUN go mod download
-
-# Copy the go source
-COPY cmd/ cmd/
-COPY pkg/ pkg/
-
-# Build
-#RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on GOPROXY=https://goproxy.cn go build -a -o pixiu-controller-manager cmd/pixiu-controller-manager/pixiu-controller-manager.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on GOPROXY=https://goproxy.cn go build -a -o pixiu-daemon cmd/pixiu-daemon/pixiu-daemon.go
-
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-#FROM gcr.io/distroless/static:nonroot
 FROM jacky06/static:nonroot
+ARG APP
 WORKDIR /
-#COPY --from=builder /workspace/pixiu-controller-manager /usr/local/bin/pixiu-controller-manager
-COPY --from=builder /workspace/pixiu-daemon /usr/local/bin/pixiu-daemon
-#USER 65530:65530
+COPY --from=builder /go/pixiu/dist/${APP} /usr/local/bin/${APP}
 USER root:root
