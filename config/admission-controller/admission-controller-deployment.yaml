@@ -1,8 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webhook-server
-  namespace: webhook-demo
+  name: pixiu-webhook-server
+  namespace: pixiu-system
   labels:
     app: webhook-server
 spec:
@@ -20,8 +20,8 @@ spec:
         runAsUser: 1234
       containers:
       - name: server
-        image: jimingyu/admission-controller:v11
-        imagePullPolicy: Always
+        image: jimingyu/pixiu-admission-controller:v1
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
           name: webhook-api
@@ -37,8 +37,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: webhook-server
-  namespace: webhook-demo
+  name: pixiu-webhook-service
+  namespace: pixiu-system
 spec:
   selector:
     app: webhook-server
@@ -49,13 +49,13 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: demo-webhook
+  name: pixiu-webhook-mutate
 webhooks:
-  - name: webhook-server.webhook-demo.svc
+  - name: pixiu-webhook-service.pixiu-system.svc
     clientConfig:
       service:
-        name: webhook-server
-        namespace: webhook-demo
+        name: pixiu-webhook-service
+        namespace: pixiu-system
         path: "/mutate"
       caBundle: ${CA_PEM_B64}
     rules:
@@ -67,13 +67,13 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: demo-webhook
+  name: pixiu-webhook-validata
 webhooks:
-  - name: webhook-server.webhook-demo.svc
+  - name: pixiu-webhook-service.pixiu-system.svc
     clientConfig:
       service:
-        name: webhook-server
-        namespace: webhook-demo
+        name: pixiu-webhook-service
+        namespace: pixiu-system
         path: "/validate"
       caBundle: ${CA_PEM_B64}
     rules:
