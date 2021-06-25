@@ -3,25 +3,20 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-
 	"github.com/golang/glog"
+	"io/ioutil"
 	"k8s.io/api/admission/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"net/http"
+	"strings"
 )
 
 var (
-	runtimeScheme = runtime.NewScheme()
-	codecs        = serializer.NewCodecFactory(runtimeScheme)
-	deserializer  = codecs.UniversalDeserializer()
-
-	defaulter = runtime.ObjectDefaulter(runtimeScheme)
+	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 )
 
 var (
@@ -32,29 +27,12 @@ var (
 	requiredLabels = []string{
 		admissionWebhookAnnotationStatusKey,
 	}
-	addLabels = map[string]string{
-		nameLabel:      NA,
-		instanceLabel:  NA,
-		versionLabel:   NA,
-		componentLabel: NA,
-		partOfLabel:    NA,
-		managedByLabel: NA,
-	}
 )
 
 const (
-	admissionWebhookAnnotationValidateKey = "admission-webhook-example.qikqiak.com/validate"
-	admissionWebhookAnnotationMutateKey   = "admission-webhook-example.qikqiak.com/mutate"
+	admissionWebhookAnnotationValidateKey = "admission-webhook-validate"
+	admissionWebhookAnnotationMutateKey   = "admission-webhook-mutate"
 	admissionWebhookAnnotationStatusKey   = "admission-webhook-status"
-
-	nameLabel      = "app.kubernetes.io/name"
-	instanceLabel  = "app.kubernetes.io/instance"
-	versionLabel   = "app.kubernetes.io/version"
-	componentLabel = "app.kubernetes.io/component"
-	partOfLabel    = "app.kubernetes.io/part-of"
-	managedByLabel = "app.kubernetes.io/managed-by"
-
-	NA = "not_available"
 )
 
 
@@ -64,45 +42,27 @@ type patchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
-	required := admissionRequired(ignoredList, admissionWebhookAnnotationMutateKey, metadata)
-	annotations := metadata.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	status := annotations[admissionWebhookAnnotationStatusKey]
-
-	if strings.ToLower(status) == "mutated" {
-		required = false
-	}
-
+func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta, annotation map[string]string) bool {
+	required := admissionRequired(ignoredList, admissionWebhookAnnotationMutateKey, metadata, annotation)
 	glog.Infof("Mutation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
 	return required
 }
 
-func createPatch(label map[string]string, labels map[string]string) ([]byte, error) {
+func createPatch() ([]byte, error) {
 	var patch []patchOperation
-
 	var test string = "jimingyu"
 	var test1 string = "jimingyu"
-	for key1, value1 := range label {
-		for key, value := range labels {
-			if key1 == key || value1 == value {
-				patch = append(patch, patchOperation{
-					Op:   "add",
-					Path: "/metadata/labels",
-					Value: map[string]string{
-						key: value,
-						test: test1,
-					},
-				})
-			}
-		}
-	}
+	patch = append(patch, patchOperation{
+		Op:   "replace",
+		Path: "/metadata/labels",
+		Value: map[string]string{
+			test: test1,
+		},
+	})
 	return json.Marshal(patch)
 }
 
-func admissionRequired(ignoredList []string, admissionAnnotationKey string, metadata *metav1.ObjectMeta) bool {
+func admissionRequired(ignoredList []string, admissionAnnotationKey string, metadata *metav1.ObjectMeta, annotation map[string]string) bool {
 	// skip special kubernetes system namespaces
 	for _, namespace := range ignoredList {
 		if metadata.Namespace == namespace {
@@ -112,22 +72,21 @@ func admissionRequired(ignoredList []string, admissionAnnotationKey string, meta
 	}
 
 	annotations := metadata.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
+	fmt.Println(annotations)
+	fmt.Println(annotation[admissionAnnotationKey])
+	fmt.Println(annotation)
+	if annotation == nil {
+		return false
 	}
-
-	var required bool
 	switch strings.ToLower(annotations[admissionAnnotationKey]) {
-	default:
-		required = true
 	case "n", "no", "false", "off":
-		required = false
+		return false
 	}
-	return required
+	return true
 }
 
-func validationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
-	required := admissionRequired(ignoredList, admissionWebhookAnnotationValidateKey, metadata)
+func validationRequired(ignoredList []string, metadata *metav1.ObjectMeta,annotation map[string]string) bool {
+	required := admissionRequired(ignoredList, admissionWebhookAnnotationValidateKey, metadata, annotation)
 	glog.Infof("Validation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
 	return required
 }
@@ -136,7 +95,7 @@ func validationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool 
 func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
 	var (
-		availableLabels                 map[string]string
+		labels,annotation         	    map[string]string
 		objectMeta                      *metav1.ObjectMeta
 		resourceNamespace, resourceName string
 	)
@@ -156,7 +115,7 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			}
 		}
 		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
-		availableLabels = deployment.Labels
+		labels = deployment.Labels
 	case "Service":
 		var service corev1.Service
 		if err := json.Unmarshal(req.Object.Raw, &service); err != nil {
@@ -168,7 +127,7 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			}
 		}
 		resourceName, resourceNamespace, objectMeta = service.Name, service.Namespace, &service.ObjectMeta
-		availableLabels = service.Labels
+		labels = service.Labels
 	case "Pod":
 		var pod corev1.Pod
 		if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
@@ -180,10 +139,12 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			}
 		}
 		resourceName, resourceNamespace, objectMeta = pod.Name, pod.Namespace, &pod.ObjectMeta
-		availableLabels = pod.Labels
+		labels = pod.Labels
+		annotation = pod.Annotations
+
 	}
 
-	if !validationRequired(ignoredNamespaces, objectMeta) {
+	if !validationRequired(ignoredNamespaces, objectMeta, annotation) {
 		glog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
 		return &v1beta1.AdmissionResponse{
 			Allowed: true,
@@ -192,10 +153,9 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 
 	allowed := true
 	var result *metav1.Status
-	glog.Info("available labels:", availableLabels)
 	glog.Info("required labels", requiredLabels)
 	for _, rl := range requiredLabels {
-		if _, ok := availableLabels[rl]; !ok {
+		if _, ok := labels[rl]; !ok {
 			allowed = false
 			result = &metav1.Status{
 				Reason: "required labels are not set",
@@ -214,7 +174,7 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 func mutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
 	var (
-		labels          map[string]string
+		labels,annotation          map[string]string
 		objectMeta      *metav1.ObjectMeta
 		resourceNamespace, resourceName       string
 	)
@@ -224,6 +184,30 @@ func mutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 
 	switch req.Kind.Kind {
+	case "Deployment":
+		var deployment appsv1.Deployment
+		if err := json.Unmarshal(req.Object.Raw, &deployment); err != nil {
+			glog.Errorf("Could not unmarshal raw object: %v", err)
+			return &v1beta1.AdmissionResponse{
+				Result: &metav1.Status{
+					Message: err.Error(),
+				},
+			}
+		}
+		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
+		labels = deployment.Labels
+	case "Service":
+		var service corev1.Service
+		if err := json.Unmarshal(req.Object.Raw, &service); err != nil {
+			glog.Errorf("Could not unmarshal raw object: %v", err)
+			return &v1beta1.AdmissionResponse{
+				Result: &metav1.Status{
+					Message: err.Error(),
+				},
+			}
+		}
+		resourceName, resourceNamespace, objectMeta = service.Name, service.Namespace, &service.ObjectMeta
+		labels = service.Labels
 	case "Pod":
 		var pod corev1.Pod
 		if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
@@ -236,17 +220,20 @@ func mutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		}
 		resourceName, resourceNamespace, objectMeta = pod.Name, pod.Namespace, &pod.ObjectMeta
 		labels = pod.Labels
+		annotation = pod.Annotations
+		fmt.Println(labels)
+
+
 	}
 
-	if !mutationRequired(ignoredNamespaces, objectMeta) {
+	if !mutationRequired(ignoredNamespaces, objectMeta, annotation) {
 		glog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
 		return &v1beta1.AdmissionResponse{
 			Allowed: true,
 		}
 	}
 
-	label := map[string]string{admissionWebhookAnnotationStatusKey: "test"}
-	patchBytes, err := createPatch(label,labels)
+	patchBytes, err := createPatch()
 	if err != nil {
 		return &v1beta1.AdmissionResponse{
 			Result: &metav1.Status{
@@ -290,7 +277,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 
 	var admissionResponse *v1beta1.AdmissionResponse
 	ar := v1beta1.AdmissionReview{}
-	if _, _, err := deserializer.Decode(body, nil, &ar); err != nil {
+	if _, _, err := universalDeserializer.Decode(body, nil, &ar); err != nil {
 		glog.Errorf("Can't decode body: %v", err)
 		admissionResponse = &v1beta1.AdmissionResponse{
 			Result: &metav1.Status{
