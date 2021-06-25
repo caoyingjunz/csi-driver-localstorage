@@ -32,6 +32,7 @@ import (
 
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
+	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
 	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
 	dInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 )
@@ -135,7 +136,7 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 		ctx.ClientBuilder.ClientOrDie("shared-informers"),
 	)
 	if err != nil {
-		return true, fmt.Errorf("New pixiu controller failed %v", err)
+		return true, fmt.Errorf("New pixiu controller failed: %v", err)
 	}
 
 	go pc.Run(workers, ctx.Stop)
@@ -143,6 +144,16 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 }
 
 func startAutoscalerController(ctx ControllerContext) (bool, error) {
+	ac, err := autoscaler.NewAutoscalerController(
+		ctx.InformerFactory.Apps().V1().Deployments(),
+		ctx.InformerFactory.Apps().V1().StatefulSets(),
+		ctx.InformerFactory.Autoscaling().V2beta2().HorizontalPodAutoscalers(),
+		ctx.ClientBuilder.ClientOrDie("shared-informer"),
+	)
+	if err != nil {
+		return true, fmt.Errorf("New autoscaler controller failed: %v", err)
+	}
 
+	go ac.Run(workers, ctx.Stop)
 	return true, nil
 }
