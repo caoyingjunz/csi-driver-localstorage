@@ -28,7 +28,7 @@ echo "Creating Kubernetes objects ..."
 kubectl apply -f pixiu-namespace.yaml
 
 # Create the TLS secret for the generated keys.
-kubectl -n pixiu-system create  secret tls webhook-server-tls \
+kubectl -n pixiu-system create secret tls webhook-server-tls \
     --cert "${keydir}/webhook-server-tls.crt" \
     --key "${keydir}/webhook-server-tls.key"
 
