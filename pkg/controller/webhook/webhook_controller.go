@@ -14,41 +14,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package webhook
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"strings"
+
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/klog/v2"
-	"net/http"
-	"strings"
 )
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 )
 
-var (
-	ignoredNamespaces = []string{
-		metav1.NamespaceSystem,
-		metav1.NamespacePublic,
-		"webhook-demo",
-	}
-	requiredLabels = []string{
-		admissionWebhookAnnotationStatusKey,
-	}
-)
-
 const (
 	admissionWebhookAnnotationValidateKey = "admission-webhook-validate"
 	admissionWebhookAnnotationMutateKey   = "admission-webhook-mutate"
 	admissionWebhookAnnotationStatusKey   = "admission-webhook-status"
+)
+
+var (
+	ignoredNamespaces = []string{
+		metav1.NamespaceSystem,
+		metav1.NamespacePublic,
+	}
+	requiredLabels = []string{
+		admissionWebhookAnnotationStatusKey,
+	}
 )
 
 type patchOperation struct {
@@ -58,6 +58,7 @@ type patchOperation struct {
 }
 
 func createPatch(labels map[string]string) ([]byte, error) {
+	// TODO: just debug for now
 	labels["jixingxing"] = "jixingxing"
 	var patch []patchOperation
 	patch = append(patch, patchOperation{
@@ -208,7 +209,7 @@ func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 }
 
 // Serve method for webhook server
-func serve(w http.ResponseWriter, r *http.Request) {
+func Serve(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 	if r.Body != nil {
 		if data, err := ioutil.ReadAll(r.Body); err == nil {
@@ -239,7 +240,6 @@ func serve(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	} else {
-		fmt.Println(r.URL.Path)
 		if r.URL.Path == "/mutate" {
 			admissionResponse = mutate(&ar)
 		} else if r.URL.Path == "/validate" {
@@ -266,4 +266,3 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
 	}
 }
-

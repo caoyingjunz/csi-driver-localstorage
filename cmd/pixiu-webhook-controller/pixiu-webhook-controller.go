@@ -17,31 +17,54 @@ limitations under the License.
 package main
 
 import (
-	"log"
+	"flag"
 	"net/http"
 	"path/filepath"
+
+	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
+	"github.com/caoyingjunz/pixiu/pkg/controller/webhook"
 )
 
 const (
+	HealthzHost = "127.0.0.1"
+	HealthzPort = "10259"
+
 	tlsDir      = `/run/secrets/tls`
 	tlsCertFile = `tls.crt`
 	tlsKeyFile  = `tls.key`
 )
 
 func main() {
+	klog.InitFlags(nil)
+	flag.Parse()
+
 	certPath := filepath.Join(tlsDir, tlsCertFile)
 	keyPath := filepath.Join(tlsDir, tlsKeyFile)
 
 	// define http server and server handler
 	mux := http.NewServeMux()
-	mux.HandleFunc("/mutate", serve)
-	mux.HandleFunc("/validate", serve)
+	mux.HandleFunc("/mutate", webhook.Serve)
+	mux.HandleFunc("/validate", webhook.Serve)
 
-    server := &http.Server{
-    	Addr:  ":8443",
-    	Handler: mux,
-    }
-	log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
+	server := &http.Server{
+		Addr:    ":8443",
+		Handler: mux,
+	}
+
+	// Start Heathz Check
+	go app.StartHealthzServer(healthzHost, healthzPort)
+
+	klog.Fatal(server.ListenAndServeTLS(certPath, keyPath))
 }
 
+var (
+	healthzHost string // The host of Healthz
+	healthzPort string // The port of Healthz to listen on
+)
 
+func init() {
+	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
+	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
+}
