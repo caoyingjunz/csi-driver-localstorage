@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pixiu-webhook-server
+  namespace: pixiu-system
+  labels:
+    app: pixiu-webhook-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pixiu-webhook-server
+  template:
+    metadata:
+      labels:
+        app: pixiu-webhook-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1234
+      containers:
+      - name: webhook-server
+        image: jacky06/pixiu-webhook-controller:v0.0.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8443
+          name: webhook-api
+        volumeMounts:
+        - name: webhook-tls-certs
+          mountPath: /run/secrets/tls
+          readOnly: true
+      volumes:
+      - name: webhook-tls-certs
+        secret:
+          secretName: webhook-server-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pixiu-webhook-service
+  namespace: pixiu-system
+spec:
+  selector:
+    app: pixiu-webhook-server
+  ports:
+    - port: 443
+      targetPort: webhook-api
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: pixiu-webhook-mutate
+webhooks:
+  - name: pixiu-webhook-service.pixiu-system.svc
+    clientConfig:
+      service:
+        name: pixiu-webhook-service
+        namespace: pixiu-system
+        path: "/mutate"
+      caBundle: ${CA_PEM_B64}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: pixiu-webhook-validata
+webhooks:
+  - name: pixiu-webhook-service.pixiu-system.svc
+    clientConfig:
+      service:
+        name: pixiu-webhook-service
+        namespace: pixiu-system
+        path: "/validate"
+      caBundle: ${CA_PEM_B64}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]

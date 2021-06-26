@@ -3,13 +3,11 @@ module github.com/caoyingjunz/pixiu
 go 1.14
 
 require (
+	github.com/caoyingjunz/kubez-autoscaler v0.0.0-20210608152105-423a3eb7fbbd
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/onsi/ginkgo v1.14.1 // indirect
-	google.golang.org/appengine v1.6.6 // indirect
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v0.21.1

@@ -158,10 +158,12 @@ func (isc *ImageSetController) handleErr(err error, key interface{}) {
 	}
 
 	if isc.queue.NumRequeues(key) < maxRetries {
+		klog.V(2).Infof("Error syncing image for imageset %q, retrying. Error: %v", key, err)
 		isc.queue.AddRateLimited(key)
 		return
 	}
 
+	klog.Warningf("Dropping imageset %q out of the queue: %v", key, err)
 	utilruntime.HandleError(err)
 	isc.queue.Forget(key)
 }
