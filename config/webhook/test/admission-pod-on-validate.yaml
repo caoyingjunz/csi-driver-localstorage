@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pixiu-admission-on-validate
+  annotations:
+    admission-webhook-validate: "yes"
+  labels:
+    admission-webhook-status: "app"
+    app: "nginx"
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
