@@ -37,7 +37,7 @@ kubectl -n pixiu-system create secret tls webhook-server-tls \
 # Read the PEM-encoded CA certificate, base64 encode it, and replace the `${CA_PEM_B64}` placeholder in the YAML
 # template with it. Then, create the Kubernetes resources.
 ca_pem_b64="$(openssl base64 -A <"${keydir}/ca.crt")"
-sed -e 's@${CA_PEM_B64}@'"$ca_pem_b64"'@g' <"pixiu-webhook-controller.yaml" \
+sed -e 's@${CA_PEM_B64}@'"$ca_pem_b64"'@g' <"pixiu-webhook-server.yaml" \
     | kubectl create -f -
 
 # Delete the key directory to prevent abuse (DO NOT USE THESE KEYS ANYWHERE ELSE).
