@@ -4,9 +4,7 @@ ARG APP
 ENV GOPROXY=${GOPROXY}
 WORKDIR /go/pixiu
 COPY . .
-RUN apk add make && \
-    make vendor && \
-    CGO_ENABLED=0 go build -a -o ./dist/${APP} cmd/${APP}/${APP}.go
+RUN CGO_ENABLED=0 go build -a -o ./dist/${APP} cmd/${APP}/${APP}.go
 
 FROM jacky06/static:nonroot
 ARG APP
