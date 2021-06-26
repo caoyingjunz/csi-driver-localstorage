@@ -7,12 +7,16 @@ BUILDX ?= false
 PLATFORM ?= linux/amd64,linux/arm64
 ORG ?= jacky06
 TAG ?= v0.0.1
+WHAT ?= all # selected all apps
+ifneq ($(filter $(WHAT),$(apps)),)
+	apps := $(WHAT)
+endif
 
 .PHONY: build client-gen vendor image
 
-build: client-gen
+build:
 	for app in $(apps); do \
-		CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOPROXY=$(GOPROXY) go build -o $(TARGET_DIR)/$(ARCH)/ ./cmd/$$app ;\
+		CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOPROXY=$(GOPROXY) go build -o $(TARGET_DIR)/$(ARCH)/ ./cmd/$$app; \
 	done
 
 client-gen: vendor
@@ -30,7 +34,7 @@ ifeq ($(BUILDX), false)
 			--force-rm \
 			--no-cache \
 			-t $(ORG)/$$app:$(TAG) \
-			. ;\
+			.; \
 	done
 else
 	for app in $(apps); do \
@@ -42,6 +46,6 @@ else
 			--platform $(PLATFORM) \
 			--push \
 			-t $(ORG)/$$app:$(TAG) \
-			. ;\
+			.; \
 	done
 endif
