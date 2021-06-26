@@ -82,7 +82,7 @@ func main() {
 		select {}
 	}
 
-	if !LeaderElect {
+	if !leaderElect {
 		run(context.TODO())
 		panic("unreachable")
 	}
