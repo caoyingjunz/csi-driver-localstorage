@@ -319,10 +319,12 @@ func (pc *PixiuController) handleErr(err error, key interface{}) {
 	}
 
 	if pc.queue.NumRequeues(key) < maxRetries {
+		klog.V(2).Infof("Error syncing pods for advanced deployments %q, retrying. Error: %v", key, err)
 		pc.queue.AddRateLimited(key)
 		return
 	}
 
+	klog.Warningf("Dropping advanced deployments %q out of the queue: %v", key, err)
 	utilruntime.HandleError(err)
 	pc.queue.Forget(key)
 }
