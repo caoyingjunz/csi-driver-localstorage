@@ -24,7 +24,7 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
-          name: pixiu-webhook-api
+          name: webhook-api
         volumeMounts:
         - name: webhook-tls-certs
           mountPath: /run/secrets/tls
@@ -44,7 +44,7 @@ spec:
     app: pixiu-webhook-server
   ports:
     - port: 443
-      targetPort: pixiu-webhook-api
+      targetPort: webhook-api
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
