@@ -206,7 +206,9 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		if isc.isSelectNode(ims) {
+			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		}
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
@@ -292,4 +294,16 @@ func (isc *ImageSetController) updateImageSet(old, cur interface{}) {
 func (isc *ImageSetController) deleteImageSet(obj interface{}) {
 	is := obj.(*appsv1alpha1.ImageSet)
 	klog.V(2).Infof("deleting ImageSet %s/%s", is.Namespace, is.Name)
+}
+
+func (isc *ImageSetController) isSelectNode (ims *appsv1alpha1.ImageSet)  bool {
+	result := false
+	nodes :=ims.Spec.Selector.Nodes
+	for _, node := range nodes {
+		if isc.hostName == node {
+			result = true
+			break
+		}
+	}
+	return  result
 }
