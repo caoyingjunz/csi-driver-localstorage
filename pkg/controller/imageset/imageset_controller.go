@@ -189,7 +189,10 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		klog.Errorf("Get imageSet from index failed: %v", err)
 		return err
 	}
-
+	if isc.isSelectedNode(ims) {
+		klog.V(4).Infof("The non-local node does not pull the image")
+		return nil
+	}
 	var imageRef string
 	image := ims.Spec.Image
 
@@ -205,9 +208,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		if isc.isSelectNode(ims) {
-			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
-		}
+		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
@@ -270,14 +271,14 @@ func (isc *ImageSetController) deleteImageSet(obj interface{}) {
 	klog.V(2).Infof("deleting ImageSet %s/%s", is.Namespace, is.Name)
 }
 
-func (isc *ImageSetController) isSelectNode(ims *appsv1alpha1.ImageSet) bool {
-	var result = false
+func (isc *ImageSetController) isSelectedNode(ims *appsv1alpha1.ImageSet) bool {
+	var isSelected = false
 	nodes := ims.Spec.Selector.Nodes
 	for _, node := range nodes {
 		if isc.hostName == node {
-			result = true
+			isSelected = true
 			break
 		}
 	}
-	return result
+	return isSelected
 }
