@@ -189,7 +189,11 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		klog.Errorf("Get imageSet from index failed: %v", err)
 		return err
 	}
-
+	if isc.isSelectedNode(ims) {
+		klog.V(4).Infof("The non-local node does not pull the image")
+		return nil
+	}
+	
 	var imageRef string
 	image := ims.Spec.Image
 
@@ -266,4 +270,16 @@ func (isc *ImageSetController) updateImageSet(old, cur interface{}) {
 func (isc *ImageSetController) deleteImageSet(obj interface{}) {
 	is := obj.(*appsv1alpha1.ImageSet)
 	klog.V(2).Infof("deleting ImageSet %s/%s", is.Namespace, is.Name)
+}
+
+func (isc *ImageSetController) isSelectedNode(ims *appsv1alpha1.ImageSet) bool {
+	var isSelected bool
+	nodes := ims.Spec.Selector.Nodes
+	for _, node := range nodes {
+		if isc.hostName == node {
+			isSelected = true
+			break
+		}
+	}
+	return isSelected
 }
