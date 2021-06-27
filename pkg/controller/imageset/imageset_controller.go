@@ -193,6 +193,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		klog.V(4).Infof("The non-local node does not pull the image")
 		return nil
 	}
+	
 	var imageRef string
 	image := ims.Spec.Image
 
@@ -272,7 +273,7 @@ func (isc *ImageSetController) deleteImageSet(obj interface{}) {
 }
 
 func (isc *ImageSetController) isSelectedNode(ims *appsv1alpha1.ImageSet) bool {
-	var isSelected = false
+	var isSelected bool
 	nodes := ims.Spec.Selector.Nodes
 	for _, node := range nodes {
 		if isc.hostName == node {
