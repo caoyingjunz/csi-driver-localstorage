@@ -270,14 +270,14 @@ func (isc *ImageSetController) deleteImageSet(obj interface{}) {
 	klog.V(2).Infof("deleting ImageSet %s/%s", is.Namespace, is.Name)
 }
 
-func (isc *ImageSetController) isSelectNode(ims *appsv1alpha1.ImageSet)  bool {
+func (isc *ImageSetController) isSelectNode(ims *appsv1alpha1.ImageSet) bool {
 	var result = false
-	nodes :=ims.Spec.Selector.Nodes
+	nodes := ims.Spec.Selector.Nodes
 	for _, node := range nodes {
 		if isc.hostName == node {
 			result = true
 			break
 		}
 	}
-	return  result
+	return result
 }
