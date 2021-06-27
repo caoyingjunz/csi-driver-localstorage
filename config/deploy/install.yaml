@@ -42,6 +42,7 @@ spec:
           command:
             - pixiu-controller-manager
             - --leader-elect=true
+            - --feature-gates=autoscaler,imageSet
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 8
