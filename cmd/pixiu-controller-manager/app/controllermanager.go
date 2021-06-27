@@ -19,8 +19,11 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/informers"
@@ -37,7 +40,13 @@ import (
 	dInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 )
 
-const workers = 5
+const (
+	workers = 5
+
+	pixiuVersion     = "v1alpha1"
+	pixiuGroup       = "apps.pixiu.io"
+	pixiuAllFeatures = "advancedDeployment,autoscaler,imageSet"
+)
 
 // ControllerContext defines the context obj for pixiu
 type ControllerContext struct {
@@ -54,6 +63,9 @@ type ControllerContext struct {
 
 	PixiuInformerFactory dInformers.SharedInformerFactory
 
+	// AvailableResources is a map listing currently available resources for pixiu
+	AvailableResources map[schema.GroupVersionResource]bool
+
 	// Stop is the stop channel
 	Stop <-chan struct{}
 
@@ -63,7 +75,7 @@ type ControllerContext struct {
 	ResyncPeriod func() time.Duration
 }
 
-func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, kubeConfig *rest.Config, stop <-chan struct{}) (ControllerContext, error) {
+func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, kubeConfig *rest.Config, featureGates string, stop <-chan struct{}) (ControllerContext, error) {
 	versionedClient := clientBuilder.ClientOrDie("shared-informers")
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Minute)
 
@@ -71,6 +83,11 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 	metadataInformers := metadatainformer.NewSharedInformerFactory(metadataClient, time.Minute)
 
 	adClient, err := dClientset.NewForConfig(kubeConfig)
+	if err != nil {
+		return ControllerContext{}, err
+	}
+
+	availableResources, err := GetAvailableResources(featureGates)
 	if err != nil {
 		return ControllerContext{}, err
 	}
@@ -93,6 +110,7 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 		InformerFactory:                 sharedInformers,
 		ObjectOrMetadataInformerFactory: controller.NewInformerFactory(sharedInformers, metadataInformers),
 		PixiuInformerFactory:            dInformers.NewSharedInformerFactory(adClient, time.Second+30),
+		AvailableResources:              availableResources,
 		Stop:                            stop,
 	}
 	return ctx, nil
@@ -117,6 +135,35 @@ func StartControllers(ctx ControllerContext, controllers map[string]InitFunc) er
 	return nil
 }
 
+var allControllers = map[string]bool{
+	"advancedDeployment": true,
+	"autoscaler":         true,
+	"imageSet":           true,
+}
+
+// GetAvailableResources gets the map which contains all Piuxiu available resources
+func GetAvailableResources(featureGates string) (map[schema.GroupVersionResource]bool, error) {
+	if len(strings.TrimSpace(featureGates)) == 0 {
+		featureGates = pixiuAllFeatures
+	}
+
+	var errs []error
+	allResources := map[schema.GroupVersionResource]bool{}
+	for _, feature := range strings.Split(featureGates, ",") {
+		feature = strings.TrimSpace(feature)
+		if !allControllers[feature] {
+			errs = append(errs, fmt.Errorf("unsupported controller %s", feature))
+		}
+		allResources[schema.GroupVersionResource{
+			Group:    pixiuGroup,
+			Version:  pixiuVersion,
+			Resource: feature,
+		}] = true
+	}
+
+	return allResources, utilerrors.NewAggregate(errs)
+}
+
 type InitFunc func(ctx ControllerContext) (enabled bool, err error)
 
 // NewControllerInitializers is a public map of named controller groups
@@ -129,6 +176,9 @@ func NewControllerInitializers() map[string]InitFunc {
 }
 
 func startPixiuController(ctx ControllerContext) (bool, error) {
+	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "advancedDeployment"}] {
+		return false, nil
+	}
 	pc, err := advanceddeployment.NewPixiuController(
 		ctx.AdClient,
 		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
@@ -144,6 +194,9 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 }
 
 func startAutoscalerController(ctx ControllerContext) (bool, error) {
+	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "autoscaler"}] {
+		return false, nil
+	}
 	ac, err := autoscaler.NewAutoscalerController(
 		ctx.InformerFactory.Apps().V1().Deployments(),
 		ctx.InformerFactory.Apps().V1().StatefulSets(),

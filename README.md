@@ -43,5 +43,5 @@ pod/pixiu-daemon-7qf27                          1/1     Running   0          4m4
 ## 构建
 
 - 代码生成 `make client-gen`
-- 构建二进制执行文件 `make build`
-- 构建镜像 `make image`
+- 编译二进制执行文件 `make build`（如果希望编译特定 app，请带上 `WHAT=${app_name}` 参数）
+- 构建镜像 `make image`（如果希望构建特定 app 镜像，请带上 `WHAT=${app_name}` 参数）

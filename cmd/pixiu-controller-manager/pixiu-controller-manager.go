@@ -61,7 +61,7 @@ func main() {
 	clientBuilder := controller.SimpleControllerClientBuilder{ClientConfig: clientConfig}
 
 	run := func(ctx context.Context) {
-		controllerContext, err := app.CreateControllerContext(clientBuilder, clientConfig, stopCh)
+		controllerContext, err := app.CreateControllerContext(clientBuilder, clientConfig, featureGates, stopCh)
 		if err != nil {
 			klog.Fatalf("Create contoller context failed: %v", err)
 		}
@@ -82,7 +82,7 @@ func main() {
 		select {}
 	}
 
-	if !LeaderElect {
+	if !leaderElect {
 		run(context.TODO())
 		panic("unreachable")
 	}
@@ -138,6 +138,7 @@ var (
 	resourceLock      string // The type of resource object that is used for locking during leader election. Supported options are `endpoints` (default) and `configmaps`
 	resourceName      string // The name of resource object that is used for locking during leader election
 	resourceNamespace string // The namespace of resource object that is used for locking during leader election
+	featureGates      string // The features for pixiu to enabled
 )
 
 func init() {
@@ -151,4 +152,5 @@ func init() {
 	flag.StringVar(&resourceLock, "leader-elect-resource-lock", ResourceLock, "The type of resource object that is used for locking during leader election. Supported options are `endpoints` (default) and `configmaps`.")
 	flag.StringVar(&resourceName, "leader-elect-resource-name", ResourceName, "The name of resource object that is used for locking during leader election.")
 	flag.StringVar(&resourceNamespace, "leader-elect-resource-namespace", ResourceNamespace, "The namespace of resource object that is used for locking during leader election.")
+	flag.StringVar(&featureGates, "feature-gates", "", "The features for pixiu to enabled.")
 }

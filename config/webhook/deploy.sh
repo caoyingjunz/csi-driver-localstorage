@@ -30,7 +30,8 @@ kubectl apply -f pixiu-namespace.yaml
 # Create the TLS secret for the generated keys.
 kubectl -n pixiu-system create secret tls webhook-server-tls \
     --cert "${keydir}/webhook-server-tls.crt" \
-    --key "${keydir}/webhook-server-tls.key"
+    --key "${keydir}/webhook-server-tls.key" \
+    --dry-run=client -o yaml | kubectl apply -f -
 
 # Read the PEM-encoded CA certificate, base64 encode it, and replace the `${CA_PEM_B64}` placeholder in the YAML
 # template with it. Then, create the Kubernetes resources.

@@ -20,7 +20,9 @@ spec:
         runAsUser: 1234
       containers:
       - name: webhook-server
-        image: jacky06/pixiu-webhook-controller:v0.0.1
+        image: jacky06/pixiu-webhook-server:v0.0.1
+        command:
+          - pixiu-webhook-server
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
