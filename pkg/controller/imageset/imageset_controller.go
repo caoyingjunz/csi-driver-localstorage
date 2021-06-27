@@ -205,7 +205,6 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.IdentityToken = auth.IdentityToken
 			authConfig.RegistryToken = auth.RegistryToken
 		}
-		// TODO, add event supported
 		if isc.isSelectNode(ims) {
 			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 		}
