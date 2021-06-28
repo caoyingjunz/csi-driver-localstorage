@@ -1,8 +1,8 @@
 name: CI
 
 on:
-#  push:
-#    branches: [ master ]
+  push:
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -21,24 +21,5 @@ jobs:
     - name: Build the pixiu binariy
       run: go build -v ./...
 
-    - name: Unit test
+    - name: Test
       run: go test -v ./...
-
-    - name: setup-docker
-      uses: docker-practice/actions-setup-docker@v1
-      with:
-        # Docker Version
-        docker_version: 20.10 # optional, default is 20.10
-
-    - name: Docker Login
-      uses: docker/login-action@v1.10.0
-      with:
-        username: ${{ secrets.USER }}
-        password: ${{ secrets.PASSWORD }}
-
-    - name: Build and push image
-      run: |
-        make image
-        docker push jacky06/pixiu-daemon:v0.0.1
-        docker push jacky06/pixiu-controller-manager:v0.0.1
-        docker push jacky06/pixiu-webhook-server:v0.0.1
