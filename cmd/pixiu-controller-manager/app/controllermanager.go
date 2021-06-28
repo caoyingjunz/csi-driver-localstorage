@@ -37,6 +37,7 @@ import (
 	dInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
+	"github.com/caoyingjunz/pixiu/pkg/controller/advancedimage"
 	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
 )
 
@@ -45,7 +46,7 @@ const (
 
 	pixiuVersion     = "v1alpha1"
 	pixiuGroup       = "apps.pixiu.io"
-	pixiuAllFeatures = "advancedDeployment,autoscaler,imageSet"
+	pixiuAllFeatures = "advancedDeployment,autoscaler,advancedImage"
 )
 
 // ControllerContext defines the context obj for pixiu
@@ -137,8 +138,8 @@ func StartControllers(ctx ControllerContext, controllers map[string]InitFunc) er
 
 var allControllers = map[string]bool{
 	"advancedDeployment": true,
+	"advancedImage":      true,
 	"autoscaler":         true,
-	"imageSet":           true,
 }
 
 // GetAvailableResources gets the map which contains all Piuxiu available resources
@@ -170,6 +171,7 @@ type InitFunc func(ctx ControllerContext) (enabled bool, err error)
 func NewControllerInitializers() map[string]InitFunc {
 	controllers := map[string]InitFunc{}
 	controllers["advancedDeployment"] = startPixiuController
+	controllers["advancedImage"] = startAdvancedImageController
 	controllers["autoscaler"] = startAutoscalerController
 
 	return controllers
@@ -208,5 +210,19 @@ func startAutoscalerController(ctx ControllerContext) (bool, error) {
 	}
 
 	go ac.Run(workers, ctx.Stop)
+	return true, nil
+}
+
+func startAdvancedImageController(ctx ControllerContext) (bool, error) {
+	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "advancedImage"}] {
+		return false, nil
+	}
+
+	err := advancedimage.NewAdvancedImageController()
+	if err != nil {
+		return true, fmt.Errorf("New advancedImage controller failed: %v", err)
+	}
+
+	//go ai.Run(workers, ctx.Stop)
 	return true, nil
 }
