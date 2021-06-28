@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/imageset/v1alpha1"
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
