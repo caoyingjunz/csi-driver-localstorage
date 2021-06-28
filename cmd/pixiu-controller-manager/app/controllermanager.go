@@ -33,11 +33,11 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 
+	dClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
+	dInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
 	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
-	dClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
-	dInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions"
 )
 
 const (

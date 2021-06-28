@@ -26,8 +26,8 @@ import (
 	"k8s.io/klog/v2"
 
 	podutil "github.com/caoyingjunz/pixiu/pkg/api/v1/pod"
-	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/advanceddeployment/v1alpha1"
-	appsClient "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned/typed/advanceddeployment/v1alpha1"
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
+	appsClient "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned/typed/apps/v1alpha1"
 )
 
 func calculateStatus(ad *appsv1alpha1.AdvancedDeployment, pods []*v1.Pod, manageAdErr error) appsv1alpha1.AdvancedDeploymentStatus {
