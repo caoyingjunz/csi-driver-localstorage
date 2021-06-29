@@ -51,6 +51,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ImageSetList{},
 		&AdvancedDeployment{},
 		&AdvancedDeploymentList{},
+		&AdvancedImage{},
+		&AdvancedImageList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

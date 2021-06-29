@@ -55,6 +55,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=apps.pixiu.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("advanceddeployments"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().AdvancedDeployments().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("advancedimages"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().AdvancedImages().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("imagesets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().ImageSets().Informer()}, nil
 

@@ -20,4 +20,6 @@ package v1alpha1
 
 type AdvancedDeploymentExpansion interface{}
 
+type AdvancedImageExpansion interface{}
+
 type ImageSetExpansion interface{}

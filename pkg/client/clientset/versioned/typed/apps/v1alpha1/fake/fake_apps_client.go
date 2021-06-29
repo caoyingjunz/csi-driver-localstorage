@@ -32,6 +32,10 @@ func (c *FakeAppsV1alpha1) AdvancedDeployments(namespace string) v1alpha1.Advanc
 	return &FakeAdvancedDeployments{c, namespace}
 }
 
+func (c *FakeAppsV1alpha1) AdvancedImages(namespace string) v1alpha1.AdvancedImageInterface {
+	return &FakeAdvancedImages{c, namespace}
+}
+
 func (c *FakeAppsV1alpha1) ImageSets(namespace string) v1alpha1.ImageSetInterface {
 	return &FakeImageSets{c, namespace}
 }
