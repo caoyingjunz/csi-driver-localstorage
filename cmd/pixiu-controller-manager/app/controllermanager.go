@@ -153,7 +153,8 @@ func GetAvailableResources(featureGates string) (map[schema.GroupVersionResource
 	for _, feature := range strings.Split(featureGates, ",") {
 		feature = strings.TrimSpace(feature)
 		if !allControllers[feature] {
-			errs = append(errs, fmt.Errorf("unsupported controller %s", feature))
+			errs = append(errs, fmt.Errorf("unsupported feature %q", feature))
+			continue
 		}
 		allResources[schema.GroupVersionResource{
 			Group:    pixiuGroup,
