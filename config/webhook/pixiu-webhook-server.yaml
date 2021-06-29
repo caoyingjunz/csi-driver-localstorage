@@ -61,7 +61,9 @@ webhooks:
         path: "/mutate"
       caBundle: ${CA_PEM_B64}
     rules:
-      - operations: [ "CREATE" ]
+      - operations:
+          - "CREATE"
+          - "UPDATE"
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
@@ -79,7 +81,9 @@ webhooks:
         path: "/validate"
       caBundle: ${CA_PEM_B64}
     rules:
-      - operations: [ "CREATE" ]
+      - operations:
+          - "CREATE"
+          - "UPDATE"
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
