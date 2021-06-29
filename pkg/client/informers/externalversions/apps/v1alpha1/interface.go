@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// AdvancedDeployments returns a AdvancedDeploymentInformer.
 	AdvancedDeployments() AdvancedDeploymentInformer
+	// AdvancedImages returns a AdvancedImageInformer.
+	AdvancedImages() AdvancedImageInformer
 	// ImageSets returns a ImageSetInformer.
 	ImageSets() ImageSetInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // AdvancedDeployments returns a AdvancedDeploymentInformer.
 func (v *version) AdvancedDeployments() AdvancedDeploymentInformer {
 	return &advancedDeploymentInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// AdvancedImages returns a AdvancedImageInformer.
+func (v *version) AdvancedImages() AdvancedImageInformer {
+	return &advancedImageInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ImageSets returns a ImageSetInformer.

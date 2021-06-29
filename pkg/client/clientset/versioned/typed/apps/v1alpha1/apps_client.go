@@ -27,6 +27,7 @@ import (
 type AppsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	AdvancedDeploymentsGetter
+	AdvancedImagesGetter
 	ImageSetsGetter
 }
 
@@ -37,6 +38,10 @@ type AppsV1alpha1Client struct {
 
 func (c *AppsV1alpha1Client) AdvancedDeployments(namespace string) AdvancedDeploymentInterface {
 	return newAdvancedDeployments(c, namespace)
+}
+
+func (c *AppsV1alpha1Client) AdvancedImages(namespace string) AdvancedImageInterface {
+	return newAdvancedImages(c, namespace)
 }
 
 func (c *AppsV1alpha1Client) ImageSets(namespace string) ImageSetInterface {

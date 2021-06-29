@@ -26,6 +26,14 @@ type AdvancedDeploymentListerExpansion interface{}
 // AdvancedDeploymentNamespaceLister.
 type AdvancedDeploymentNamespaceListerExpansion interface{}
 
+// AdvancedImageListerExpansion allows custom methods to be added to
+// AdvancedImageLister.
+type AdvancedImageListerExpansion interface{}
+
+// AdvancedImageNamespaceListerExpansion allows custom methods to be added to
+// AdvancedImageNamespaceLister.
+type AdvancedImageNamespaceListerExpansion interface{}
+
 // ImageSetListerExpansion allows custom methods to be added to
 // ImageSetLister.
 type ImageSetListerExpansion interface{}

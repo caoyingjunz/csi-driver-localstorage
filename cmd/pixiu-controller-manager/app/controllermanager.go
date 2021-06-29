@@ -33,10 +33,11 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 
-	dClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
-	dInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions"
+	pClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
+	pInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
+	"github.com/caoyingjunz/pixiu/pkg/controller/advancedimage"
 	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
 )
 
@@ -45,7 +46,7 @@ const (
 
 	pixiuVersion     = "v1alpha1"
 	pixiuGroup       = "apps.pixiu.io"
-	pixiuAllFeatures = "advancedDeployment,autoscaler,imageSet"
+	pixiuAllFeatures = "advancedDeployment,autoscaler,advancedImage"
 )
 
 // ControllerContext defines the context obj for pixiu
@@ -54,14 +55,14 @@ type ControllerContext struct {
 	// ClientBuilder will provide a client for this controller to use
 	ClientBuilder controller.ControllerClientBuilder
 
-	AdClient dClientset.Interface
+	PixiuClient pClientset.Interface
 
 	// InformerFactory gives access to informers for the controller.
 	InformerFactory informers.SharedInformerFactory
 
 	ObjectOrMetadataInformerFactory controller.InformerFactory
 
-	PixiuInformerFactory dInformers.SharedInformerFactory
+	PixiuInformerFactory pInformers.SharedInformerFactory
 
 	// AvailableResources is a map listing currently available resources for pixiu
 	AvailableResources map[schema.GroupVersionResource]bool
@@ -82,7 +83,7 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 	metadataClient := metadata.NewForConfigOrDie(clientBuilder.ConfigOrDie("metadata-informers"))
 	metadataInformers := metadatainformer.NewSharedInformerFactory(metadataClient, time.Minute)
 
-	adClient, err := dClientset.NewForConfig(kubeConfig)
+	pClient, err := pClientset.NewForConfig(kubeConfig)
 	if err != nil {
 		return ControllerContext{}, err
 	}
@@ -106,10 +107,10 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 
 	ctx := ControllerContext{
 		ClientBuilder:                   clientBuilder,
-		AdClient:                        adClient,
+		PixiuClient:                     pClient,
 		InformerFactory:                 sharedInformers,
 		ObjectOrMetadataInformerFactory: controller.NewInformerFactory(sharedInformers, metadataInformers),
-		PixiuInformerFactory:            dInformers.NewSharedInformerFactory(adClient, time.Second+30),
+		PixiuInformerFactory:            pInformers.NewSharedInformerFactory(pClient, time.Second+30),
 		AvailableResources:              availableResources,
 		Stop:                            stop,
 	}
@@ -137,8 +138,8 @@ func StartControllers(ctx ControllerContext, controllers map[string]InitFunc) er
 
 var allControllers = map[string]bool{
 	"advancedDeployment": true,
+	"advancedImage":      true,
 	"autoscaler":         true,
-	"imageSet":           true,
 }
 
 // GetAvailableResources gets the map which contains all Piuxiu available resources
@@ -170,6 +171,7 @@ type InitFunc func(ctx ControllerContext) (enabled bool, err error)
 func NewControllerInitializers() map[string]InitFunc {
 	controllers := map[string]InitFunc{}
 	controllers["advancedDeployment"] = startPixiuController
+	controllers["advancedImage"] = startAdvancedImageController
 	controllers["autoscaler"] = startAutoscalerController
 
 	return controllers
@@ -180,7 +182,7 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 		return false, nil
 	}
 	pc, err := advanceddeployment.NewPixiuController(
-		ctx.AdClient,
+		ctx.PixiuClient,
 		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
 		ctx.InformerFactory.Core().V1().Pods(),
 		ctx.ClientBuilder.ClientOrDie("shared-informers"),
@@ -208,5 +210,23 @@ func startAutoscalerController(ctx ControllerContext) (bool, error) {
 	}
 
 	go ac.Run(workers, ctx.Stop)
+	return true, nil
+}
+
+func startAdvancedImageController(ctx ControllerContext) (bool, error) {
+	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "advancedImage"}] {
+		return false, nil
+	}
+	ai, err := advancedimage.NewAdvancedImageController(
+		ctx.PixiuClient,
+		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedImages(),
+		ctx.PixiuInformerFactory.Apps().V1alpha1().ImageSets(),
+		ctx.ClientBuilder.ClientOrDie("shared-informer"),
+	)
+	if err != nil {
+		return true, fmt.Errorf("New advancedImage controller failed: %v", err)
+	}
+
+	go ai.Run(workers, ctx.Stop)
 	return true, nil
 }
