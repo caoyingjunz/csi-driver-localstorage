@@ -21,34 +21,26 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"k8s.io/api/admission/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/klog/v2"
+
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
+)
+
+const (
+	advancedImage      = "AdvancedImage"
+	advancedDeployment = "AdvancedDeployment"
+	imageSet           = "ImageSet"
 )
 
 var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
-)
 
-const (
-	admissionWebhookAnnotationValidateKey = "admission-webhook-validate"
-	admissionWebhookAnnotationMutateKey   = "admission-webhook-mutate"
-	admissionWebhookAnnotationStatusKey   = "admission-webhook-status"
-)
-
-var (
-	ignoredNamespaces = []string{
-		metav1.NamespaceSystem,
-		metav1.NamespacePublic,
-	}
-	requiredLabels = []string{
-		admissionWebhookAnnotationStatusKey,
-	}
+	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
 )
 
 type patchOperation struct {
@@ -57,20 +49,7 @@ type patchOperation struct {
 	Value interface{} `json:"value,omitempty"`
 }
 
-func createPatch(labels map[string]string) ([]byte, error) {
-	// TODO: just debug for now
-	labels["jixingxing"] = "jixingxing"
-	var patch []patchOperation
-	patch = append(patch, patchOperation{
-		Op:    "add",
-		Path:  "/metadata/labels",
-		Value: labels,
-	})
-
-	return json.Marshal(patch)
-}
-
-func admissionRequired(ignoredList []string, admissionAnnotationKey string, metadata *metav1.ObjectMeta) bool {
+func admissionRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
 	// skip special kubernetes system namespaces
 	for _, namespace := range ignoredList {
 		if metadata.Namespace == namespace {
@@ -79,44 +58,29 @@ func admissionRequired(ignoredList []string, admissionAnnotationKey string, meta
 		}
 	}
 
-	annotations := metadata.GetAnnotations()
-	switch strings.ToLower(annotations[admissionAnnotationKey]) {
-	case "n", "no", "false", "off":
-		return false
-	case "y", "yes", "true", "on":
-		return true
-	}
+	// TODO: 自定义检查实现
 	return false
 }
 
-func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
-	required := admissionRequired(ignoredList, admissionWebhookAnnotationMutateKey, metadata)
-	klog.Infof("Mutation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
-	return required
+// TODO
+func doMutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+	return nil
 }
 
-func validationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
-	required := admissionRequired(ignoredList, admissionWebhookAnnotationValidateKey, metadata)
-	klog.Infof("Validation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
-	return required
-}
-
-// main mutation process
-func mutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
+// Do validate Pixiu resources
+func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
-	var (
-		labels                          map[string]string
-		objectMeta                      *metav1.ObjectMeta
-		resourceNamespace, resourceName string
-	)
 
-	klog.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v patchOperation=%v UserInfo=%v",
-		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
+	var objectMeta *metav1.ObjectMeta
+	var resourceNamespace, resourceName string
+	klog.V(4).Infof("Will validate for Kind=%v, Namespace=%v Name=%v ResourceName=%v UID=%v Operation=%v UserInfo=%v",
+		req.Kind, req.Namespace, req.Name, resourceName, req.UID, req.Operation, req.UserInfo)
 
+	var err error
 	switch req.Kind.Kind {
-	case "Pod":
-		var pod corev1.Pod
-		if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
+	case advancedImage:
+		var ai appsv1alpha1.AdvancedImage
+		if err = json.Unmarshal(req.Object.Raw, &ai); err != nil {
 			klog.Errorf("Could not unmarshal raw object: %v", err)
 			return &v1beta1.AdmissionResponse{
 				Result: &metav1.Status{
@@ -124,144 +88,105 @@ func mutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace, objectMeta = pod.Name, pod.Namespace, &pod.ObjectMeta
-		labels = pod.Labels
-	}
-
-	if !mutationRequired(ignoredNamespaces, objectMeta) {
-		klog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
-		return &v1beta1.AdmissionResponse{
-			Allowed: true,
+		resourceName, resourceNamespace, objectMeta = ai.Name, ai.Namespace, &ai.ObjectMeta
+	case imageSet:
+		var is appsv1alpha1.ImageSet
+		if err = json.Unmarshal(req.Object.Raw, &is); err != nil {
+			klog.Errorf("Could not unmarshal raw object: %v", err)
+			return &v1beta1.AdmissionResponse{
+				Result: &metav1.Status{
+					Message: err.Error(),
+				},
+			}
 		}
-	}
-
-	patchBytes, err := createPatch(labels)
-	if err != nil {
+		resourceName, resourceNamespace, objectMeta = is.Name, is.Namespace, &is.ObjectMeta
+	default:
+		// This case will not happened
 		return &v1beta1.AdmissionResponse{
 			Result: &metav1.Status{
-				Message: err.Error(),
+				Message: "unsupported Pixiu Kind",
 			},
 		}
 	}
-
-	klog.Infof("AdmissionResponse: patch=%v\n", string(patchBytes))
-	return &v1beta1.AdmissionResponse{
-		Allowed: true,
-		Patch:   patchBytes,
-		PatchType: func() *v1beta1.PatchType {
-			pt := v1beta1.PatchTypeJSONPatch
-			return &pt
-		}(),
-	}
-}
-
-// validate deployments and services
-func validate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
-	req := ar.Request
-	var (
-		labels                          map[string]string
-		objectMeta                      *metav1.ObjectMeta
-		resourceNamespace, resourceName string
-	)
-
-	klog.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v patchOperation=%v UserInfo=%v",
-		req.Kind, req.Namespace, req.Name, resourceName, req.UID, req.Operation, req.UserInfo)
-
-	switch req.Kind.Kind {
-	case "Pod":
-		var pod corev1.Pod
-		if err := json.Unmarshal(req.Object.Raw, &pod); err != nil {
-			klog.Errorf("Could not unmarshal raw object: %v", err)
-			return &v1beta1.AdmissionResponse{
-				Result: &metav1.Status{
-					Message: err.Error(),
-				},
-			}
-		}
-		resourceName, resourceNamespace, objectMeta = pod.Name, pod.Namespace, &pod.ObjectMeta
-		labels = pod.Labels
-	}
-
-	if !validationRequired(ignoredNamespaces, objectMeta) {
-		klog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
-		return &v1beta1.AdmissionResponse{
-			Allowed: true,
-		}
-	}
+	klog.Infof("debug resourceName: %v, resourceNamespace: %v, objectMeta: %v", resourceName, resourceNamespace, objectMeta)
 
 	allowed := true
-	var result *metav1.Status
-	klog.Info("required labels", requiredLabels)
-	for _, rl := range requiredLabels {
-		if _, ok := labels[rl]; !ok {
-			allowed = false
-			result = &metav1.Status{
-				Reason: "required labels are not set",
+	var status *metav1.Status
+	if objectMeta != nil {
+		anno := objectMeta.GetAnnotations()
+		if anno != nil {
+			if _, exists := anno["allForbid"]; exists {
+				allowed = false
+				status = &metav1.Status{
+					Reason: "Debug, allForbid is set",
+					Code:   http.StatusMethodNotAllowed,
+				}
 			}
-			break
 		}
 	}
 
 	return &v1beta1.AdmissionResponse{
 		Allowed: allowed,
-		Result:  result,
+		Result:  status,
 	}
 }
 
-// Serve method for webhook server
-func Serve(w http.ResponseWriter, r *http.Request) {
+func verifyAndParseRequest(r *http.Request) (*v1beta1.AdmissionReview, error) {
 	var body []byte
-	if r.Body != nil {
-		if data, err := ioutil.ReadAll(r.Body); err == nil {
-			body = data
-		}
-	}
-	if len(body) == 0 {
-		klog.Error("empty body")
-		http.Error(w, "empty body", http.StatusBadRequest)
-		return
+	var err error
+
+	body, err = ioutil.ReadAll(r.Body)
+	if err != nil || len(body) == 0 {
+		return nil, fmt.Errorf("empty body")
 	}
 
 	// verify the content type is accurate
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
-		klog.Errorf("Content-Type=%s, expect application/json", contentType)
-		http.Error(w, "invalid Content-Type, expect `application/json`", http.StatusUnsupportedMediaType)
+		return nil, fmt.Errorf("Content-Type=%s, expect application/json", contentType)
+	}
+
+	ar := v1beta1.AdmissionReview{}
+	if _, _, err = universalDeserializer.Decode(body, nil, &ar); err != nil {
+		return nil, fmt.Errorf("can't decode admissionReview from body: %v", err)
+	}
+
+	return &ar, nil
+}
+
+// TODO: will complated the HandlerMutate in the future
+func HandlerMutate(w http.ResponseWriter, r *http.Request) {
+	klog.Infof("Do nothing for HandlerMutate for now")
+	return
+}
+
+// Hander validate for Pixiu webhook server
+func HandlerValidate(w http.ResponseWriter, r *http.Request) {
+	ar, err := verifyAndParseRequest(r)
+	if err != nil {
+		klog.Errorf("verify or parse the request failed: %v", err)
+		http.Error(w, fmt.Sprintf("verify or parse the request failed: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	var admissionResponse *v1beta1.AdmissionResponse
-	ar := v1beta1.AdmissionReview{}
-	if _, _, err := universalDeserializer.Decode(body, nil, &ar); err != nil {
-		klog.Errorf("Can't decode body: %v", err)
-		admissionResponse = &v1beta1.AdmissionResponse{
-			Result: &metav1.Status{
-				Message: err.Error(),
-			},
-		}
-	} else {
-		if r.URL.Path == "/mutate" {
-			admissionResponse = mutate(&ar)
-		} else if r.URL.Path == "/validate" {
-			admissionResponse = validate(&ar)
-		}
-	}
-
-	admissionReview := v1beta1.AdmissionReview{}
-	if admissionResponse != nil {
-		admissionReview.Response = admissionResponse
+	// Do validate
+	adResponse := doValidate(ar)
+	adReview := v1beta1.AdmissionReview{}
+	if adResponse != nil {
+		adReview.Response = adResponse
 		if ar.Request != nil {
-			admissionReview.Response.UID = ar.Request.UID
+			adReview.Response.UID = ar.Request.UID
 		}
 	}
 
-	resp, err := json.Marshal(admissionReview)
+	resp, err := json.Marshal(adReview)
 	if err != nil {
-		klog.Errorf("Can't encode response: %v", err)
-		http.Error(w, fmt.Sprintf("could not encode response: %v", err), http.StatusInternalServerError)
+		klog.Errorf("Can't marshal AdmissionReview: %v", err)
+		http.Error(w, fmt.Sprintf("Can't marshal AdmissionReview: %v", err), http.StatusInternalServerError)
+		return
 	}
-	klog.Infof("Ready to write reponse ...")
-	if _, err := w.Write(resp); err != nil {
+
+	if _, err = w.Write(resp); err != nil {
 		klog.Errorf("Can't write response: %v", err)
 		http.Error(w, fmt.Sprintf("could not write response: %v", err), http.StatusInternalServerError)
 	}
