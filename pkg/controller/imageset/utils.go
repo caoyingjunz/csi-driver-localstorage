@@ -23,8 +23,8 @@ import (
 	"reflect"
 	"strings"
 
-	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/imageset/v1alpha1"
-	appsClient "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned/typed/imageset/v1alpha1"
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
+	appsClient "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned/typed/apps/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

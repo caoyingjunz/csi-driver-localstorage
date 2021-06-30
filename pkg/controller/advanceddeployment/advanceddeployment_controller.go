@@ -46,11 +46,11 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/integer"
 
-	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/advanceddeployment/v1alpha1"
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
+	adClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
+	adInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/apps/v1alpha1"
+	adListers "github.com/caoyingjunz/pixiu/pkg/client/listers/apps/v1alpha1"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
-	adClientset "github.com/caoyingjunz/pixiu/pkg/generated/clientset/versioned"
-	adInformers "github.com/caoyingjunz/pixiu/pkg/generated/informers/externalversions/advanceddeployment/v1alpha1"
-	adListers "github.com/caoyingjunz/pixiu/pkg/generated/listers/advanceddeployment/v1alpha1"
 )
 
 const (

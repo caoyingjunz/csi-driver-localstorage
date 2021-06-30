@@ -1,0 +1,6 @@
+apiVersion: apps.pixiu.io/v1alpha1
+kind: AdvancedImage
+metadata:
+  name: advancedimage-sample
+spec:
+  replicas: 1
