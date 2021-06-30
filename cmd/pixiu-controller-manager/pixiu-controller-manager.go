@@ -77,14 +77,12 @@ func main() {
 
 		// Heathz Check
 		go app.StartHealthzServer(healthzHost, healthzPort)
-
-		// always wait
-		select {}
 	}
 
 	if !leaderElect {
 		run(context.TODO())
-		panic("unreachable")
+		<-stopCh
+		return
 	}
 
 	id, err := os.Hostname()
@@ -110,21 +108,29 @@ func main() {
 		klog.Fatalf("error creating lock: %v", err)
 	}
 
-	leaderelection.RunOrDie(context.TODO(), leaderelection.LeaderElectionConfig{
-		Lock:          rl,
-		LeaseDuration: time.Duration(leaseDuration) * time.Second,
-		RenewDeadline: time.Duration(renewDeadline) * time.Second,
-		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		<-stopCh
+		klog.Info("Received termination, signaling shutdown")
+		cancel()
+	}()
+
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		Lock:            rl,
+		ReleaseOnCancel: true,
+		LeaseDuration:   time.Duration(leaseDuration) * time.Second,
+		RenewDeadline:   time.Duration(renewDeadline) * time.Second,
+		RetryPeriod:     time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: run,
 			OnStoppedLeading: func() {
-				klog.Fatalf("leaderelection lost")
+				klog.Error("leaderelection lost")
 			},
 		},
 		//WatchDog: electionChecker,
 		Name: PixiuControllerManagerUserAgent,
 	})
-	panic("unreachable")
 }
 
 var (
