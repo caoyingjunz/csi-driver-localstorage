@@ -63,9 +63,15 @@ type AdvancedImageController struct {
 	// NewAdvancedImageController.
 	imgLister pListers.AdvancedImageLister
 
+	// iSetLister is able to list/get imageSet from indexer
+	iSetLister pListers.ImageSetLister
+
 	// imgListerSynced returns true if the img shared informer has been synced at least once.
 	// Added as a member to the struct to allow injection for testing.
 	imgListerSynced cache.InformerSynced
+
+	// iSetListerSynced returns true if the imageSet shared informer has been synced at least once.
+	iSetListerSynced cache.InformerSynced
 
 	// advancedImage that need to be updated. A channel is inappropriate here,
 	//  it also would cause a advancedImage that's inserted multiple times to
@@ -100,12 +106,19 @@ func NewAdvancedImageController(
 		UpdateFunc: ai.updateAdvancedImage,
 		DeleteFunc: ai.deleteAdvancedImage,
 	})
+	ai.imgLister = aiInformer.Lister()
+	ai.imgListerSynced = aiInformer.Informer().HasSynced
+
+	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    ai.addImageSet,
+		UpdateFunc: ai.updateImageSet,
+		DeleteFunc: ai.deleteImageSet,
+	})
+	ai.iSetLister = isInformer.Lister()
+	ai.iSetListerSynced = isInformer.Informer().HasSynced
 
 	ai.syncHandler = ai.syncAdvancedImage
 	ai.enqueueAdvancedImage = ai.enqueue
-
-	ai.imgLister = aiInformer.Lister()
-	ai.imgListerSynced = aiInformer.Informer().HasSynced
 
 	return ai, nil
 }
@@ -146,6 +159,28 @@ func (ai *AdvancedImageController) deleteAdvancedImage(obj interface{}) {
 	ai.enqueueAdvancedImage(img)
 }
 
+func (ai *AdvancedImageController) addImageSet(obj interface{}) {
+	iSet := obj.(*appsv1alpha1.ImageSet)
+
+	klog.V(0).Infof("ImageSet %s added.", iSet.Name)
+}
+
+func (ai *AdvancedImageController) updateImageSet(old, cur interface{}) {
+	oldiSet := old.(*appsv1alpha1.ImageSet)
+	curiSet := cur.(*appsv1alpha1.ImageSet)
+	if oldiSet.ResourceVersion == curiSet.ResourceVersion {
+		return
+	}
+
+	klog.V(0).Infof("ImageSet %s updated.", curiSet.Name)
+}
+
+func (ai *AdvancedImageController) deleteImageSet(obj interface{}) {
+	iSet := obj.(*appsv1alpha1.ImageSet)
+
+	klog.V(0).Infof("ImageSet %s deleted.", iSet.Name)
+}
+
 func (ai *AdvancedImageController) Run(workers int, stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer ai.queue.ShutDown()
@@ -153,7 +188,7 @@ func (ai *AdvancedImageController) Run(workers int, stopCh <-chan struct{}) {
 	klog.Infof("Starting AdvancedImage Controller")
 	defer klog.Infof("Shutting down AdvancedImage Controller")
 
-	if !cache.WaitForNamedCacheSync("advancedImage-controller", stopCh, ai.imgListerSynced) {
+	if !cache.WaitForNamedCacheSync("advancedImage-controller", stopCh, ai.imgListerSynced, ai.iSetListerSynced) {
 		return
 	}
 
