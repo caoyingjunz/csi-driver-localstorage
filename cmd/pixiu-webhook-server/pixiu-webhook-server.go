@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"k8s.io/klog/v2"
 	"net/http"
 
@@ -48,7 +47,7 @@ func main() {
 	mux.HandleFunc(validateURL, webhook.HandlerValidate)
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%v", port),
+		Addr:    ":8443",
 		Handler: mux,
 	}
 
@@ -63,7 +62,6 @@ func main() {
 var (
 	healthzHost string // The host of Healthz
 	healthzPort string // The port of Healthz to listen on
-	port int           // The port of Webhook to listen on
 	certFile string    // path to the x509 certificate for https
 	keyFile string     // path to the x509 private key matching `CertFile`
 )
@@ -71,7 +69,6 @@ var (
 func init() {
 	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
 	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
-	flag.IntVar(&port, "port", Port, "Webhook server port.")
-	flag.StringVar(&certFile, "tlsCertFile", CertFile, "File containing the x509 Certificate for HTTPS.")
-	flag.StringVar(&keyFile, "tlsKeyFile", KeyFile, "File containing the x509 private key to --tlsCertFile.")
+	flag.StringVar(&certFile, "cert-file", CertFile, "File containing the x509 Certificate for HTTPS.")
+	flag.StringVar(&keyFile, "key-file", KeyFile, "File containing the x509 private key to --tlsCertFile.")
 }
