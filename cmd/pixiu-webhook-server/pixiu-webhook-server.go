@@ -32,7 +32,6 @@ const (
 	mutateURL   = "/mutate"
 	validateURL = "/validate"
 
-	Port     = 8443
 	CertFile = "/run/secrets/tls/tls.crt"
 	KeyFile  = "/run/secrets/tls/tls.key"
 )
