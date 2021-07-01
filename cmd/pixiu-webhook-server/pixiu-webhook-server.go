@@ -55,15 +55,21 @@ func main() {
 
 	klog.Infof("Starting Webhook Server...")
 	// TODO: use flag to pass the certFile and keyFile
-	klog.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))
+	klog.Fatal(server.ListenAndServeTLS(certFile, keyFile))
 }
 
 var (
 	healthzHost string // The host of Healthz
 	healthzPort string // The port of Healthz to listen on
+	
+	certFile string
+	keyFile string
+
 )
 
 func init() {
 	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
 	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
+	flag.StringVar(&certFile, "certfile", CertFile, "The tls cert file.")
+	flag.StringVar(&keyFile, "keyfile", KeyFile, "The tls key file.")
 }
