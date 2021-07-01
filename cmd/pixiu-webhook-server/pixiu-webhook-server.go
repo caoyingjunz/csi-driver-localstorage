@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"k8s.io/klog/v2"
 	"net/http"
 
@@ -57,7 +58,7 @@ func main() {
 	mux.HandleFunc(validateURL, webhook.HandlerValidate)
 
 	server := &http.Server{
-		Addr:    string(port),
+		Addr:    fmt.Sprintf(":%v", port),
 		Handler: mux,
 	}
 
