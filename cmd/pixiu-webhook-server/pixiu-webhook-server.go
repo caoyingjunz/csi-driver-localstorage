@@ -61,9 +61,13 @@ func main() {
 var (
 	healthzHost string // The host of Healthz
 	healthzPort string // The port of Healthz to listen on
+	certFile string    // path to the x509 certificate for https
+	keyFile string     // path to the x509 private key matching `CertFile`
 )
 
 func init() {
 	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
 	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
+	flag.StringVar(&certFile, "cert-file", CertFile, "File containing the x509 Certificate for HTTPS.")
+	flag.StringVar(&keyFile, "key-file", KeyFile, "File containing the x509 private key to --tlsCertFile.")
 }
