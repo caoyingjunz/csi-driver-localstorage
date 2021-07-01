@@ -32,11 +32,22 @@ const (
 	mutateURL   = "/mutate"
 	validateURL = "/validate"
 
+	Port     = 8443
 	CertFile = "/run/secrets/tls/tls.crt"
 	KeyFile  = "/run/secrets/tls/tls.key"
+
+)
+var (
+	port int
+	certFile string
+	keyFile string
 )
 
 func main() {
+	flag.IntVar(&port, "port", Port, "Webhook server port.")
+	flag.StringVar(&certFile, "tlsCertFile", CertFile, "File containing the x509 Certificate for HTTPS.")
+	flag.StringVar(&keyFile, "tlsKeyFile", KeyFile, "File containing the x509 private key to --tlsCertFile.")
+
 	klog.InitFlags(nil)
 	flag.Parse()
 
@@ -46,7 +57,7 @@ func main() {
 	mux.HandleFunc(validateURL, webhook.HandlerValidate)
 
 	server := &http.Server{
-		Addr:    ":8443",
+		Addr:    string(port),
 		Handler: mux,
 	}
 
