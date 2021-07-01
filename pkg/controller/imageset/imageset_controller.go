@@ -34,10 +34,10 @@ import (
 	"k8s.io/component-base/metrics/prometheus/ratelimiter"
 	"k8s.io/klog/v2"
 
-	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/imageset/v1alpha1"
+	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 	isClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
-	isInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/imageset/v1alpha1"
-	isListers "github.com/caoyingjunz/pixiu/pkg/client/listers/imageset/v1alpha1"
+	isInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/apps/v1alpha1"
+	isListers "github.com/caoyingjunz/pixiu/pkg/client/listers/apps/v1alpha1"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	"github.com/caoyingjunz/pixiu/pkg/controller/libdocker"
 )
@@ -193,7 +193,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		klog.V(4).Infof("The non-local node does not pull the image")
 		return nil
 	}
-	
+
 	var imageRef string
 	image := ims.Spec.Image
 

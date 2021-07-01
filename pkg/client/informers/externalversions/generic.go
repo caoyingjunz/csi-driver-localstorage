@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/imageset/v1alpha1"
+	v1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,6 +53,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=apps.pixiu.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("advanceddeployments"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().AdvancedDeployments().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("advancedimages"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().AdvancedImages().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("imagesets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().ImageSets().Informer()}, nil
 
