@@ -51,11 +51,10 @@ const (
 
 // ControllerContext defines the context obj for pixiu
 type ControllerContext struct {
-
 	// ClientBuilder will provide a client for this controller to use
 	ClientBuilder controller.ControllerClientBuilder
-
-	PixiuClient pClientset.Interface
+	// PixiuClientBuilder will provide a client for pixiu controller to use
+	PixiuClientBuilder func(c *rest.Config) *pClientset.Clientset
 
 	// InformerFactory gives access to informers for the controller.
 	InformerFactory informers.SharedInformerFactory
@@ -70,6 +69,9 @@ type ControllerContext struct {
 	// Stop is the stop channel
 	Stop <-chan struct{}
 
+	// KubeConfig is the given config to cluster
+	KubeConfig *rest.Config
+
 	// ResyncPeriod generates a duration each time it is invoked; this is so that
 	// multiple controllers don't get into lock-step and all hammer the apiserver
 	// with list requests simultaneously.
@@ -83,10 +85,8 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 	metadataClient := metadata.NewForConfigOrDie(clientBuilder.ConfigOrDie("metadata-informers"))
 	metadataInformers := metadatainformer.NewSharedInformerFactory(metadataClient, time.Minute)
 
-	pClient, err := pClientset.NewForConfig(kubeConfig)
-	if err != nil {
-		return ControllerContext{}, err
-	}
+	pixiuClient := pClientset.NewForConfigOrDie(kubeConfig)
+	pixiuInformers := pInformers.NewSharedInformerFactory(pixiuClient, time.Second+30)
 
 	availableResources, err := GetAvailableResources(featureGates)
 	if err != nil {
@@ -107,11 +107,12 @@ func CreateControllerContext(clientBuilder controller.ControllerClientBuilder, k
 
 	ctx := ControllerContext{
 		ClientBuilder:                   clientBuilder,
-		PixiuClient:                     pClient,
+		PixiuClientBuilder:              pClientset.NewForConfigOrDie,
 		InformerFactory:                 sharedInformers,
 		ObjectOrMetadataInformerFactory: controller.NewInformerFactory(sharedInformers, metadataInformers),
-		PixiuInformerFactory:            pInformers.NewSharedInformerFactory(pClient, time.Second+30),
+		PixiuInformerFactory:            pixiuInformers,
 		AvailableResources:              availableResources,
+		KubeConfig:                      kubeConfig,
 		Stop:                            stop,
 	}
 	return ctx, nil
@@ -183,7 +184,7 @@ func startPixiuController(ctx ControllerContext) (bool, error) {
 		return false, nil
 	}
 	pc, err := advanceddeployment.NewPixiuController(
-		ctx.PixiuClient,
+		ctx.PixiuClientBuilder(ctx.KubeConfig),
 		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedDeployments(),
 		ctx.InformerFactory.Core().V1().Pods(),
 		ctx.ClientBuilder.ClientOrDie("shared-informers"),
@@ -219,7 +220,7 @@ func startAdvancedImageController(ctx ControllerContext) (bool, error) {
 		return false, nil
 	}
 	ai, err := advancedimage.NewAdvancedImageController(
-		ctx.PixiuClient,
+		ctx.PixiuClientBuilder(ctx.KubeConfig),
 		ctx.PixiuInformerFactory.Apps().V1alpha1().AdvancedImages(),
 		ctx.PixiuInformerFactory.Apps().V1alpha1().ImageSets(),
 		ctx.ClientBuilder.ClientOrDie("shared-informer"),
