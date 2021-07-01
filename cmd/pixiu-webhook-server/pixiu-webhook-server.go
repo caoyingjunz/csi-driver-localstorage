@@ -38,16 +38,8 @@ const (
 	KeyFile  = "/run/secrets/tls/tls.key"
 
 )
-var (
-	port int
-	certFile string
-	keyFile string
-)
 
 func main() {
-	flag.IntVar(&port, "port", Port, "Webhook server port.")
-	flag.StringVar(&certFile, "tlsCertFile", CertFile, "File containing the x509 Certificate for HTTPS.")
-	flag.StringVar(&keyFile, "tlsKeyFile", KeyFile, "File containing the x509 private key to --tlsCertFile.")
 
 	klog.InitFlags(nil)
 	flag.Parse()
@@ -73,9 +65,15 @@ func main() {
 var (
 	healthzHost string // The host of Healthz
 	healthzPort string // The port of Healthz to listen on
+	port int           // The port of Webhook to listen on
+	certFile string    // path to the x509 certificate for https
+	keyFile string     // path to the x509 private key matching `CertFile`
 )
 
 func init() {
 	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
 	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
+	flag.IntVar(&port, "port", Port, "Webhook server port.")
+	flag.StringVar(&certFile, "tlsCertFile", CertFile, "File containing the x509 Certificate for HTTPS.")
+	flag.StringVar(&keyFile, "tlsKeyFile", KeyFile, "File containing the x509 private key to --tlsCertFile.")
 }
