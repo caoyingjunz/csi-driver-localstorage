@@ -101,12 +101,12 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace,Action, objectMeta = is.Name, is.Namespace, is.Spec.Action, &is.ObjectMeta
+		resourceName, resourceNamespace, Action, objectMeta = is.Name, is.Namespace, is.Spec.Action, &is.ObjectMeta
 
 		if _, ok := action[Action]; ok {
 			return &v1beta1.AdmissionResponse{
 				Allowed: true,
-				Result:  &metav1.Status{},
+				Result: &metav1.Status{},
 			}
 		} else {
 			return &v1beta1.AdmissionResponse{
