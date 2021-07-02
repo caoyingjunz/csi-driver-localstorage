@@ -111,7 +111,7 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		} else {
 			return &v1beta1.AdmissionResponse{
 				Result: &metav1.Status{
-					Message: "unsupported Pixiu Action",
+					Message: err.Error(),
 				},
 			}
 		}
