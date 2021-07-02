@@ -18,10 +18,8 @@ package main
 
 import (
 	"flag"
-	"net/http"
-	"path/filepath"
-
 	"k8s.io/klog/v2"
+	"net/http"
 
 	"github.com/caoyingjunz/pixiu/cmd/pixiu-controller-manager/app"
 	"github.com/caoyingjunz/pixiu/pkg/controller/webhook"
@@ -31,22 +29,21 @@ const (
 	HealthzHost = "127.0.0.1"
 	HealthzPort = "10259"
 
-	tlsDir      = `/run/secrets/tls`
-	tlsCertFile = `tls.crt`
-	tlsKeyFile  = `tls.key`
+	mutateURL   = "/mutate"
+	validateURL = "/validate"
+
+	CertFile = "/run/secrets/tls/tls.crt"
+	KeyFile  = "/run/secrets/tls/tls.key"
 )
 
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	certPath := filepath.Join(tlsDir, tlsCertFile)
-	keyPath := filepath.Join(tlsDir, tlsKeyFile)
-
 	// define http server and server handler
 	mux := http.NewServeMux()
-	mux.HandleFunc("/mutate", webhook.Serve)
-	mux.HandleFunc("/validate", webhook.Serve)
+	mux.HandleFunc(mutateURL, webhook.HandlerMutate)
+	mux.HandleFunc(validateURL, webhook.HandlerValidate)
 
 	server := &http.Server{
 		Addr:    ":8443",
@@ -56,15 +53,21 @@ func main() {
 	// Start Heathz Check
 	go app.StartHealthzServer(healthzHost, healthzPort)
 
-	klog.Fatal(server.ListenAndServeTLS(certPath, keyPath))
+	klog.Infof("Starting Webhook Server...")
+	// TODO: use flag to pass the certFile and keyFile
+	klog.Fatal(server.ListenAndServeTLS(CertFile, KeyFile))
 }
 
 var (
 	healthzHost string // The host of Healthz
 	healthzPort string // The port of Healthz to listen on
+	certFile string    // path to the x509 certificate for https
+	keyFile string     // path to the x509 private key matching `CertFile`
 )
 
 func init() {
 	flag.StringVar(&healthzHost, "healthz-host", HealthzHost, "The host of Healthz.")
 	flag.StringVar(&healthzPort, "healthz-port", HealthzPort, "The port of Healthz to listen on.")
+	flag.StringVar(&certFile, "cert-file", CertFile, "File containing the x509 Certificate for HTTPS.")
+	flag.StringVar(&keyFile, "key-file", KeyFile, "File containing the x509 private key to --tlsCertFile.")
 }

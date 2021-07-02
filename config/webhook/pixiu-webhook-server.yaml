@@ -23,6 +23,8 @@ spec:
         image: jacky06/pixiu-webhook-server:v0.0.1
         command:
           - pixiu-webhook-server
+          - --cert-file=/run/secrets/tls/tls.crt
+          - --key-file=/run/secrets/tls/tls.key
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8443
