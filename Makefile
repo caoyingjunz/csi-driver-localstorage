@@ -15,9 +15,7 @@ endif
 .PHONY: build client-gen vendor image
 
 build:
-	for app in $(apps); do \
-		CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOPROXY=$(GOPROXY) go build -o $(TARGET_DIR)/$(ARCH)/ ./cmd/$$app; \
-	done
+	@$(foreach app, $(apps), CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) GOPROXY=$(GOPROXY) go build -o $(TARGET_DIR)/$(ARCH)/ ./cmd/$(app);)
 
 client-gen: vendor
 	./hack/update-codegen.sh
@@ -27,25 +25,26 @@ vendor:
 
 image:
 ifeq ($(BUILDX), false)
-	for app in $(apps); do \
-		docker build \
-			--build-arg GOPROXY=$(GOPROXY) \
-			--build-arg APP=$$app \
-			--force-rm \
-			--no-cache \
-			-t $(ORG)/$$app:$(TAG) \
-			.; \
-	done
+	@$(foreach app, $(apps), \
+	docker build \
+		--build-arg GOPROXY=$(GOPROXY) \
+		--build-arg APP=$(app) \
+		--force-rm \
+		--no-cache \
+		-t $(ORG)/$(app):$(TAG) \
+		.;)
 else
-	for app in $(apps); do \
-		docker buildx build \
+	@$(foreach app, $(apps), \
+	docker buildx build \
 			--build-arg GOPROXY=$(GOPROXY) \
-			--build-arg APP=$$app \
+			--build-arg APP=$(app) \
 			--force-rm \
 			--no-cache \
 			--platform $(PLATFORM) \
 			--push \
-			-t $(ORG)/$$app:$(TAG) \
-			.; \
-	done
+			-t $(ORG)/$(app):$(TAG) \
+			.;)
 endif
+
+push:
+	@$(foreach app, $(apps), docker push $(ORG)/$(app):$(TAG);)
