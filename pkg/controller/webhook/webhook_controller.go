@@ -41,6 +41,8 @@ var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
 	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
+
+	action = map[string]bool{"pull":true,"action":true}
 )
 
 type patchOperation struct {
@@ -72,7 +74,7 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
 
 	var objectMeta *metav1.ObjectMeta
-	var resourceNamespace, resourceName string
+	var resourceNamespace, resourceName, Action string
 	klog.V(4).Infof("Will validate for Kind=%v, Namespace=%v Name=%v ResourceName=%v UID=%v Operation=%v UserInfo=%v",
 		req.Kind, req.Namespace, req.Name, resourceName, req.UID, req.Operation, req.UserInfo)
 
@@ -99,7 +101,20 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace, objectMeta = is.Name, is.Namespace, &is.ObjectMeta
+		resourceName, resourceNamespace,Action, objectMeta = is.Name, is.Namespace, is.Spec.Action, &is.ObjectMeta
+
+		if _, ok := action[Action]; ok {
+			return &v1beta1.AdmissionResponse{
+				Allowed: true,
+				Result:  &metav1.Status{},
+			}
+		} else {
+			return &v1beta1.AdmissionResponse{
+				Result: &metav1.Status{
+					Message: "unsupported Pixiu Action",
+				},
+			}
+		}
 	default:
 		// This case will not happened
 		return &v1beta1.AdmissionResponse{
