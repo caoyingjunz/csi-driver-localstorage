@@ -23,6 +23,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -162,6 +163,24 @@ func (ai *AdvancedImageController) deleteAdvancedImage(obj interface{}) {
 func (ai *AdvancedImageController) addImageSet(obj interface{}) {
 	iSet := obj.(*appsv1alpha1.ImageSet)
 
+	if iSet.DeletionTimestamp != nil {
+		// On a restart of the controller, it's possible for an obj to show up in a state
+		// that is already pending deletion.
+		ai.deleteImageSet(iSet)
+		return
+	}
+
+	// if it has a ControllerRef, that's all that matters
+	if controllerRef := metav1.GetControllerOf(iSet); controllerRef != nil {
+		img := ai.resolveControllerRef(iSet.Namespace, controllerRef)
+		if img == nil {
+			return
+		}
+		klog.V(0).Infof("ImageSet %s added.", iSet.Name)
+		ai.enqueueAdvancedImage(img)
+		return
+	}
+
 	klog.V(0).Infof("ImageSet %s added.", iSet.Name)
 }
 
@@ -197,6 +216,26 @@ func (ai *AdvancedImageController) Run(workers int, stopCh <-chan struct{}) {
 	}
 
 	<-stopCh
+}
+
+// resolveControllerRef returns the controller referenced by a ControllerRef,
+// or nil if the ControllerRef could not be resolved to a matching controller
+// of the correct King
+func (ai *AdvancedImageController) resolveControllerRef(nameSpace string, controllerRef *metav1.OwnerReference) *appsv1alpha1.AdvancedImage {
+	if controllerKind.Kind != controllerRef.Kind {
+		return nil
+	}
+	img, err := ai.imgLister.AdvancedImages(nameSpace).Get(controllerRef.Name)
+	if err != nil {
+		return nil
+	}
+	if img.UID != controllerRef.UID {
+		// The controller we found with this Name is not the same one that the
+		// ControllerRef points to.
+		return nil
+	}
+
+	return img
 }
 
 func (ai *AdvancedImageController) enqueue(img *appsv1alpha1.AdvancedImage) {
