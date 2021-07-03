@@ -18,12 +18,14 @@ package advancedimage
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
@@ -176,28 +178,97 @@ func (ai *AdvancedImageController) addImageSet(obj interface{}) {
 		if img == nil {
 			return
 		}
-		klog.V(0).Infof("ImageSet %s added.", iSet.Name)
+		klog.V(4).Infof("ImageSet %s added.", iSet.Name)
 		ai.enqueueAdvancedImage(img)
 		return
 	}
 
-	klog.V(0).Infof("ImageSet %s added.", iSet.Name)
+	// Otherwise, it's an orphan. Get a list of all matching AdvancedImages and sync
+	// them to see if anyone wants to adopt it.
+	ais := ai.getAdvancedImageForImageSet(iSet)
+	if len(ais) == 0 {
+		return
+	}
+
+	klog.V(4).Infof("Orphan ImageSet %s added.", iSet.Name)
+	for _, i := range ais {
+		ai.enqueueAdvancedImage(i)
+	}
 }
 
+// updateImageSet figures out what advancedImage(s) manage a imageSet when the imageSet
+// is updated and wake them up. If the anything of the imageSet have changed, we need to
+// awaken both the old and new advancedImage. old and cur must be *appsv1alpha1.ImageSet
+// types.
 func (ai *AdvancedImageController) updateImageSet(old, cur interface{}) {
 	oldiSet := old.(*appsv1alpha1.ImageSet)
 	curiSet := cur.(*appsv1alpha1.ImageSet)
 	if oldiSet.ResourceVersion == curiSet.ResourceVersion {
+		// Periodic resync will send update events for all known image sets.
+		// Two different versions of the same image set will always have different RVs.
 		return
 	}
 
-	klog.V(0).Infof("ImageSet %s updated.", curiSet.Name)
+	oldControllerRef := metav1.GetControllerOf(oldiSet)
+	curControllerRef := metav1.GetControllerOf(curiSet)
+	isControllerRefChanged := !reflect.DeepEqual(oldControllerRef, curControllerRef)
+	if isControllerRefChanged && oldControllerRef != nil {
+		if a := ai.resolveControllerRef(oldiSet.Namespace, oldControllerRef); a != nil {
+			ai.enqueueAdvancedImage(a)
+		}
+	}
+
+	if curControllerRef != nil {
+		if a := ai.resolveControllerRef(curiSet.Namespace, curControllerRef); a != nil {
+			klog.V(4).Infof("ImageSet %s updated.", curiSet.Name)
+			ai.enqueueAdvancedImage(a)
+			return
+		}
+	}
+
+	// Otherwise, it's an orphan. If anything changed, sync matching controllers
+	// to see if anyone wants to adopt it now.
+	labelChanged := !reflect.DeepEqual(curiSet.Labels, curiSet.Labels)
+	if labelChanged || isControllerRefChanged {
+		as := ai.getAdvancedImageForImageSet(curiSet)
+		if len(as) == 0 {
+			return
+		}
+		klog.V(4).Infof("Orphan ImageSet %s updated.", curiSet.Name)
+		for _, a := range as {
+			ai.enqueueAdvancedImage(a)
+		}
+	}
 }
 
 func (ai *AdvancedImageController) deleteImageSet(obj interface{}) {
-	iSet := obj.(*appsv1alpha1.ImageSet)
+	iSet, ok := obj.(*appsv1alpha1.ImageSet)
 
-	klog.V(0).Infof("ImageSet %s deleted.", iSet.Name)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
+			return
+		}
+		iSet, ok = tombstone.Obj.(*appsv1alpha1.ImageSet)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("Tombstone contained object that is not a ImageSet %#v", obj))
+			return
+		}
+	}
+
+	controllerRef := metav1.GetControllerOf(iSet)
+	if controllerRef == nil {
+		// No controller should care about orphans being deleted.
+		return
+	}
+
+	a := ai.resolveControllerRef(iSet.Namespace, controllerRef)
+	if a == nil {
+		return
+	}
+	klog.V(4).Infof("ImageSet %s deleted.", iSet.Name)
+	ai.enqueueAdvancedImage(a)
 }
 
 func (ai *AdvancedImageController) Run(workers int, stopCh <-chan struct{}) {
@@ -236,6 +307,48 @@ func (ai *AdvancedImageController) resolveControllerRef(nameSpace string, contro
 	}
 
 	return img
+}
+
+// getAdvancedImageForImageSet returns a list of AdvancedImage that potentially
+// match a ImageSet. Only the one specified in the ImageSet's ControllerRef
+// will actually manage it.
+// Returns nil only if no matching AdvancedImage are found.
+func (ai *AdvancedImageController) getAdvancedImageForImageSet(iSet *appsv1alpha1.ImageSet) []*appsv1alpha1.AdvancedImage {
+	if len(iSet.Labels) == 0 {
+		// no advancedImage found for ImageSet %v because it has no labels
+		return nil
+	}
+
+	imageList, err := ai.imgLister.AdvancedImages(iSet.Namespace).List(labels.Everything())
+	if err != nil || len(imageList) == 0 {
+		return nil
+	}
+
+	var advancedImages []*appsv1alpha1.AdvancedImage
+	for _, img := range imageList {
+		selector, err := metav1.LabelSelectorAsSelector(img.Spec.Selector)
+		if err != nil {
+			return nil
+		}
+		// If a advancedImage with a nil or emtpy selector creeps in, it should match nothing, not everything.
+		if selector.Empty() || !selector.Matches(labels.Set(img.Labels)) {
+			continue
+		}
+		advancedImages = append(advancedImages, img)
+	}
+
+	if len(advancedImages) == 0 {
+		return nil
+	}
+
+	if len(advancedImages) > 1 {
+		// ControllerRef will ensure we don't do anything crazy, but more than one
+		// item in this list nevertheless constitutes user error.
+		klog.V(4).Infof("user error! more than one advancedImage is selecting image set %s/%s with labels: %#v, returning %s/%s",
+			iSet.Namespace, iSet.Name, iSet.Labels, advancedImages[0].Namespace, advancedImages[0].Name)
+	}
+
+	return advancedImages
 }
 
 func (ai *AdvancedImageController) enqueue(img *appsv1alpha1.AdvancedImage) {

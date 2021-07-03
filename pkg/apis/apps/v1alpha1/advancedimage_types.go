@@ -52,10 +52,13 @@ type AdvancedImageList struct {
 
 // AdvancedImageSpec defines the desired state of advancedImage
 type AdvancedImageSpec struct {
-	// Number of desired pods. This is a pointer to distinguish between explicit
+	// Number of desired nodes. This is a pointer to distinguish between explicit
 	// zero and not specified. Defaults to 1.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+
+	// Label selector for ImageSet.
+	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 }
 
 type AdvancedImageStatus struct {
