@@ -9,7 +9,11 @@
   NAME         AGE   IMAGE
   image-test   33h   nginx:1.9.2
   ```
-  - 通过注释，在创建 `deployment` 等资源的时候，开启镜像拉取功能，自动在指定 `node` 完成镜像准备
+
+  - 通过创建 `advancedImage` 资源，`pixiu` 会通过计算预测 `pod` 可能调度的 `nodes`， 完成镜像的拉取
+
+  - 通过注释，在创建 `deployment` 等资源的时候，开启镜像拉取功能，自动在指定或预测 `node` 完成镜像准备
+
 
 - 无状态应用的分批发布
   ```
@@ -30,18 +34,21 @@ kubectl apply -f config/crds
 
 # 安装控制器
 kubectl apply -f config/deploy
+
+# 安装 webhook 控制器
+cd config/webhook && ./deploy.sh
 ```
 
 然后通过 `kubectl get pod -n pixiu-system` 能看到 `pixiu` 已经启动成功.
 ```
-# kubectl get all -n pixiu-system
-NAME                                            READY   STATUS    RESTARTS   AGE
-pod/pixiu-controller-manager-859c8b94f6-9f8bh   1/1     Running   0          10m
-pod/pixiu-daemon-7qf27                          1/1     Running   0          4m40s
+# kubectl get pod -n pixiu-system
+NAME                                        READY   STATUS    RESTARTS   AGE
+pixiu-controller-manager-859c8b94f6-9f8bh   1/1     Running   0          10m
+pixiu-daemon-7qf27                          1/1     Running   0          4m40s
+pixiu-webhook-server-5b7647d748-tvfgg       1/1     Running   0          2d5h
 ```
 
 ## 构建
-
 - 代码生成 `make client-gen`
 - 编译二进制执行文件 `make build`（如果希望编译特定 app，请带上 `WHAT=${app_name}` 参数）
 - 构建镜像 `make image`（如果希望构建特定 app 镜像，请带上 `WHAT=${app_name}` 参数）
