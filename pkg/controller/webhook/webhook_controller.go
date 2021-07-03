@@ -35,6 +35,8 @@ const (
 	advancedImage      = "AdvancedImage"
 	advancedDeployment = "AdvancedDeployment"
 	imageSet           = "ImageSet"
+	Pull			   = "pull"
+	Remove             = "remove"
 )
 
 var (
@@ -42,7 +44,10 @@ var (
 
 	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
 
-	action = map[string]bool{"pull":true,"action":true}
+	AvailableActions = map[string]bool{
+		Pull:	true,
+		Remove:	true,
+	}
 )
 
 type patchOperation struct {
@@ -74,7 +79,7 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
 
 	var objectMeta *metav1.ObjectMeta
-	var resourceNamespace, resourceName, Action string
+	var resourceNamespace, resourceName string
 	klog.V(4).Infof("Will validate for Kind=%v, Namespace=%v Name=%v ResourceName=%v UID=%v Operation=%v UserInfo=%v",
 		req.Kind, req.Namespace, req.Name, resourceName, req.UID, req.Operation, req.UserInfo)
 
@@ -101,9 +106,9 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace, Action, objectMeta = is.Name, is.Namespace, is.Spec.Action, &is.ObjectMeta
+		resourceName, resourceNamespace, objectMeta = is.Name, is.Namespace, &is.ObjectMeta
 
-		if _, ok := action[Action]; ok {
+		if AvailableActions[is.Spec.Action] {
 			return &v1beta1.AdmissionResponse{
 				Allowed: true,
 				Result: &metav1.Status{},
