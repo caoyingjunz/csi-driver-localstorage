@@ -35,7 +35,7 @@ const (
 	advancedImage      = "AdvancedImage"
 	advancedDeployment = "AdvancedDeployment"
 	imageSet           = "ImageSet"
-	Pull			   = "pull"
+	Pull               = "pull"
 	Remove             = "remove"
 )
 
