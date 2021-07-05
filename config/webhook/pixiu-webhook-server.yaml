@@ -81,7 +81,7 @@ webhooks:
         path: "/validate"
       caBundle: ${CA_PEM_B64}
     rules:
-      - operations: [ "CREATE" ]
-        apiGroups: [""]
-        apiVersions: ["v1"]
-        resources: ["pods"]
+      - operations: [ "CREATE","UPDATE" ]
+        apiGroups: ["apps.pixiu.io"]
+        apiVersions: ["v1alpha1"]
+        resources: ["imagesets"]
