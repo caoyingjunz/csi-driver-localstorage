@@ -115,8 +115,9 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			}
 		} else {
 			return &v1beta1.AdmissionResponse{
+				Allowed: false,
 				Result: &metav1.Status{
-					Message: err.Error(),
+					Message: "action is pull or remove",
 				},
 			}
 		}
