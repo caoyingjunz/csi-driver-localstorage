@@ -35,8 +35,9 @@ const (
 	advancedImage      = "AdvancedImage"
 	advancedDeployment = "AdvancedDeployment"
 	imageSet           = "ImageSet"
-	Pull               = "pull"
-	Remove             = "remove"
+
+	Pull   = "pull"
+	Remove = "remove"
 )
 
 var (
@@ -45,8 +46,8 @@ var (
 	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
 
 	AvailableActions = map[string]bool{
-		Pull:	true,
-		Remove:	true,
+		Pull:   true,
+		Remove: true,
 	}
 )
 
@@ -109,17 +110,13 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		resourceName, resourceNamespace, objectMeta = is.Name, is.Namespace, &is.ObjectMeta
 
 		if AvailableActions[is.Spec.Action] {
-			return &v1beta1.AdmissionResponse{
-				Allowed: true,
-				Result: &metav1.Status{},
-			}
-		} else {
-			return &v1beta1.AdmissionResponse{
-				Allowed: false,
-				Result: &metav1.Status{
-					Message: "action is pull or remove",
-				},
-			}
+			return &v1beta1.AdmissionResponse{Allowed: true}
+		}
+		return &v1beta1.AdmissionResponse{
+			Allowed: false,
+			Result: &metav1.Status{
+				Message: fmt.Sprintf(".Spec.Action %v invalid, expect %q or %q", is.Spec.Action, "pull", "remove"),
+			},
 		}
 	default:
 		// This case will not happened
