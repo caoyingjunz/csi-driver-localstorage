@@ -196,7 +196,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 
 	var imageRef string
 	image := ims.Spec.Image
-
+	var exists bool
 	switch ims.Spec.Action {
 	case PullAction:
 		auth := ims.Spec.Auth
@@ -209,7 +209,12 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		exists, err = isc.dc.ListImage(image)
+		if exists {
+			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		}
+		return fmt.Errorf("image is exists: %s", image)
+
 	case RemoveAction:
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
