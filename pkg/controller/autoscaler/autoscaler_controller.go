@@ -160,7 +160,7 @@ func (ac *AutoscalerController) Run(workers int, stopCh <-chan struct{}) {
 	defer klog.Infof("Shutting down Autoscaler Controller")
 
 	// Wait for all involved caches to be synced, before processing items from the queue is started
-	if !cache.WaitForNamedCacheSync("kubez-autoscaler-manager", stopCh, ac.dListerSynced, ac.sListerSynced, ac.hpaListerSynced) {
+	if !cache.WaitForNamedCacheSync("autoscaler-manager", stopCh, ac.dListerSynced, ac.sListerSynced, ac.hpaListerSynced) {
 		return
 	}
 
