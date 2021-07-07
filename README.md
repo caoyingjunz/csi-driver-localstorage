@@ -48,6 +48,19 @@ pixiu-daemon-7qf27                          1/1     Running   0          4m40s
 pixiu-webhook-server-5b7647d748-tvfgg       1/1     Running   0          2d5h
 ```
 
+## Uninstalling (demo版)
+
+```
+# 卸载 crds
+kubectl delete -f config/crds
+
+# 卸载控制器
+kubectl delete -f config/deploy
+
+# 卸载 webhook 控制器
+cd config/webhook && ./uninstall.sh
+```
+
 ## 构建
 - 代码生成 `make client-gen`
 - 编译二进制执行文件 `make build`（如果希望编译特定 app，请带上 `WHAT=${app_name}` 参数）
