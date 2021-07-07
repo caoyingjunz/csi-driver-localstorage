@@ -42,7 +42,8 @@ spec:
           command:
             - pixiu-controller-manager
             - --leader-elect=true
-            - --feature-gates=autoscaler,imageSet
+            # Enable autoscaler and advnacedImage by default
+            - --feature-gates=autoscaler,advancedImage
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 8
@@ -99,7 +100,7 @@ spec:
           volumeMounts:
             - mountPath: /var/run
               name: socketpath
-              readOnly: true
+              # readOnly: true
       volumes:
         - hostPath:
             path: /var/run
