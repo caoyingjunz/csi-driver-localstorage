@@ -410,7 +410,7 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 	}
 
 	if img.DeletionTimestamp != nil {
-		klog.V(4).Infof("Advanced Deployment %v is deleting", key)
+		klog.V(4).Infof("Advanced Image %v is deleting", key)
 		// TODO：just to update the status if needed
 		return nil
 	}
