@@ -361,6 +361,31 @@ func (ai *AdvancedImageController) enqueue(img *appsv1alpha1.AdvancedImage) {
 	ai.queue.Add(key)
 }
 
+func (ai *AdvancedImageController) getImageSetForAdvancedImage(i *appsv1alpha1.AdvancedImage) ([]*appsv1alpha1.ImageSet, error) {
+	selector, err := metav1.LabelSelectorAsSelector(i.Spec.Selector)
+	if err != nil {
+		return nil, err
+	}
+	imageSets, err := ai.iSetLister.ImageSets(i.Namespace).List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	var requiredISets []*appsv1alpha1.ImageSet
+	for _, iSet := range imageSets {
+		controllerRef := metav1.GetControllerOf(iSet)
+		if controllerRef == nil {
+			continue
+		}
+		if controllerRef.UID != i.UID {
+			continue
+		}
+		requiredISets = append(requiredISets, iSet)
+	}
+
+	return requiredISets, nil
+}
+
 // syncAdvancedImage will sync the advancedImage with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
@@ -374,12 +399,23 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 	if err != nil {
 		return err
 	}
-
 	img, err := ai.imgLister.AdvancedImages(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		klog.V(4).Infof("Advanced Deployment %v has been deleted", key)
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	m := img.DeepCopy()
+
+	everything := metav1.LabelSelector{}
+	if reflect.DeepEqual(m.Spec.Selector, &everything) {
+		ai.eventRecorder.Eventf(m, v1.EventTypeWarning, "SelectingAll", "This advanced image is selecting all imageSet. A non-empty selector is required.")
+		return nil
+	}
+	imageSets, err := ai.getImageSetForAdvancedImage(m)
 	if err != nil {
 		return err
 	}
