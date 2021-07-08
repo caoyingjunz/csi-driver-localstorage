@@ -17,6 +17,7 @@ limitations under the License.
 package advancedimage
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -55,7 +56,7 @@ var controllerKind = apps.SchemeGroupVersion.WithKind("AdvancedImage")
 // in the system with actual running image sets.
 type AdvancedImageController struct {
 	// imgClient is used for adopting/releasing imgs.
-	imgClient     pClientset.Interface
+	pxClient      pClientset.Interface
 	client        clientset.Interface
 	eventRecorder record.EventRecorder
 
@@ -77,7 +78,7 @@ type AdvancedImageController struct {
 	iSetListerSynced cache.InformerSynced
 
 	// advancedImage that need to be updated. A channel is inappropriate here,
-	//  it also would cause a advancedImage that's inserted multiple times to
+	// it also would cause a advancedImage that's inserted multiple times to
 	// be processed more than necessary.
 	queue workqueue.RateLimitingInterface
 }
@@ -101,7 +102,7 @@ func NewAdvancedImageController(
 		client:        client,
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "advancedimage-controller"}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "advancedimage"),
-		imgClient:     aiClient,
+		pxClient:      aiClient,
 	}
 
 	aiInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -408,13 +409,28 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 		return err
 	}
 
+	if img.DeletionTimestamp != nil {
+		klog.V(4).Infof("Advanced Deployment %v is deleting", key)
+		// TODO：just to update the status if needed
+		return nil
+	}
+
+	// Deep copy otherwise we are mutating our indexer cache.
 	m := img.DeepCopy()
 
 	everything := metav1.LabelSelector{}
 	if reflect.DeepEqual(m.Spec.Selector, &everything) {
 		ai.eventRecorder.Eventf(m, v1.EventTypeWarning, "SelectingAll", "This advanced image is selecting all imageSet. A non-empty selector is required.")
+		if m.Status.ObservedGeneration < m.Generation {
+			m.Status.ObservedGeneration = m.Generation
+			_, _ = ai.pxClient.AppsV1alpha1().AdvancedImages(m.Namespace).UpdateStatus(context.TODO(), m, metav1.UpdateOptions{})
+		}
+
 		return nil
 	}
+
+	// List imageSets owned by the advancedImage, while reconciling ControllerRef
+	// through adoption/orphaning.
 	imageSets, err := ai.getImageSetForAdvancedImage(m)
 	if err != nil {
 		return err
