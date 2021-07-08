@@ -436,7 +436,7 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 		return err
 	}
 
-	klog.V(0).Infof("get adviced image is: %+v", img)
+	klog.V(0).Infof("get adviced image is: %+v", imageSets)
 
 	return nil
 }
