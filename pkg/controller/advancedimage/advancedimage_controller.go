@@ -17,6 +17,7 @@ limitations under the License.
 package advancedimage
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -55,7 +56,7 @@ var controllerKind = apps.SchemeGroupVersion.WithKind("AdvancedImage")
 // in the system with actual running image sets.
 type AdvancedImageController struct {
 	// imgClient is used for adopting/releasing imgs.
-	imgClient     pClientset.Interface
+	pxClient      pClientset.Interface
 	client        clientset.Interface
 	eventRecorder record.EventRecorder
 
@@ -77,7 +78,7 @@ type AdvancedImageController struct {
 	iSetListerSynced cache.InformerSynced
 
 	// advancedImage that need to be updated. A channel is inappropriate here,
-	//  it also would cause a advancedImage that's inserted multiple times to
+	// it also would cause a advancedImage that's inserted multiple times to
 	// be processed more than necessary.
 	queue workqueue.RateLimitingInterface
 }
@@ -101,7 +102,7 @@ func NewAdvancedImageController(
 		client:        client,
 		eventRecorder: eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "advancedimage-controller"}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "advancedimage"),
-		imgClient:     aiClient,
+		pxClient:      aiClient,
 	}
 
 	aiInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -361,6 +362,31 @@ func (ai *AdvancedImageController) enqueue(img *appsv1alpha1.AdvancedImage) {
 	ai.queue.Add(key)
 }
 
+func (ai *AdvancedImageController) getImageSetForAdvancedImage(i *appsv1alpha1.AdvancedImage) ([]*appsv1alpha1.ImageSet, error) {
+	selector, err := metav1.LabelSelectorAsSelector(i.Spec.Selector)
+	if err != nil {
+		return nil, err
+	}
+	imageSets, err := ai.iSetLister.ImageSets(i.Namespace).List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	var requiredISets []*appsv1alpha1.ImageSet
+	for _, iSet := range imageSets {
+		controllerRef := metav1.GetControllerOf(iSet)
+		if controllerRef == nil {
+			continue
+		}
+		if controllerRef.UID != i.UID {
+			continue
+		}
+		requiredISets = append(requiredISets, iSet)
+	}
+
+	return requiredISets, nil
+}
+
 // syncAdvancedImage will sync the advancedImage with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
@@ -374,7 +400,6 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 	if err != nil {
 		return err
 	}
-
 	img, err := ai.imgLister.AdvancedImages(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		klog.V(4).Infof("Advanced Deployment %v has been deleted", key)
@@ -384,7 +409,34 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 		return err
 	}
 
-	klog.V(0).Infof("get adviced image is: %+v", img)
+	if img.DeletionTimestamp != nil {
+		klog.V(4).Infof("Advanced Image %v is deleting", key)
+		// TODO：just to update the status if needed
+		return nil
+	}
+
+	// Deep copy otherwise we are mutating our indexer cache.
+	m := img.DeepCopy()
+
+	everything := metav1.LabelSelector{}
+	if reflect.DeepEqual(m.Spec.Selector, &everything) {
+		ai.eventRecorder.Eventf(m, v1.EventTypeWarning, "SelectingAll", "This advanced image is selecting all imageSet. A non-empty selector is required.")
+		if m.Status.ObservedGeneration < m.Generation {
+			m.Status.ObservedGeneration = m.Generation
+			_, _ = ai.pxClient.AppsV1alpha1().AdvancedImages(m.Namespace).UpdateStatus(context.TODO(), m, metav1.UpdateOptions{})
+		}
+
+		return nil
+	}
+
+	// List imageSets owned by the advancedImage, while reconciling ControllerRef
+	// through adoption/orphaning.
+	imageSets, err := ai.getImageSetForAdvancedImage(m)
+	if err != nil {
+		return err
+	}
+
+	klog.V(0).Infof("get adviced image is: %+v", imageSets)
 
 	return nil
 }
