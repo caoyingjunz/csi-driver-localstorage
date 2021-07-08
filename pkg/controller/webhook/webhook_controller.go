@@ -115,7 +115,9 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 		return &v1beta1.AdmissionResponse{
 			Allowed: false,
 			Result: &metav1.Status{
-				Message: fmt.Sprintf(".Spec.Action %v invalid, expect %q or %q", is.Spec.Action, "pull", "remove"),
+				Message: fmt.Sprintf(".Spec.Action %q invalid, expect %q or %q", is.Spec.Action, "pull", "remove"),
+				Reason:  metav1.StatusReasonInvalid,
+				Code:    http.StatusUnprocessableEntity,
 			},
 		}
 	default:
