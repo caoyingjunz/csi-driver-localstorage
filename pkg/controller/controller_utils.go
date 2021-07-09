@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	podutil "github.com/caoyingjunz/pixiu/pkg/api/v1/pod"
+	podutil "github.com/caoyingjunz/libpixiu/pod"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
