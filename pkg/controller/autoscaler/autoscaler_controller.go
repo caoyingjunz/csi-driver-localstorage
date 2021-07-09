@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/caoyingjunz/kubez-autoscaler/pkg/controller"
 	autoscalingv2 "k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -290,7 +289,7 @@ func (ac *AutoscalerController) GetNewestHPAFromResource(
 			return nil, err
 		}
 		// check
-		if !controller.IsOwnerReference(d.UID, hpa.OwnerReferences) {
+		if !IsOwnerReference(d.UID, hpa.OwnerReferences) {
 			return nil, nil
 		}
 		uid = d.UID
@@ -300,17 +299,17 @@ func (ac *AutoscalerController) GetNewestHPAFromResource(
 		if err != nil {
 			return nil, err
 		}
-		if !controller.IsOwnerReference(s.UID, hpa.OwnerReferences) {
+		if !IsOwnerReference(s.UID, hpa.OwnerReferences) {
 			return nil, nil
 		}
 		uid = s.UID
 		annotations = s.Annotations
 	}
-	if !controller.IsNeedForHPAs(annotations) {
+	if !IsNeedForHPAs(annotations) {
 		return nil, nil
 	}
 
-	return controller.CreateHorizontalPodAutoscaler(
+	return CreateHorizontalPodAutoscaler(
 		hpa.Name, hpa.Namespace, uid, appsAPIVersion, kind, annotations)
 }
 
@@ -337,13 +336,13 @@ func (ac *AutoscalerController) popInnerEvent(hpa *autoscalingv2.HorizontalPodAu
 }
 
 func (ac *AutoscalerController) addEvents(obj interface{}) {
-	ascCtx := controller.NewAutoscalerContext(obj)
+	ascCtx := NewAutoscalerContext(obj)
 	klog.V(2).Infof("Adding %s %s/%s", ascCtx.Kind, ascCtx.Namespace, ascCtx.Name)
-	if !controller.IsNeedForHPAs(ascCtx.Annotations) {
+	if !IsNeedForHPAs(ascCtx.Annotations) {
 		return
 	}
 
-	hpa, err := controller.CreateHorizontalPodAutoscaler(
+	hpa, err := CreateHorizontalPodAutoscaler(
 		ascCtx.Name, ascCtx.Namespace, ascCtx.UID, appsAPIVersion, ascCtx.Kind, ascCtx.Annotations)
 	if err != nil {
 		utilruntime.HandleError(err)
@@ -353,7 +352,7 @@ func (ac *AutoscalerController) addEvents(obj interface{}) {
 		return
 	}
 
-	key, err := controller.KeyFunc(hpa)
+	key, err := KeyFunc(hpa)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", hpa, err))
 		return
@@ -365,15 +364,15 @@ func (ac *AutoscalerController) addEvents(obj interface{}) {
 }
 
 func (ac *AutoscalerController) updateEvents(old, cur interface{}) {
-	oldCtx := controller.NewAutoscalerContext(old)
-	curCtx := controller.NewAutoscalerContext(cur)
+	oldCtx := NewAutoscalerContext(old)
+	curCtx := NewAutoscalerContext(cur)
 	klog.V(2).Infof("Updating %s %s/%s", oldCtx.Kind, oldCtx.Namespace, oldCtx.Name)
 
 	if reflect.DeepEqual(oldCtx.Annotations, curCtx.Annotations) {
 		return
 	}
-	oldExists := controller.IsNeedForHPAs(oldCtx.Annotations)
-	curExists := controller.IsNeedForHPAs(curCtx.Annotations)
+	oldExists := IsNeedForHPAs(oldCtx.Annotations)
+	curExists := IsNeedForHPAs(curCtx.Annotations)
 
 	// Delete HPAs
 	if oldExists && !curExists {
@@ -386,7 +385,7 @@ func (ac *AutoscalerController) updateEvents(old, cur interface{}) {
 			return
 		}
 
-		key, err := controller.KeyFunc(hpa)
+		key, err := KeyFunc(hpa)
 		if err != nil {
 			utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", hpa, err))
 			return
@@ -399,14 +398,14 @@ func (ac *AutoscalerController) updateEvents(old, cur interface{}) {
 	}
 
 	// Add or Update HPAs
-	hpa, err := controller.CreateHorizontalPodAutoscaler(
+	hpa, err := CreateHorizontalPodAutoscaler(
 		curCtx.Name, curCtx.Namespace, curCtx.UID, appsAPIVersion, curCtx.Kind, curCtx.Annotations)
 	if err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
 
-	key, err := controller.KeyFunc(hpa)
+	key, err := KeyFunc(hpa)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", hpa, err))
 		return
@@ -423,7 +422,7 @@ func (ac *AutoscalerController) updateEvents(old, cur interface{}) {
 }
 
 func (ac *AutoscalerController) deleteEvents(obj interface{}) {
-	ascCtx := controller.NewAutoscalerContext(obj)
+	ascCtx := NewAutoscalerContext(obj)
 	klog.V(2).Infof("Deleting %s %s/%s", ascCtx.Kind, ascCtx.Namespace, ascCtx.Name)
 
 	hpa, err := ac.hpaLister.HorizontalPodAutoscalers(ascCtx.Namespace).Get(ascCtx.Name)
@@ -435,11 +434,11 @@ func (ac *AutoscalerController) deleteEvents(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	if !controller.IsOwnerReference(ascCtx.UID, hpa.OwnerReferences) {
+	if IsOwnerReference(ascCtx.UID, hpa.OwnerReferences) {
 		return
 	}
 
-	key, err := controller.KeyFunc(hpa)
+	key, err := KeyFunc(hpa)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", hpa, err))
 		return
@@ -452,7 +451,7 @@ func (ac *AutoscalerController) deleteEvents(obj interface{}) {
 
 func (ac *AutoscalerController) addHPA(obj interface{}) {
 	h := obj.(*autoscalingv2.HorizontalPodAutoscaler)
-	if !controller.ManagerByKubezController(h) {
+	if !ManagerByKubezController(h) {
 		return
 	}
 	klog.V(0).Infof("Adding HPA(manager by kubez) %s/%s", h.Namespace, h.Name)
@@ -468,12 +467,12 @@ func (ac *AutoscalerController) updateHPA(old, cur interface{}) {
 		// Two different versions of the same HPA will always have different ResourceVersions.
 		return
 	}
-	if !controller.ManagerByKubezController(oldH) {
+	if !ManagerByKubezController(oldH) {
 		return
 	}
 	klog.V(0).Infof("Updating HPA %s/%s", oldH.Namespace, oldH.Name)
 
-	key, err := controller.KeyFunc(curH)
+	key, err := KeyFunc(curH)
 	if err != nil {
 		return
 	}
@@ -486,12 +485,12 @@ func (ac *AutoscalerController) updateHPA(old, cur interface{}) {
 
 func (ac *AutoscalerController) deleteHPA(obj interface{}) {
 	h := obj.(*autoscalingv2.HorizontalPodAutoscaler)
-	if !controller.ManagerByKubezController(h) {
+	if !ManagerByKubezController(h) {
 		return
 	}
 	klog.V(0).Infof("Deleting HPA %s/%s", h.Namespace, h.Name)
 
-	key, err := controller.KeyFunc(h)
+	key, err := KeyFunc(h)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", h, err))
 		return
@@ -503,7 +502,7 @@ func (ac *AutoscalerController) deleteHPA(obj interface{}) {
 }
 
 func (ac *AutoscalerController) enqueue(hpa *autoscalingv2.HorizontalPodAutoscaler) {
-	key, err := controller.KeyFunc(hpa)
+	key, err := KeyFunc(hpa)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", hpa, err))
 		return
