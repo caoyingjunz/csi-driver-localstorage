@@ -26,7 +26,9 @@ jobs:
         password: ${{ secrets.PASSWORD }}
 
     - name: Build pixiu images
-      run: make image
+      run: |
+        make image
 
     - name: Push pixiu images
-      run: make push
+      run: |
+        make push
