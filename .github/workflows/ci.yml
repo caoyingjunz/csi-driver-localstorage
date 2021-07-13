@@ -41,5 +41,6 @@ jobs:
 
     - name: Build the pixiu binariy
       run: go build -v ./...
+
     - name: Run pixiu unit test
       run: go test -v ./...
