@@ -15,19 +15,12 @@ jobs:
  golang-lint:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        submodules: true
-    - name: Setup Go
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
       uses: actions/setup-go@v2
       with:
         go-version: 1.14
-    - name: Lint golang code
-      uses: golangci/golangci-lint-action@v2
-      with:
-        version: ${{ env.GOLANGCI_VERSION }}
-        args: --disable-all  -E deadcode -E gofmt -E goimports -E ineffassign -E misspell -E vet --timeout=15m
 
   markdown-misspell-check:
     runs-on: ubuntu-18.04
