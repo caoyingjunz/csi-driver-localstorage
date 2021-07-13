@@ -12,16 +12,6 @@ env:
 
 jobs:
 
- golang-lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.14
-
   markdown-misspell-check:
     runs-on: ubuntu-18.04
     container: pouchcontainer/pouchlinter:v0.1.2
@@ -33,7 +23,17 @@ jobs:
     - name: Lint markdown files
       run: find  ./ -name  "*.md" | grep -v enhancements |  grep -v .github |  xargs mdl -r ~MD010,~MD013,~MD022,~MD024,~MD029,~MD031,~MD032,~MD033,~MD034,~MD036
 
-  build-binaries:
+  golang-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
     - name: Build the pixiu binariy
       run: go build -v ./...
 
