@@ -1,0 +1,15 @@
+name: Docker Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  # TODO: to test for docker build and push
+  docker-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: To test docker
+      uses: actions/checkout@v2
