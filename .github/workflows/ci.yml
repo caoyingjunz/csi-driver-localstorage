@@ -2,22 +2,45 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches:
+      - master
+  pull_request: {}
+  workflow_dispatch: {}
+
+env:
+  GO_VERSION: '1.14'
 
 jobs:
 
-  build:
+ golang-lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Go
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+    - name: Setup Go
       uses: actions/setup-go@v2
       with:
         go-version: 1.14
+    - name: Lint golang code
+      uses: golangci/golangci-lint-action@v2
+      with:
+        version: ${{ env.GOLANGCI_VERSION }}
+        args: --disable-all  -E deadcode -E gofmt -E goimports -E ineffassign -E misspell -E vet --timeout=15m
 
+  markdown-misspell-check:
+    runs-on: ubuntu-18.04
+    container: pouchcontainer/pouchlinter:v0.1.2
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Run markdownlint misspell
+      run: find  ./* -name  "*"  | xargs misspell -error
+    - name: Lint markdown files
+      run: find  ./ -name  "*.md" | grep -v enhancements |  grep -v .github |  xargs mdl -r ~MD010,~MD013,~MD022,~MD024,~MD029,~MD031,~MD032,~MD033,~MD034,~MD036
+
+  build-binaries:
     - name: Build the pixiu binariy
       run: go build -v ./...
 
