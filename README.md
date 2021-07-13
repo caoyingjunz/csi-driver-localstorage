@@ -14,7 +14,6 @@
 
   - 通过注释，在创建 `deployment` 等资源的时候，开启镜像拉取功能，自动在指定或预测 `node` 完成镜像准备
 
-
 - 无状态应用的分批发布
   ```
   # kubectl get advancedDeployment
