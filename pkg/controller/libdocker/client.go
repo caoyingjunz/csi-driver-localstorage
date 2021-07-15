@@ -299,7 +299,3 @@ func (dc *DockerClient) InspectImageByRef(imageRef string) (*dockertypes.ImageIn
 	// TODO: need to check tag or sha match
 	return &resp, nil
 }
-
-func main() {
-	ConnectToContainerdOrDie("123")
-}
