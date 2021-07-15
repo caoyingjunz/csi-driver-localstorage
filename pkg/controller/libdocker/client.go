@@ -173,8 +173,8 @@ func (dc *DockerClient) IsImageExists(image string, opts dockertypes.ImageListOp
 		}
 	}
 	return false, nil
-
 }
+
 func (dc *DockerClient) PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error) {
 	// RegistryAuth is the base64 encoded credentials for the registry
 	authBase64, err := base64EncodeAuth(auth)
