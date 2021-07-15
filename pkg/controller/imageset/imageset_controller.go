@@ -215,10 +215,11 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			return err
 		}
 		if !exists {
-			klog.Errorf("not exists image, so start pull")
+			klog.Infof("not exists image, so start pull")
 			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
+		} else {
+			klog.Infof("image is exists: %s", image)
 		}
-		klog.Errorf("image is exists: %s", image)
 	case RemoveAction:
 		exists, err := isc.dc.IsImageExists(image, dockertypes.ImageListOptions{})
 		if err != nil {
@@ -226,10 +227,12 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			return err
 		}
 		if exists {
-			klog.Errorf("image is exists, so start remove")
+			klog.Infof("image is exists, so start remove")
 			_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
+		} else {
+			klog.Infof("image is not exists: %s", image)
 		}
-		klog.Errorf("image is not exists: %s", image)
+		klog.Infof("image is not exists: %s", image)
 	default:
 		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
 	}
