@@ -46,7 +46,7 @@ const (
 
 // Interface is an abstract interface for testability. It abstracts the interface of docker client.
 type Interface interface {
-	ExistsImage(image string, opts dockertypes.ImageListOptions) (bool, error)
+	IsImageExists(image string, opts dockertypes.ImageListOptions) (bool, error)
 	PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error)
 	RemoveImage(image string, opts dockertypes.ImageRemoveOptions) ([]dockertypes.ImageDeleteResponseItem, error)
 	InspectImageByRef(imageRef string) (*dockertypes.ImageInspect, error)
@@ -160,7 +160,7 @@ func (dc *DockerClient) getImageRef(image string) (string, error) {
 	return img.ID, nil
 }
 
-func (dc *DockerClient) ExistsImage(image string, opts dockertypes.ImageListOptions) (bool, error) {
+func (dc *DockerClient) IsImageExists(image string, opts dockertypes.ImageListOptions) (bool, error) {
 	ctx, cancel := dc.getCancelableContext()
 	defer cancel()
 	imageList, err := dc.client.ImageList(ctx, opts)
