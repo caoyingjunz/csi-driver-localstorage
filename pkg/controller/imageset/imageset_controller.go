@@ -72,7 +72,6 @@ type ImageSetController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-
 func NewImageSetController(
 	isClient isClientset.Interface,
 	isInformer isInformers.ImageSetInformer,
