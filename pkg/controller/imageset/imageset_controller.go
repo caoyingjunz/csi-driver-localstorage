@@ -209,33 +209,25 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		exists, err := isc.dc.IsImageExists(image, dockertypes.ImageListOptions{})
-		if err != nil {
-			klog.Errorf("list image status failed: %v", err)
-			return err
+		if isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
+			klog.V(2).Infof("%s image %q already present on node %q.", PullAction, image, isc.hostName)
+			return nil
 		}
-		if !exists {
-			klog.Infof("not exists image, so start pull")
-			imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
-		} else {
-			klog.Infof("image is exists: %s", image)
-		}
+
+		klog.V(2).Infof("image %q will be pull on node %q", image, isc.hostName)
+		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
-		exists, err := isc.dc.IsImageExists(image, dockertypes.ImageListOptions{})
-		if err != nil {
-			klog.Errorf("list image status failed: %v", err)
-			return err
+		if !isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
+			klog.V(2).Infof("%s is unnecessary since image %q not exits on node %q.", RemoveAction, image, isc.hostName)
+			return nil
 		}
-		if exists {
-			klog.Infof("image is exists, so start remove")
-			_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
-		} else {
-			klog.Infof("image is not exists: %s", image)
-		}
-		klog.Infof("image is not exists: %s", image)
+
+		klog.V(2).Infof("image %q will be remove from node %q", image, isc.hostName)
+		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
 		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
 	}
+
 	if err != nil {
 		klog.Errorf("%s imageset: %s failed: %v", ims.Spec.Action, image, err)
 		return err
