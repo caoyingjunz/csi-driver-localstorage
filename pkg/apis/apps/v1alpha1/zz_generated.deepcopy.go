@@ -263,6 +263,11 @@ func (in *AdvancedImageSpec) DeepCopyInto(out *AdvancedImageSpec) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.Selector != nil {
+		in, out := &in.Selector, &out.Selector
+		*out = new(v1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

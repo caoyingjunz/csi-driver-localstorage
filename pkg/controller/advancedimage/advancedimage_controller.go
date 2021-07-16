@@ -447,7 +447,9 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 				Action: "pull",
 			},
 		}
-		_, _ = ai.pxClient.AppsV1alpha1().ImageSets(img.Namespace).Create(context.TODO(), imageSet, metav1.CreateOptions{})
+		_, err = ai.pxClient.AppsV1alpha1().ImageSets(img.Namespace).Create(context.TODO(), imageSet, metav1.CreateOptions{})
+		return err
+
 	case 1:
 		imageSet = imageSets[0]
 	default:
