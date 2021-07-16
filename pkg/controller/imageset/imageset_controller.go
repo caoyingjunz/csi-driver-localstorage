@@ -209,11 +209,13 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
-		if isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
+		if isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) &&
+			appsv1alpha1.PullIfNotPresent == ims.Spec.ImagePullPolicy {
 			klog.V(2).Infof("%s image %q already present on node %q.", PullAction, image, isc.hostName)
 			return nil
 		}
 
+		// PullAlways or PullNotPresent
 		klog.V(2).Infof("image %q will be pull on node %q", image, isc.hostName)
 		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
