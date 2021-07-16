@@ -209,12 +209,25 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 			authConfig.RegistryToken = auth.RegistryToken
 		}
 		// TODO, add event supported
+		if isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
+			klog.V(2).Infof("%s image %q already present on node %q.", PullAction, image, isc.hostName)
+			return nil
+		}
+
+		klog.V(2).Infof("image %q will be pull on node %q", image, isc.hostName)
 		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 	case RemoveAction:
+		if !isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
+			klog.V(2).Infof("%s is unnecessary since image %q not exits on node %q.", RemoveAction, image, isc.hostName)
+			return nil
+		}
+
+		klog.V(2).Infof("image %q will be remove from node %q", image, isc.hostName)
 		_, err = isc.dc.RemoveImage(image, dockertypes.ImageRemoveOptions{})
 	default:
 		return fmt.Errorf("unsupported imageset action: %s", ims.Spec.Action)
 	}
+
 	if err != nil {
 		klog.Errorf("%s imageset: %s failed: %v", ims.Spec.Action, image, err)
 		return err
