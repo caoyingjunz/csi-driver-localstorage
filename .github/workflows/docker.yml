@@ -1,0 +1,33 @@
+name: Docker Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: setup docker env
+      uses: docker-practice/actions-setup-docker@v1
+      with:
+        # Docker Version
+        docker_version: 20.10 # optional, default is 20.10
+
+    - name: Docker Login
+      uses: docker/login-action@v1.10.0
+      with:
+        username: ${{ secrets.USER }}
+        password: ${{ secrets.PASSWORD }}
+
+    - name: Build pixiu images
+      run: |
+        make image
+
+    - name: Push pixiu images
+      run: |
+        make push

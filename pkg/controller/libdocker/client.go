@@ -49,6 +49,7 @@ type Interface interface {
 	PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error)
 	RemoveImage(image string, opts dockertypes.ImageRemoveOptions) ([]dockertypes.ImageDeleteResponseItem, error)
 	InspectImageByRef(imageRef string) (*dockertypes.ImageInspect, error)
+	IsImageExists(image string, opts dockertypes.ImageListOptions) bool
 	//ListImages(opts dockertypes.ImageListOptions) ([]dockertypes.ImageSummary, error)
 	//InspectImageByID(imageID string) (*dockertypes.ImageInspect, error)
 }
@@ -157,6 +158,22 @@ func (dc *DockerClient) getImageRef(image string) (string, error) {
 	}
 
 	return img.ID, nil
+}
+
+func (dc *DockerClient) IsImageExists(image string, opts dockertypes.ImageListOptions) bool {
+	ctx, cancel := dc.getCancelableContext()
+	defer cancel()
+	imageList, err := dc.client.ImageList(ctx, opts)
+	if err != nil {
+		return false
+	}
+	for _, imageName := range imageList {
+		if image == imageName.RepoTags[0] {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (dc *DockerClient) PullImage(image string, auth dockertypes.AuthConfig, opts dockertypes.ImagePullOptions) (string, error) {
