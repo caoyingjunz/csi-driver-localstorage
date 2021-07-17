@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	putil "github.com/caoyingjunz/libpixiu/pixiu"
 	dockertypes "github.com/docker/docker/api/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,10 +45,6 @@ import (
 
 const (
 	maxRetries = 15
-
-	// images action, only should pull and remove action, is equal to docker command
-	PullAction   = "pull"
-	RemoveAction = "remove"
 )
 
 var controllerKind = v1.SchemeGroupVersion.WithKind("ImageSet")
@@ -197,11 +194,12 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 	var imageRef string
 	image := ims.Spec.Image
 
+	// images action, only should pull and remove action, is equal to docker command
 	switch ims.Spec.Action {
-	case PullAction:
+	case putil.Pull:
 		if isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) &&
-			appsv1alpha1.PullIfNotPresent == ims.Spec.ImagePullPolicy {
-			klog.V(2).Infof("%s image %q already present on node %q.", PullAction, image, isc.hostName)
+			putil.PullIfNotPresent == ims.Spec.ImagePullPolicy {
+			klog.V(2).Infof("%s image %q already present on node %q.", putil.Pull, image, isc.hostName)
 			return nil
 		}
 
@@ -218,9 +216,9 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		// PullAlways or PullNotPresent
 		klog.V(2).Infof("image %q will be pulling on node %q", image, isc.hostName)
 		imageRef, err = isc.dc.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
-	case RemoveAction:
+	case putil.Remove:
 		if !isc.dc.IsImageExists(image, dockertypes.ImageListOptions{}) {
-			klog.V(2).Infof("%s is unnecessary since image %q not exits on node %q.", RemoveAction, image, isc.hostName)
+			klog.V(2).Infof("%s is unnecessary since image %q not exits on node %q.", putil.Remove, image, isc.hostName)
 			return nil
 		}
 

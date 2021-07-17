@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	putil "github.com/caoyingjunz/libpixiu/pixiu"
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,17 +45,6 @@ var (
 	universalDeserializer = serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
 
 	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
-
-	availableActions = map[string]bool{
-		Pull:   true,
-		Remove: true,
-	}
-
-	availableImagePullPolicy = map[appsv1alpha1.PullPolicy]bool{
-		appsv1alpha1.PullAlways:       true,
-		appsv1alpha1.PullIfNotPresent: true,
-		appsv1alpha1.PullNever:        true,
-	}
 )
 
 type patchOperation struct {
@@ -141,11 +131,11 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 // 2. image pull policy
 func doImageSetValid(is *appsv1alpha1.ImageSet) error {
 	// action check
-	if !availableActions[is.Spec.Action] {
+	if !putil.AvailableActions[is.Spec.Action] {
 		return fmt.Errorf("invaild action %q for imageSet, expect pull or remove", is.Spec.Action)
 	}
 	// image pull policy check
-	if !availableImagePullPolicy[is.Spec.ImagePullPolicy] {
+	if !putil.AvailableImagePullPolicy[is.Spec.ImagePullPolicy] {
 		return fmt.Errorf("invaild image pull policy %q for imageSet, expect pullAlways, pullIfNotPresent, or pullNever ", is.Spec.ImagePullPolicy)
 	}
 

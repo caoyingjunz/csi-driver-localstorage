@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	putil "github.com/caoyingjunz/libpixiu/pixiu"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -66,7 +67,7 @@ type ImageSetSpec struct {
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
 	// +optional
-	ImagePullPolicy PullPolicy `json:"imagePullPolicy,omitempty"`
+	ImagePullPolicy putil.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// Authorization for registry
 	// +optional
@@ -142,15 +143,3 @@ type ImageSetStrategy struct {
 }
 
 type ImageSetStrategyType string
-
-// PullPolicy describes a policy for if/when to pull a container image
-type PullPolicy string
-
-const (
-	// PullAlways means that imageSet always attempts to pull the latest image. Container will fail If the pull fails.
-	PullAlways PullPolicy = "Always"
-	// PullNever means that imageSet never pulls an image, but only uses a local image. Container will fail if the image isn't present
-	PullNever PullPolicy = "Never"
-	// PullIfNotPresent means that imageSet pulls if the image isn't present on disk. Container will fail if the image isn't present and the pull fails.
-	PullIfNotPresent PullPolicy = "IfNotPresent"
-)

@@ -3,7 +3,7 @@ module github.com/caoyingjunz/pixiu
 go 1.14
 
 require (
-	github.com/caoyingjunz/libpixiu v0.0.0-20210709164155-2f8bf7a53b08
+	github.com/caoyingjunz/libpixiu v0.0.0-20210717071954-fbfdef06df5e
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
