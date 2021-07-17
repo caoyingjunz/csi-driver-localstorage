@@ -56,8 +56,9 @@ type ImageSetSpec struct {
 	// The image should to be pulled
 	Image string `json:"image"`
 
-	// Equal to docker command, support pull and remove for now
-	Action string `json:"action"`
+	// Equal to docker command.
+	// One of Pull, Remove, defaults to Pull
+	Action string `json:"action,omitempty"`
 
 	// Image pull policy.
 	// One of Always, Never, IfNotPresent.

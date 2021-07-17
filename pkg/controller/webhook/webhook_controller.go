@@ -45,9 +45,15 @@ var (
 
 	ignoredNamespaces = []string{metav1.NamespaceSystem, metav1.NamespacePublic}
 
-	AvailableActions = map[string]bool{
+	availableActions = map[string]bool{
 		Pull:   true,
 		Remove: true,
+	}
+
+	availableImagePullPolicy = map[appsv1alpha1.PullPolicy]bool{
+		appsv1alpha1.PullAlways:       true,
+		appsv1alpha1.PullIfNotPresent: true,
+		appsv1alpha1.PullNever:        true,
 	}
 )
 
@@ -78,11 +84,8 @@ func doMutate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 // Do validate Pixiu resources
 func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 	req := ar.Request
-
-	var objectMeta *metav1.ObjectMeta
-	var resourceNamespace, resourceName string
-	klog.V(4).Infof("Will validate for Kind=%v, Namespace=%v Name=%v ResourceName=%v UID=%v Operation=%v UserInfo=%v",
-		req.Kind, req.Namespace, req.Name, resourceName, req.UID, req.Operation, req.UserInfo)
+	klog.V(4).Infof("Will validate for Kind=%v, Namespace=%v Name=%v UID=%v Operation=%v UserInfo=%v",
+		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 
 	var err error
 	switch req.Kind.Kind {
@@ -96,7 +99,7 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace, objectMeta = ai.Name, ai.Namespace, &ai.ObjectMeta
+
 	case imageSet:
 		var is appsv1alpha1.ImageSet
 		if err = json.Unmarshal(req.Object.Raw, &is); err != nil {
@@ -107,18 +110,17 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-		resourceName, resourceNamespace, objectMeta = is.Name, is.Namespace, &is.ObjectMeta
 
-		if AvailableActions[is.Spec.Action] {
-			return &v1beta1.AdmissionResponse{Allowed: true}
-		}
-		return &v1beta1.AdmissionResponse{
-			Allowed: false,
-			Result: &metav1.Status{
-				Message: fmt.Sprintf(".Spec.Action %q invalid, expect %q or %q", is.Spec.Action, "pull", "remove"),
-				Reason:  metav1.StatusReasonInvalid,
-				Code:    http.StatusUnprocessableEntity,
-			},
+		if err = doImageSetValid(&is); err != nil {
+			klog.Errorf("vaild imageSet failed: %v", err)
+			return &v1beta1.AdmissionResponse{
+				Allowed: false,
+				Result: &metav1.Status{
+					Message: err.Error(),
+					Reason:  metav1.StatusReasonInvalid,
+					Code:    http.StatusUnprocessableEntity,
+				},
+			}
 		}
 	default:
 		// This case will not happened
@@ -128,27 +130,26 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			},
 		}
 	}
-	klog.Infof("debug resourceName: %v, resourceNamespace: %v, objectMeta: %v", resourceName, resourceNamespace, objectMeta)
-
-	allowed := true
-	var status *metav1.Status
-	if objectMeta != nil {
-		anno := objectMeta.GetAnnotations()
-		if anno != nil {
-			if _, exists := anno["allForbid"]; exists {
-				allowed = false
-				status = &metav1.Status{
-					Reason: "Debug, allForbid is set",
-					Code:   http.StatusMethodNotAllowed,
-				}
-			}
-		}
-	}
 
 	return &v1beta1.AdmissionResponse{
-		Allowed: allowed,
-		Result:  status,
+		Allowed: true,
 	}
+}
+
+// To valid spec for imageSet
+// 1. action
+// 2. image pull policy
+func doImageSetValid(is *appsv1alpha1.ImageSet) error {
+	// action check
+	if !availableActions[is.Spec.Action] {
+		return fmt.Errorf("invaild action %q for imageSet, expect pull or remove", is.Spec.Action)
+	}
+	// image pull policy check
+	if !availableImagePullPolicy[is.Spec.ImagePullPolicy] {
+		return fmt.Errorf("invaild image pull policy %q for imageSet, expect pullAlways, pullIfNotPresent, or pullNever ", is.Spec.ImagePullPolicy)
+	}
+
+	return nil
 }
 
 func verifyAndParseRequest(r *http.Request) (*v1beta1.AdmissionReview, error) {

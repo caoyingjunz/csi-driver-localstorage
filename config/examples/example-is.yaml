@@ -5,6 +5,7 @@ metadata:
 spec:
   image: nginx
   action: pull
+  imagePullPolicy: IfNotPresent
   selector:
     nodes:
       - kube-master

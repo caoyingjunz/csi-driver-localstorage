@@ -168,8 +168,10 @@ func (dc *DockerClient) IsImageExists(image string, opts dockertypes.ImageListOp
 		return false
 	}
 	for _, imageName := range imageList {
-		if image == imageName.RepoTags[0] {
-			return true
+		for _, repoTag := range imageName.RepoTags {
+			if repoTag == image {
+				return true
+			}
 		}
 	}
 
