@@ -436,29 +436,6 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 		return err
 	}
 
-	var imageSet *appsv1alpha1.ImageSet
-	// TODO
-	// To reconcile
-	switch len(imageSets) {
-	case 0:
-		// To create
-		imageSet = &appsv1alpha1.ImageSet{
-			Spec: appsv1alpha1.ImageSetSpec{
-				Action: "pull",
-			},
-		}
-		_, err = ai.pxClient.AppsV1alpha1().ImageSets(img.Namespace).Create(context.TODO(), imageSet, metav1.CreateOptions{})
-		return err
-
-	case 1:
-		imageSet = imageSets[0]
-	default:
-		imageSet = imageSets[0]
-		for _, im := range imageSets[1:] {
-			_ = ai.pxClient.AppsV1alpha1().ImageSets(im.Namespace).Delete(context.TODO(), im.Name, metav1.DeleteOptions{})
-		}
-	}
-
 	klog.V(0).Infof("get advanced image is: %+v", imageSets)
 
 	return nil
