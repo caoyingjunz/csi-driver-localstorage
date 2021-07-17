@@ -15,160 +15,131 @@ spec:
     plural: imagesets
     singular: imageset
     shortNames:
-      - img
-      - imgs
+      - is
     categories:
       - all
   scope: Namespaced
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: ImageSet is the Schema for the imagesets API
-          properties:
-            apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ImageSet is the Schema for the imagesets API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-              type: string
-            kind:
-              description: 'Kind is a string value representing the REST resource this
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
               submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: ImageSetSpec defines the desired state of ImageSet
-              properties:
-                action:
-                  description: Equal to docker command, support pull and remove for
-                    now
-                  type: string
-                auth:
-                  description: Authorization for registry
-                  properties:
-                    auth:
-                      type: string
-                    identitytoken:
-                      description: IdentityToken is used to authenticate the user and
-                        get an access token for the registry.
-                      type: string
-                    password:
-                      type: string
-                    registrytoken:
-                      description: RegistryToken is a bearer token to be sent to a registry
-                      type: string
-                    serveraddress:
-                      type: string
-                    username:
-                      type: string
-                  type: object
-                image:
-                  description: The image should to be pulled
-                  type: string
-                selector:
-                  description: Nodes to pull the special images
-                  properties:
-                    matchExpressions:
-                      description: matchExpressions is a list of label selector requirements.
-                        The requirements are ANDed.
-                      items:
-                        description: A label selector requirement is a selector that
-                          contains values, a key, and an operator that relates the key
-                          and values.
-                        properties:
-                          key:
-                            description: key is the label key that the selector applies
-                              to.
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ImageSetSpec defines the desired state of ImageSet
+            properties:
+              action:
+                description: Equal to docker command, support pull and remove for
+                  now
+                type: string
+              auth:
+                description: Authorization for registry
+                properties:
+                  auth:
+                    type: string
+                  identitytoken:
+                    description: IdentityToken is used to authenticate the user and
+                      get an access token for the registry.
+                    type: string
+                  password:
+                    type: string
+                  registrytoken:
+                    description: RegistryToken is a bearer token to be sent to a registry
+                    type: string
+                  serveraddress:
+                    type: string
+                  username:
+                    type: string
+                type: object
+              image:
+                description: The image should to be pulled
+                type: string
+              imagePullPolicy:
+                description: 'Image pull policy. One of Always, Never, IfNotPresent.
+                  Defaults to Always if :latest tag is specified, or IfNotPresent
+                  otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
+                type: string
+              selector:
+                description: nodes to pull the special images
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
                             type: string
-                          operator:
-                            description: operator represents a key's relationship to
-                              a set of values. Valid operators are In, NotIn, Exists
-                              and DoesNotExist.
-                            type: string
-                          values:
-                            description: values is an array of string values. If the
-                              operator is In or NotIn, the values array must be non-empty.
-                              If the operator is Exists or DoesNotExist, the values
-                              array must be empty. This array is replaced during a strategic
-                              merge patch.
-                            items:
-                              type: string
-                            type: array
-                        required:
-                          - key
-                          - operator
-                        type: object
-                      type: array
-                    matchLabels:
-                      additionalProperties:
-                        type: string
-                      description: matchLabels is a map of {key,value} pairs. A single
-                        {key,value} in the matchLabels map is equivalent to an element
-                        of matchExpressions, whose key field is "key", the operator
-                        is "In", and the values array contains only "value". The requirements
-                        are ANDed.
+                          type: array
+                      required:
+                      - key
+                      - operator
                       type: object
-                    nodes:
-                      items:
-                        type: string
-                      type: array
-                  required:
-                    - nodes
-                  type: object
-              required:
-                - action
-                - image
-                - selector
-              type: object
-            status:
-              description: ImageSetStatus defines the observed state of ImageSet
-              properties:
-                image:
-                  type: string
-                message:
-                  type: string
-                nodes:
-                  items:
-                    properties:
-                      image_id:
-                        type: string
-                      lastUpdateTime:
-                        format: date-time
-                        type: string
-                      message:
-                        type: string
-                      node_name:
-                        type: string
-                      size_bytes:
-                        type: string
-                    required:
-                      - node_name
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
                     type: object
-                  type: array
-                observedGeneration:
-                  format: int64
-                  type: integer
-              required:
-                - image
+                  nodes:
+                    items:
+                      type: string
+                    type: array
+                required:
                 - nodes
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
-      additionalPrinterColumns:
-        - name: AGE
-          type: date
-          jsonPath: .metadata.creationTimestamp
-        - name: action
-          type: string
-          jsonPath: .spec.action
-        - name: IMAGE
-          type: string
-          jsonPath: .spec.image
+                type: object
+            required:
+            - action
+            - image
+            - selector
+            type: object
+          status:
+            description: ImageSetStatus defines the observed state of ImageSet
+            properties:
+              message:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                  of cluster Important: Run "make" to regenerate code after modifying
+                  this file'
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

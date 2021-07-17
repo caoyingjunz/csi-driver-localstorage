@@ -436,7 +436,7 @@ func (ai *AdvancedImageController) syncAdvancedImage(key string) error {
 		return err
 	}
 
-	klog.V(0).Infof("get adviced image is: %+v", imageSets)
+	klog.V(0).Infof("get advanced image is: %+v", imageSets)
 
 	return nil
 }
@@ -466,12 +466,12 @@ func (ai *AdvancedImageController) handleErr(err error, key interface{}) {
 	}
 
 	if ai.queue.NumRequeues(key) < maxRetries {
-		klog.V(2).Infof("Error syncing pods for advanced deployments %q, retrying. Error: %v", key, err)
+		klog.V(2).Infof("Error syncing imageSet for advancedImage %q, retrying. Error: %v", key, err)
 		ai.queue.AddRateLimited(key)
 		return
 	}
 
-	klog.Warningf("Dropping advanced deployments %q out of the queue: %v", key, err)
+	klog.Warningf("Dropping advanced image %q out of the queue: %v", key, err)
 	utilruntime.HandleError(err)
 	ai.queue.Forget(key)
 }
