@@ -221,6 +221,23 @@ spec:
     storage: true
     subresources:
       status: {}
+    additionalPrinterColumns:
+    - name: Nodes
+      type: string
+      jsonPath: .spec.ImageNodes
+    - name: AVAILABLE
+      type: integer
+      jsonPath: .status.AvailableImageNodes
+    - name: UNAVAILABLE
+      type: integer
+      jsonPath: .status.UnAvailableImageNodes
+    - name: AGE
+      type: date
+      jsonPath: .metadata.creationTimestamp
+#    - name: CONTAINERS
+#      type: string
+#      priority: 1
+#      jsonPath: .spec.templates[*].spec.containers[*].name
 status:
   acceptedNames:
     kind: ""
