@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -62,11 +60,27 @@ type AdvancedImageSpec struct {
 	// Label selector for ImageSet.
 	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 
-	// Specify number of parallel processes to pull images. Default to 5
-	Parallels *int32 `json:"parallels,omitempty" protobuf:"bytes,3,opt,name=parallels"`
+	// Template describes the imageSets that will be created.
+	Template ImageSetTemplateSpec `json:"template,omitempty" protobuf:"bytes,3,opt,name=template"`
 
-	// Specify the delay Duration for execute
-	DelayDuration time.Duration `json:"delay_duration,omitempty" protobuf:"bytes,4,opt,name=delayDuration"`
+	// Specify number of parallel processes to pull images. Default to 5
+	Parallels *int32 `json:"parallels,omitempty" protobuf:"bytes,4,opt,name=parallels"`
+
+	// The maximum time in seconds for a advancedImage to make progress before it
+	// is considered to be failed. The advancedImage controller will continue to
+	// process failed advancedImage. Defaults to 600s.
+	// +optional
+	ProgressDelaySeconds *int32 `json:"progressDelaySeconds,omitempty" protobuf:"varint,5,opt,name=progressDelaySeconds"`
+}
+
+type ImageSetTemplateSpec struct {
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Specification of the desired behavior of the ImageSet.
+	Spec ImageSetSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 type AdvancedImageStatus struct {

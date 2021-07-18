@@ -49,7 +49,7 @@ type ImageSetList struct {
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of ImageSet.
-	Items []ImageSet `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []ImageSet `json:"items" protobuf:"bAuthConfigytes,2,rep,name=items"`
 }
 
 // ImageSetSpec defines the desired state of ImageSet
