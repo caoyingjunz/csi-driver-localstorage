@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,10 +57,16 @@ type AdvancedImageSpec struct {
 	// Number of desired nodes. This is a pointer to distinguish between explicit
 	// zero and not specified. Defaults to 1.
 	// +optional
-	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
+	ImageNodes *int32 `json:"image_nodes,omitempty" protobuf:"varint,1,opt,name=imageNodes"`
 
 	// Label selector for ImageSet.
 	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
+
+	// Specify number of parallel processes to pull images. Default to 5
+	Parallels *int32 `json:"parallels,omitempty" protobuf:"bytes,3,opt,name=parallels"`
+
+	// Specify the delay Duration for execute
+	DelayDuration time.Duration `json:"delay_duration,omitempty" protobuf:"bytes,4,opt,name=delayDuration"`
 }
 
 type AdvancedImageStatus struct {
@@ -66,7 +74,7 @@ type AdvancedImageStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
 
-	// Total number of non-terminated pods targeted (their labels match the selector).
-	// +optional
-	Replicas int32 `json:"replicas,omitempty" protobuf:"varint,2,opt,name=replicas"`
+	AvailableImageNodes *int32 `json:"availableImageNodes"`
+
+	UnAvailableImageNodes *int32 `json:"unAvailableImageNodes"`
 }

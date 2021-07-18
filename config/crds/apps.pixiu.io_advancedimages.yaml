@@ -36,24 +36,81 @@ spec:
           spec:
             description: AdvancedImageSpec defines the desired state of AdvancedImage
             properties:
-              replicas:
-                description: Foo is an example field of AdvancedImage. Edit AdvancedImage_types.go
-                  to remove/update
+              delay_duration:
+                description: Specify the delay Duration for execute
+                format: int64
+                type: integer
+              image_nodes:
                 format: int32
                 type: integer
+              parallels:
+                description: Specify number of parallel processes to pull images.
+                  Default to 5
+                format: int32
+                type: integer
+              selector:
+                description: Label selector for ImageSet.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: A label selector requirement is a selector that
+                        contains values, a key, and an operator that relates the key
+                        and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: operator represents a key's relationship to
+                            a set of values. Valid operators are In, NotIn, Exists
+                            and DoesNotExist.
+                          type: string
+                        values:
+                          description: values is an array of string values. If the
+                            operator is In or NotIn, the values array must be non-empty.
+                            If the operator is Exists or DoesNotExist, the values
+                            array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: matchLabels is a map of {key,value} pairs. A single
+                      {key,value} in the matchLabels map is equivalent to an element
+                      of matchExpressions, whose key field is "key", the operator
+                      is "In", and the values array contains only "value". The requirements
+                      are ANDed.
+                    type: object
+                type: object
+            required:
+            - selector
             type: object
           status:
             description: AdvancedImageStatus defines the observed state of AdvancedImage
             properties:
+              availableImageNodes:
+                format: int32
+                type: integer
               observedGeneration:
                 description: The generation observed by the advancedImage controller.
                 format: int64
                 type: integer
-              replicas:
-                description: Total number of non-terminated pods targeted (their labels
-                  match the selector).
+              unAvailableImageNodes:
                 format: int32
                 type: integer
+            required:
+            - availableImageNodes
+            - unAvailableImageNodes
             type: object
         type: object
     served: true
