@@ -33,12 +33,8 @@ import (
 )
 
 const (
-	advancedImage      = "AdvancedImage"
-	advancedDeployment = "AdvancedDeployment"
-	imageSet           = "ImageSet"
-
-	Pull   = "pull"
-	Remove = "remove"
+	advancedImage = "AdvancedImage"
+	imageSet      = "ImageSet"
 )
 
 var (
@@ -90,6 +86,17 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 			}
 		}
 
+		if err = doAdvancedImageValid(&ai); err != nil {
+			klog.Errorf("vaild advancedImage failed: %v", err)
+			return &v1beta1.AdmissionResponse{
+				Allowed: false,
+				Result: &metav1.Status{
+					Message: err.Error(),
+					Reason:  metav1.StatusReasonInvalid,
+					Code:    http.StatusUnprocessableEntity,
+				},
+			}
+		}
 	case imageSet:
 		var is appsv1alpha1.ImageSet
 		if err = json.Unmarshal(req.Object.Raw, &is); err != nil {
@@ -112,18 +119,26 @@ func doValidate(ar *v1beta1.AdmissionReview) *v1beta1.AdmissionResponse {
 				},
 			}
 		}
-	default:
-		// This case will not happened
-		return &v1beta1.AdmissionResponse{
-			Result: &metav1.Status{
-				Message: "unsupported Pixiu Kind",
-			},
-		}
 	}
 
 	return &v1beta1.AdmissionResponse{
 		Allowed: true,
 	}
+}
+
+// To valid spec for advancedImage
+// 1. parallels
+// 2. delayDuration
+func doAdvancedImageValid(ai *appsv1alpha1.AdvancedImage) error {
+	// parallels
+	if ai.Spec.Parallels != nil {
+		p := *ai.Spec.Parallels
+		if p < 1 {
+			return fmt.Errorf("invailded parallels %d, it should be greater than 1", p)
+		}
+	}
+
+	return nil
 }
 
 // To valid spec for imageSet
