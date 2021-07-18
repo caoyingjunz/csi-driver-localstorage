@@ -40,7 +40,7 @@ spec:
           spec:
             description: AdvancedImageSpec defines the desired state of AdvancedImage
             properties:
-              image_nodes:
+              imageNodes:
                 format: int32
                 type: integer
               parallels:

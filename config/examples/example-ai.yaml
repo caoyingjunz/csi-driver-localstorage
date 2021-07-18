@@ -1,6 +1,19 @@
 apiVersion: apps.pixiu.io/v1alpha1
 kind: AdvancedImage
 metadata:
-  name: advancedimage-sample
+  name: sample-ai
 spec:
-  replicas: 1
+  parallels: 2
+  imageNodes: 6
+  progressDelaySeconds: 300
+  selector:
+    matchLabels:
+      key: value
+  template:
+    spec:
+      image: nginx
+      action: pull
+      imagePullPolicy: ifNotPresent
+      selector:
+        nodes:
+          - node1

@@ -55,7 +55,7 @@ type AdvancedImageSpec struct {
 	// Number of desired nodes. This is a pointer to distinguish between explicit
 	// zero and not specified. Defaults to 1.
 	// +optional
-	ImageNodes *int32 `json:"image_nodes,omitempty" protobuf:"varint,1,opt,name=imageNodes"`
+	ImageNodes *int32 `json:"imageNodes,omitempty" protobuf:"varint,1,opt,name=imageNodes"`
 
 	// Label selector for ImageSet.
 	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
