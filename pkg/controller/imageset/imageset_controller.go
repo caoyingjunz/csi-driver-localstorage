@@ -187,7 +187,7 @@ func (isc *ImageSetController) syncImageSet(key string) error {
 		return err
 	}
 	if isc.isSelectedNode(ims) {
-		klog.V(4).Infof("The non-local node does not pull the image")
+		klog.V(4).Infof("The non-local node does not f the image")
 		return nil
 	}
 

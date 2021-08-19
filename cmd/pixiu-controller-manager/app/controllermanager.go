@@ -19,6 +19,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/caoyingjunz/pixiu/pkg/controller/Annotationimageset"
 	"strings"
 	"time"
 
@@ -175,6 +176,7 @@ func NewControllerInitializers() map[string]InitFunc {
 	controllers["advancedDeployment"] = startPixiuController
 	controllers["advancedImage"] = startAdvancedImageController
 	controllers["autoscaler"] = startAutoscalerController
+	controllers["annotationimageset"] = startAnnotationImageSetController
 
 	return controllers
 }
@@ -230,5 +232,24 @@ func startAdvancedImageController(ctx ControllerContext) (bool, error) {
 	}
 
 	go ai.Run(workers, ctx.Stop)
+	return true, nil
+}
+
+func startAnnotationImageSetController(ctx ControllerContext) (bool, error) {
+	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "annotationimageset"}] {
+		return false, nil
+	}
+	ac, err := Annotationimageset.NewAnnotationimagesetController(
+		ctx.InformerFactory.Apps().V1().Deployments(),
+		ctx.InformerFactory.Apps().V1().StatefulSets(),
+		ctx.PixiuInformerFactory.Apps().V1alpha1().ImageSets(),
+		ctx.ClientBuilder.ClientOrDie("shared-informer"),
+		ctx.PixiuClientBuilder(ctx.KubeConfig),
+	)
+	if err != nil {
+		return true, fmt.Errorf("New Annotation controller failed: %v", err)
+	}
+
+	go ac.Run(workers, ctx.Stop)
 	return true, nil
 }
