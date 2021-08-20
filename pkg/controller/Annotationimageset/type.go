@@ -1,5 +1,7 @@
 package Annotationimageset
 
+import "errors"
+
 const (
 	Annotation			string = "img.jixingxing.io/imageset"
 )
@@ -24,10 +26,9 @@ func IsNeedForIMGs(annotations map[string]string) bool {
 }
 
 func CheckAnnotation(annotations map[string]string) error {
-	var err error
 	_, exists := annotations[Annotation]
-	if exists {
-		return nil
+	if !exists {
+		return errors.New("Extract from annotations failed")
 	}
-	return err
+	return nil
 }

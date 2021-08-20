@@ -7,6 +7,7 @@ import (
 	isClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
 	pInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/apps/v1alpha1"
 	isListers "github.com/caoyingjunz/pixiu/pkg/client/listers/apps/v1alpha1"
+	"github.com/caoyingjunz/pixiu/pkg/controller"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +32,6 @@ const (
 	AddEvent           string = "Add"
 	UpdateEvent        string = "Update"
 	DeleteEvent        string = "Delete"
-	RecoverDeleteEvent string = "RecoverDelete"
-	RecoverUpdateEvent string = "RecoverUpdate"
 
 	markInnerEvent string = "markInnerEvent"
 )
@@ -91,13 +90,20 @@ func NewAnnotationimagesetController(
 
 	dInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    ais.addEvents,
+		UpdateFunc: ais.UpdateEvent,
+		DeleteFunc: ais.DeleteEvent,
 	})
 	sInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    ais.addEvents,
+		UpdateFunc: ais.UpdateEvent,
+		DeleteFunc: ais.DeleteEvent,
 	})
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    ais.addEvents,
 	})
+
+	ais.syncHandler = ais.syncAnnotationimageset
+	ais.enqueueAnnotationimageset = ais.enqueue
 
 	ais.dLister = dInformer.Lister()
 	ais.dListerSynced = dInformer.Informer().HasSynced
@@ -107,9 +113,6 @@ func NewAnnotationimagesetController(
 
 	ais.isLister = isInformer.Lister()
 	ais.dListerSynced = dInformer.Informer().HasSynced
-
-	ais.syncHandler = ais.syncAnnotationimageset
-	ais.enqueueAnnotationimageset = ais.enqueue
 
 	return ais, nil
 }
@@ -167,21 +170,12 @@ func (ais *AnnotationImageSetController) syncAnnotationimageset(key string) erro
 		}
 		ais.eventRecorder.Eventf(img, v1.EventTypeNormal, "CreateImageSet",
 			fmt.Sprintf("Create IS %s/%s for %s success", img.Namespace, img.Name, kind))
+	case UpdateEvent:
+	case DeleteEvent:
 	default:
 		return fmt.Errorf("Unsupported handlers event %s", event)
 	}
 	return err
-}
-
-func (ais *AnnotationImageSetController) wrapInnerEvent(img *appsv1alpha1.ImageSet, event string) {
-	// there is no necessary to lock the Annotations
-	if img.Annotations == nil {
-		img.Annotations = map[string]string{
-			markInnerEvent: event,
-		}
-		return
-	}
-	img.Annotations[markInnerEvent] = event
 }
 
 // To pop kubez annotation and clean up kubez marker from HPA
@@ -195,7 +189,7 @@ func (ais *AnnotationImageSetController) popInnerEvent(img *appsv1alpha1.ImageSe
 }
 
 func (ais *AnnotationImageSetController) enqueue(img *appsv1alpha1.ImageSet) {
-	key, err := KeyFunc(img)
+	key, err := controller.KeyFunc(img)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", img, err))
 		return
@@ -208,7 +202,7 @@ func (ais *AnnotationImageSetController) worker() {
 	}
 }
 
-func (ais *AnnotationImageSetController) processNextWorkItem() bool {
+func (ais *AnnotationImageSetController)   processNextWorkItem() bool {
 	key, quit := ais.queue.Get()
 	if quit {
 		return false
@@ -220,27 +214,27 @@ func (ais *AnnotationImageSetController) processNextWorkItem() bool {
 	return true
 }
 
-func (ac *AnnotationImageSetController) handleErr(err error, key interface{}) {
+func (ais *AnnotationImageSetController) handleErr(err error, key interface{}) {
 	if err == nil {
-		ac.queue.Forget(key)
+		ais.queue.Forget(key)
 		return
 	}
 
-	if ac.queue.NumRequeues(key) < maxRetries {
+	if ais.queue.NumRequeues(key) < maxRetries {
 		klog.V(0).Infof("Error syncing HPA %v: %v", key, err)
-		ac.queue.AddRateLimited(key)
+		ais.queue.AddRateLimited(key)
 		return
 	}
 
 	utilruntime.HandleError(err)
 	klog.V(0).Infof("Dropping HPA %q out of the queue: %v", key, err)
-	ac.queue.Forget(key)
+	ais.queue.Forget(key)
 }
 
 
 func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 	imgCtx := NewAnnotationImageSetContext(obj)
-	klog.V(2).Infof("Adding %s %s/%s", imgCtx.Kind, imgCtx.Namespace, imgCtx.Name,imgCtx.Image)
+	klog.V(2).Infof("Adding %s %s/%s", imgCtx.Namespace, imgCtx.Name,imgCtx.Image)
 	if !IsNeedForIMGs(imgCtx.Annotations) {
 		return
 	}
@@ -251,17 +245,13 @@ func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	if img == nil {
-		return
-	}
-
-	key, err := KeyFunc(img)
-	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", img, err))
-		return
-	}
-	ais.wrapInnerEvent(img, AddEvent)
-	ais.store.Update(key, img)
-
 	ais.enqueueAnnotationimageset(img)
+}
+
+func (ais *AnnotationImageSetController) UpdateEvent(old, curl interface{}) {
+
+}
+
+func (ais *AnnotationImageSetController) DeleteEvent(obj interface{}) {
+
 }
