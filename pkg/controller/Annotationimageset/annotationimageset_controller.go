@@ -112,7 +112,7 @@ func NewAnnotationimagesetController(
 	ais.sListerSynced = sInformer.Informer().HasSynced
 
 	ais.isLister = isInformer.Lister()
-	ais.dListerSynced = dInformer.Informer().HasSynced
+	ais.isListerSynced = isInformer.Informer().HasSynced
 
 	return ais, nil
 }
