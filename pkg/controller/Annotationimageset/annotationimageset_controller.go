@@ -6,7 +6,6 @@ import (
 	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 	isClientset "github.com/caoyingjunz/pixiu/pkg/client/clientset/versioned"
 	pInformers "github.com/caoyingjunz/pixiu/pkg/client/informers/externalversions/apps/v1alpha1"
-	isListers "github.com/caoyingjunz/pixiu/pkg/client/listers/apps/v1alpha1"
 	"github.com/caoyingjunz/pixiu/pkg/controller"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +46,7 @@ type AnnotationImageSetController struct {
 
 	dLister appslisters.DeploymentLister
 	sLister appslisters.StatefulSetLister
-	isLister	isListers.ImageSetLister
+//	isLister	isListers.ImageSetLister
 
 	dListerSynced cache.InformerSynced
 	sListerSynced cache.InformerSynced
@@ -56,13 +55,8 @@ type AnnotationImageSetController struct {
 	// ImageSet that need to be synced
 	queue workqueue.RateLimitingInterface
 
-	store SafeStoreInterface
+	store1 SafeStoreInterface1
 }
-
-const (
-	Deployment  string = "Deployment"
-	StatefulSet string = "StatefulSet"
-)
 
 // NewAnnotationimagesetController creates a new AnnotationimagesetController.
 func NewAnnotationimagesetController(
@@ -98,21 +92,22 @@ func NewAnnotationimagesetController(
 		UpdateFunc: ais.UpdateEvent,
 		DeleteFunc: ais.DeleteEvent,
 	})
-	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    ais.addEvents,
-	})
+//	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+//		AddFunc:    ais.DeleteEvent,
+//	})
 
+	ais.dLister = dInformer.Lister()
+	ais.sLister = sInformer.Lister()
+//	ais.isLister = isInformer.Lister()
+
+	//syncAnnotationimageset
 	ais.syncHandler = ais.syncAnnotationimageset
 	ais.enqueueAnnotationimageset = ais.enqueue
 
-	ais.dLister = dInformer.Lister()
+
 	ais.dListerSynced = dInformer.Informer().HasSynced
-
-	ais.sLister = sInformer.Lister()
 	ais.sListerSynced = sInformer.Informer().HasSynced
-
-	ais.isLister = isInformer.Lister()
-	ais.isListerSynced = isInformer.Informer().HasSynced
+	//ais.isListerSynced = isInformer.Informer().HasSynced
 
 	return ais, nil
 }
@@ -146,30 +141,33 @@ func (ais *AnnotationImageSetController) syncAnnotationimageset(key string) erro
 	}()
 
 	// Delete the obj from store even though the syncAutoscalers failed
-	defer ais.store.Delete(key)
+	defer ais.store1.Delete(key)
 
-	img, exists := ais.store.Get(key)
+	img, exists := ais.store1.Get(key)
 	if !exists {
 		// Do nothing and return directly
 		return nil
 	}
 
-	kind := img.Kind
+	//kind := img.Kind
 
 	var err error
 	event := ais.popInnerEvent(img)
-	klog.V(0).Infof("Handlering %s event for %s/%s from %s", event, img.Namespace, img.Name, kind)
+	//klog.V(0).Infof("Handlering %s event for %s/%s from %s", event, img.Namespace, img.Name, kind)
+	klog.V(0).Infof("Handlering %s event for  %s",event, img)
 
 	switch event {
 	case AddEvent:
 		_, err = ais.isClient.AppsV1alpha1().ImageSets(img.Namespace).Create(context.TODO(),img,metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
-			msg := fmt.Sprintf("Failed to create IMG %s/%s for %s", img.Namespace, img.Name, kind)
+			//msg := fmt.Sprintf("Failed to create IMG %s/%s for %s", img.Namespace, img.Name, kind)
+			msg := fmt.Sprintf("Failed to create IMG %s  for ", img)
 			ais.eventRecorder.Eventf(img, v1.EventTypeWarning, "FailedCreateImageSet", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(img, v1.EventTypeNormal, "CreateImageSet",
-			fmt.Sprintf("Create IS %s/%s for %s success", img.Namespace, img.Name, kind))
+			//fmt.Sprintf("Create IS %s/%s for %s success", img.Namespace, img.Name, kind))
+			fmt.Sprintf("Create IS %s/%s for  success", img.Namespace, img.Name))
 	case UpdateEvent:
 	case DeleteEvent:
 	default:
@@ -231,6 +229,16 @@ func (ais *AnnotationImageSetController) handleErr(err error, key interface{}) {
 	ais.queue.Forget(key)
 }
 
+func (ais *AnnotationImageSetController) wrapInnerEvent(img *appsv1alpha1.ImageSet, event string) {
+	// there is no necessary to lock the Annotations
+	if img.Annotations == nil {
+		img.Annotations = map[string]string{
+			markInnerEvent: event,
+		}
+		return
+	}
+	img.Annotations[markInnerEvent] = event
+}
 
 func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 	imgCtx := NewAnnotationImageSetContext(obj)
@@ -239,13 +247,22 @@ func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 		return
 	}
 
-	img, err := CreateImageSet(
+	imgs, err := CreateImageSet(
 		imgCtx.Name, imgCtx.Namespace, imgCtx.Annotations, imgCtx.Image)
 	if err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
-	ais.enqueueAnnotationimageset(img)
+
+	key, err := KeyFunc(imgs)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", imgs, err))
+		return
+	}
+	ais.wrapInnerEvent(imgs, AddEvent)
+	ais.store1.Update(key, imgs)
+
+	ais.enqueueAnnotationimageset(imgs)
 }
 
 func (ais *AnnotationImageSetController) UpdateEvent(old, curl interface{}) {

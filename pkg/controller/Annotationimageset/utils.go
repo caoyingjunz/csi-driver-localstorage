@@ -5,9 +5,13 @@ import (
 	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 	apps "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
 
+var (
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+)
 const (
 	imageset 			 string = "ImageSet"
 	imagesetAPIVersion   string = "apps.pixiu.io/v1alpha1"
@@ -72,6 +76,8 @@ func CreateImageSet(
 			ImagePullPolicy: pixiu.PullIfNotPresent,
 			Selector: appsv1alpha1.NodeSelector{
 				Nodes: []string{host},
+			},
+			Auth: &appsv1alpha1.AuthConfig{
 			},
 		},
 	}

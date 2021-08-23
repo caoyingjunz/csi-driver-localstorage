@@ -22,7 +22,7 @@ import (
 	appsv1alpha1 "github.com/caoyingjunz/pixiu/pkg/apis/apps/v1alpha1"
 )
 
-type SafeStoreInterface interface {
+type SafeStoreInterface1 interface {
 	// Adds a hpa into the store.
 	Add(key string, obj *appsv1alpha1.ImageSet)
 	// Update a hpa into the store if exists, or Add it.
@@ -33,31 +33,31 @@ type SafeStoreInterface interface {
 	Get(key string) (*appsv1alpha1.ImageSet, bool)
 }
 
-type SafeStore struct {
+type SafeStore1 struct {
 	lock  sync.RWMutex
 	items map[string]*appsv1alpha1.ImageSet
 }
 
-func (s *SafeStore) Get(key string) (*appsv1alpha1.ImageSet, bool) {
+func (s *SafeStore1) Get(key string) (*appsv1alpha1.ImageSet, bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	item, exists := s.items[key]
 	return item, exists
 }
 
-func (s *SafeStore) Add(key string, obj *appsv1alpha1.ImageSet) {
+func (s *SafeStore1) Add(key string, obj *appsv1alpha1.ImageSet) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.items[key] = obj
 }
 
-func (s *SafeStore) Update(key string, obj *appsv1alpha1.ImageSet) {
+func (s *SafeStore1) Update(key string, obj *appsv1alpha1.ImageSet) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.items[key] = obj
 }
 
-func (s *SafeStore) Delete(key string) {
+func (s *SafeStore1) Delete(key string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if _, ok := s.items[key]; ok {
@@ -67,8 +67,8 @@ func (s *SafeStore) Delete(key string) {
 
 // NewSafeStore creates and returns a reference to an empty store. Operations
 // on the resulting set are thread safe.
-func newSafeStore() SafeStoreInterface {
-	return &SafeStore{
+func newSafeStore() SafeStoreInterface1 {
+	return &SafeStore1{
 		items: map[string]*appsv1alpha1.ImageSet{},
 	}
 }
@@ -80,7 +80,7 @@ type Empty struct{}
 // SafeSet is the primary interface. It
 // represents an unordered set of data and a large number of
 // operations that can be applied to that set.
-type SafeSetInterface interface {
+type SafeSetInterface1 interface {
 	// Adds an element to the set.
 	Add(i interface{})
 
@@ -89,19 +89,19 @@ type SafeSetInterface interface {
 	Has(i interface{}) bool
 }
 
-type SafeSet struct {
+type SafeSet1 struct {
 	lock sync.RWMutex
 	set  map[interface{}]Empty
 }
 
-func (s *SafeSet) Add(i interface{}) {
+func (s *SafeSet1) Add(i interface{}) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	s.set[i] = Empty{}
 }
 
 // Has returns true if and only if item is contained in the set.
-func (s *SafeSet) Has(i interface{}) bool {
+func (s *SafeSet1) Has(i interface{}) bool {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	_, containd := s.set[i]
@@ -110,8 +110,8 @@ func (s *SafeSet) Has(i interface{}) bool {
 
 // NewSafeSet creates and returns a reference to an empty set. Operations
 // on the resulting set are thread safe.
-func NewSafeSet(s ...interface{}) SafeSetInterface {
-	ss := &SafeSet{
+func NewSafeSet(s ...interface{}) SafeSetInterface1 {
+	ss := &SafeSet1{
 		set: map[interface{}]Empty{},
 	}
 	for _, item := range s {
