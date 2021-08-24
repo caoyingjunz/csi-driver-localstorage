@@ -102,7 +102,9 @@ func NewAnnotationimagesetController(
 		DeleteFunc: ais.deleteEvents,
 	})
 	isInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    ais.deleteEvents,
+		AddFunc:    ais.addIS,
+		UpdateFunc: ais.updateIS,
+		DeleteFunc: ais.deleteIS,
 	})
 
 	ais.dLister = dInformer.Lister()
