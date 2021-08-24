@@ -171,35 +171,36 @@ func (ais *AnnotationImageSetController) syncAnnotationImageSet(key string) erro
 	case AddEvent:
 		_, err = ais.isClient.AppsV1alpha1().ImageSets(is.Namespace).Create(context.TODO(),is,metav1.CreateOptions{})
 		if err != nil && !errors.IsAlreadyExists(err) {
-			msg := fmt.Sprintf("Failed to create IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to create IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedCreateImageSet", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(is, v1.EventTypeNormal, "CreateImageSet",
-			fmt.Sprintf("Create IS %s/%s for %s success", is.Namespace, is.Name, imageset))
+			fmt.Sprintf("Create IS %s/%s for %s success", is.Namespace, is.Name, is.Kind))
 	case UpdateEvent:
 		_, err = ais.isClient.AppsV1alpha1().ImageSets(is.Namespace).Update(context.TODO(), is, metav1.UpdateOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			msg := fmt.Sprintf("Failed to update IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to update IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedUpdateIS", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(is, v1.EventTypeNormal, "UpdateIS",
-			fmt.Sprintf("Update IS %s/%s for %s success", is.Namespace, is.Name, imageset))
+			fmt.Sprintf("Update IS %s/%s for %s success", is.Namespace, is.Name, is.Kind))
 	case DeleteEvent:
 		err = ais.isClient.AppsV1alpha1().ImageSets(is.Namespace).Delete(context.TODO(), is.Name, metav1.DeleteOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			msg := fmt.Sprintf("Failed to delete IS %s/%s forr %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to delete IS %s/%s forr %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedDeleteIS", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(is, v1.EventTypeNormal, "DeleteIS",
-			fmt.Sprintf("Delete IS %s/%s for %s success", is.Namespace, is.Name, imageset))
+			fmt.Sprintf("Delete IS %s/%s for %s success", is.Namespace, is.Name, is.Kind))
 	case RecoverUpdateEvent:
 		newIS, err := ais.GetNewestISFromResource(is)
+		newIS.ResourceVersion = is.ResourceVersion
 		if err != nil {
-			msg := fmt.Sprintf("Failed to get update newest IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to get update newest IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedNewestIS", msg)
 			return err
 		}
@@ -208,21 +209,21 @@ func (ais *AnnotationImageSetController) syncAnnotationImageSet(key string) erro
 			return nil
 		}
 		if reflect.DeepEqual(is.Spec, newIS.Spec) {
-			klog.V(2).Infof("IS: %s/%s spec is not changed, no need to updated", is.Namespace, imageset)
+			klog.V(2).Infof("IS: %s/%s spec is not changed, no need to updated", is.Namespace, is.Kind)
 			return nil
 		}
 		_, err = ais.isClient.AppsV1alpha1().ImageSets(newIS.Namespace).Update(context.TODO(), newIS, metav1.UpdateOptions{})
 		if err != nil && !errors.IsNotFound(err) {
-			msg := fmt.Sprintf("Failed to Recover update IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to Recover update IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedRecoverIS", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(is, v1.EventTypeNormal, "RecoverIS",
-			fmt.Sprintf("Recover Update IS %s/%s for %s success", is.Namespace, is.Name, imageset))
+			fmt.Sprintf("Recover Update IS %s/%s for %s success", is.Namespace, is.Name, is.Kind))
 	case RecoverDeleteEvent:
 		newIS, err := ais.GetNewestISFromResource(is)
 		if err != nil {
-			msg := fmt.Sprintf("Failed to get delete newest IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to get delete newest IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedNewestIS", msg)
 			return err
 		}
@@ -232,19 +233,19 @@ func (ais *AnnotationImageSetController) syncAnnotationImageSet(key string) erro
 		}
 		_, err = ais.isClient.AppsV1alpha1().ImageSets(newIS.Namespace).Create(context.TODO(), newIS, metav1.CreateOptions{})
 		if err != nil {
-			msg := fmt.Sprintf("Failed to get delete newest IS %s/%s for %s", is.Namespace, is.Name, imageset)
+			msg := fmt.Sprintf("Failed to get delete newest IS %s/%s for %s", is.Namespace, is.Name, is.Kind)
 			ais.eventRecorder.Eventf(is, v1.EventTypeWarning, "FailedCreateIS", msg)
 			return err
 		}
 		ais.eventRecorder.Eventf(is, v1.EventTypeNormal, "RecoverIS",
-			fmt.Sprintf("Recover Delete IS %s/%s for %s success", newIS.Namespace, newIS.Name, imageset))
+			fmt.Sprintf("Recover Delete IS %s/%s for %s success", newIS.Namespace, newIS.Name, is.Kind))
 	default:
 		return fmt.Errorf("Unsupported handlers event %s", event)
 	}
 	return err
 }
 
-// GetNewestHPA will get newest HPA from kubernetes resources
+// GetNewestIS will get newest IS from kubernetes resources
 func (ais *AnnotationImageSetController) GetNewestISFromResource(
 	is *appsv1alpha1.ImageSet) (*appsv1alpha1.ImageSet, error) {
 	var annotations map[string]string
@@ -281,7 +282,7 @@ func (ais *AnnotationImageSetController) GetNewestISFromResource(
 	}
 
 	return CreateImageSet(
-		is.Name, is.Namespace, is.APIVersion, is.Kind, uid, annotations, image)
+		is.Name, is.Namespace, APIVersion, kind, uid, annotations, image)
 }
 
 func (ais *AnnotationImageSetController) wrapInnerEvent(img *appsv1alpha1.ImageSet, event string) {
@@ -308,6 +309,7 @@ func (ais *AnnotationImageSetController) popInnerEvent(img *appsv1alpha1.ImageSe
 func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 	isCtx := NewAnnotationImageSetContext(obj)
 	klog.V(2).Infof("Adding %s %s/%s", "ImageSet", isCtx.Namespace, isCtx.Name)
+
 	if !IsNeedForIS(isCtx.Annotations) {
 		return
 	}
@@ -333,6 +335,7 @@ func (ais *AnnotationImageSetController) addEvents(obj interface{}) {
 func (ais *AnnotationImageSetController) updateEvents(old, cur interface{}) {
 	oldCtx := NewAnnotationImageSetContext(old)
 	curCtx := NewAnnotationImageSetContext(cur)
+
 	klog.V(2).Infof("Updating %s %s/%s", "ImageSet", oldCtx.Namespace, oldCtx.Namespace)
 
 	if reflect.DeepEqual(oldCtx.Annotations, curCtx.Annotations) {
@@ -382,6 +385,12 @@ func (ais *AnnotationImageSetController) updateEvents(old, cur interface{}) {
 	if !oldExists && curExists {
 		ais.wrapInnerEvent(is, AddEvent)
 	} else if oldExists && curExists {
+		i, err := ais.isClient.AppsV1alpha1().ImageSets(is.Namespace).Get(context.TODO(), is.Name, metav1.GetOptions{})
+		if err != nil {
+			utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", i, err))
+			return
+		}
+		is.ObjectMeta.ResourceVersion = i.ResourceVersion
 		ais.wrapInnerEvent(is, UpdateEvent)
 	}
 	ais.store.Add(key, is)
@@ -430,7 +439,7 @@ func (ais *AnnotationImageSetController) addIS(obj interface{}) {
 func (ais *AnnotationImageSetController) updateIS(old, cur interface{}) {
 	oldI := old.(*appsv1alpha1.ImageSet)
 	curI := cur.(*appsv1alpha1.ImageSet)
-	if oldI.ResourceVersion == curI.ResourceVersion {
+	if oldI == curI {
 		return
 	}
 	if !ManagerByKubezController(oldI) {

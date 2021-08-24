@@ -17,8 +17,7 @@ const (
 	host				    string = "kube-node"
 	imageset 			    string = "ImageSet"
 	imagesetAPIVersion      string = "apps.pixiu.io/v1alpha1"
-
-
+	APIVersion              string = "apps/v1"
 )
 
 type AnnotationImageSetContext struct {
@@ -33,13 +32,14 @@ type AnnotationImageSetContext struct {
 
 func NewAnnotationImageSetContext(obj interface{}) *AnnotationImageSetContext {
 	// TODO: 后续优化，直接获取 hpa 的 Annotations
+
 	switch o := obj.(type) {
 	case *apps.Deployment:
 		return &AnnotationImageSetContext{
 			Name:        o.Name,
 			Namespace:   o.Namespace,
-			APIVersion:  o.APIVersion,
-			Kind:        o.Kind,
+			APIVersion:  APIVersion,
+			Kind:        Deployment,
 			UID:         o.UID,
 			Annotations: o.Annotations,
 			Image:  o.Spec.Template.Spec.Containers[0].Image,
@@ -48,8 +48,8 @@ func NewAnnotationImageSetContext(obj interface{}) *AnnotationImageSetContext {
 		return &AnnotationImageSetContext{
 			Name:        o.Name,
 			Namespace:   o.Namespace,
-			APIVersion:  o.APIVersion,
-			Kind:        o.Kind,
+			APIVersion:  APIVersion,
+			Kind:        StatefulSet,
 			UID:         o.UID,
 			Annotations: o.Annotations,
 			Image:  o.Spec.Template.Spec.Containers[0].Image,

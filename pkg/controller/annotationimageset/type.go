@@ -4,13 +4,13 @@ import "errors"
 
 const (
 	Annotation		string = "img.jixingxing.io/imageset"
-	KubezManager    string = "pixiu-autoscaler-controller"
+	KubezManager    string = "pixiu-controller-manager"
 	KubezMain       string = "main"
 )
 
 var (
 	// Init SafeSet which contains the HPA Average Utilization / Value
-	kset = NewSafeSet("img.jixingxing.io/imageset")
+	kset = NewSafeSet(Annotation)
 )
 
 // To ensure whether we need to maintain the HPA
