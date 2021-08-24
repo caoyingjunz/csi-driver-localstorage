@@ -1,9 +1,11 @@
-package Annotationimageset
+package annotationimageset
 
 import "errors"
 
 const (
-	Annotation			string = "img.jixingxing.io/imageset"
+	Annotation		string = "img.jixingxing.io/imageset"
+	KubezManager    string = "pixiu-autoscaler-controller"
+	KubezMain       string = "main"
 )
 
 var (
@@ -12,7 +14,7 @@ var (
 )
 
 // To ensure whether we need to maintain the HPA
-func IsNeedForIMGs(annotations map[string]string) bool {
+func IsNeedForIS(annotations map[string]string) bool {
 	if annotations == nil || len(annotations) == 0 {
 		return false
 	}

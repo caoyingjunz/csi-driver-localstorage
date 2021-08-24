@@ -19,7 +19,6 @@ package app
 
 import (
 	"fmt"
-	"github.com/caoyingjunz/pixiu/pkg/controller/Annotationimageset"
 	"strings"
 	"time"
 
@@ -40,6 +39,7 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advancedimage"
 	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
+	"github.com/caoyingjunz/pixiu/pkg/controller/annotationimageset"
 )
 
 const (
@@ -240,7 +240,7 @@ func startAnnotationImageSetController(ctx ControllerContext) (bool, error) {
 	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "annotationimageset"}] {
 		return false, nil
 	}
-	ais, err := Annotationimageset.NewAnnotationimagesetController(
+	ais, err := annotationimageset.NewAnnotationimagesetController(
 		ctx.InformerFactory.Apps().V1().Deployments(),
 		ctx.InformerFactory.Apps().V1().StatefulSets(),
 		ctx.PixiuInformerFactory.Apps().V1alpha1().ImageSets(),
