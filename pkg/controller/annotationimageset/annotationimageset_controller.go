@@ -146,9 +146,9 @@ func (ais *AnnotationImageSetController) Run(workers int, stopCh <-chan struct{}
 // syncAnnotationimageset will sync the imageset with the given key.
 func (ais *AnnotationImageSetController) syncAnnotationImageSet(key string) error {
 	starTime := time.Now()
-	klog.V(2).Infof("Start syncing Annotationimageset %q (%v)", key, starTime)
+	klog.V(2).Infof("Start syncing Imageset %q (%v)", key, starTime)
 	defer func() {
-		klog.V(2).Infof("Finished syncing Annotationimageset %q (%v)", key, time.Since(starTime))
+		klog.V(2).Infof("Finished syncing Imageset %q (%v)", key, time.Since(starTime))
 	}()
 
 	// Delete the obj from store even though the syncAutoscalers failed

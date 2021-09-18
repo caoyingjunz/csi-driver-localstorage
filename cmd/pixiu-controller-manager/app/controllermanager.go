@@ -39,7 +39,6 @@ import (
 	"github.com/caoyingjunz/pixiu/pkg/controller/advanceddeployment"
 	"github.com/caoyingjunz/pixiu/pkg/controller/advancedimage"
 	"github.com/caoyingjunz/pixiu/pkg/controller/autoscaler"
-	"github.com/caoyingjunz/pixiu/pkg/controller/annotationimageset"
 )
 
 const (
@@ -47,7 +46,7 @@ const (
 
 	pixiuVersion     = "v1alpha1"
 	pixiuGroup       = "apps.pixiu.io"
-	pixiuAllFeatures = "advancedDeployment,autoscaler,advancedImage,annotationimageset"
+	pixiuAllFeatures = "advancedDeployment,autoscaler,advancedImage"
 )
 
 // ControllerContext defines the context obj for pixiu
@@ -142,7 +141,6 @@ var allControllers = map[string]bool{
 	"advancedDeployment": true,
 	"advancedImage":      true,
 	"autoscaler":         true,
-	"annotationimageset": true,
 }
 
 // GetAvailableResources gets the map which contains all Piuxiu available resources
@@ -177,7 +175,6 @@ func NewControllerInitializers() map[string]InitFunc {
 	controllers["advancedDeployment"] = startPixiuController
 	controllers["advancedImage"] = startAdvancedImageController
 	controllers["autoscaler"] = startAutoscalerController
-	controllers["annotationimageset"] = startAnnotationImageSetController
 
 	return controllers
 }
@@ -233,24 +230,5 @@ func startAdvancedImageController(ctx ControllerContext) (bool, error) {
 	}
 
 	go ai.Run(workers, ctx.Stop)
-	return true, nil
-}
-
-func startAnnotationImageSetController(ctx ControllerContext) (bool, error) {
-	if !ctx.AvailableResources[schema.GroupVersionResource{Group: pixiuGroup, Version: pixiuVersion, Resource: "annotationimageset"}] {
-		return false, nil
-	}
-	ais, err := annotationimageset.NewAnnotationimagesetController(
-		ctx.InformerFactory.Apps().V1().Deployments(),
-		ctx.InformerFactory.Apps().V1().StatefulSets(),
-		ctx.PixiuInformerFactory.Apps().V1alpha1().ImageSets(),
-		ctx.ClientBuilder.ClientOrDie("shared-informer"),
-		ctx.PixiuClientBuilder(ctx.KubeConfig),
-	)
-	if err != nil {
-		return true, fmt.Errorf("New Annotation controller failed: %v", err)
-	}
-
-	go ais.Run(workers, ctx.Stop)
 	return true, nil
 }
