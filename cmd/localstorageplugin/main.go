@@ -18,12 +18,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"k8s.io/klog/v2"
 )
 
 const (
-	DefaultDriverName = "nfs.csi.pixiu.io"
+	DefaultDriverName = "localstorage.csi.pixiu.io"
 )
 
 var (
@@ -39,5 +38,6 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	fmt.Println("starting")
+	klog.Info("starting")
+	klog.V(2).Info("v2 starting")
 }
