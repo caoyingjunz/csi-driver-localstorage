@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Pixiu Authors.
+Copyright 2021 The Caoyingjunz Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,25 +19,39 @@ package main
 import (
 	"flag"
 	"k8s.io/klog/v2"
-)
 
-const (
-	DefaultDriverName = "localstorage.csi.pixiu.io"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 )
 
 var (
 	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName = flag.String("drivername", DefaultDriverName, "name of the driver")
+	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
 )
 
 func init() {
 	_ = flag.Set("logtostderr", "true")
 }
 
+var (
+	version = "v1.0.0"
+)
+
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	klog.Info("starting")
-	klog.V(2).Info("v2 starting")
+	cfg := localstorage.Config{
+		DriverName: *driverName,
+		Endpoint:   *endpoint,
+		Version:    version,
+	}
+
+	driver, err := localstorage.NewLocalStorage(cfg)
+	if err != nil {
+		klog.Fatalf("Failed to initialize localstorage driver :%v", err)
+	}
+
+	if err = driver.Run(); err != nil {
+		klog.Fatalf("Failed to run localstorage driver :%v", err)
+	}
 }
