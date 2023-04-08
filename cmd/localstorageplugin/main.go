@@ -41,9 +41,9 @@ func main() {
 	flag.Parse()
 
 	cfg := localstorage.Config{
-		DriverName: *driverName,
-		Endpoint:   *endpoint,
-		Version:    version,
+		DriverName:    *driverName,
+		Endpoint:      *endpoint,
+		VendorVersion: version,
 	}
 
 	driver, err := localstorage.NewLocalStorage(cfg)

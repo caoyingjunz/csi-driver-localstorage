@@ -29,13 +29,13 @@ type localStorage struct {
 }
 
 type Config struct {
-	DriverName string
-	Endpoint   string
-	Version    string
+	DriverName    string
+	Endpoint      string
+	VendorVersion string
 }
 
 func NewLocalStorage(cfg Config) (*localStorage, error) {
-	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.Version)
+	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.VendorVersion)
 
 	ls := &localStorage{
 		config: cfg,
