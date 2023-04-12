@@ -26,6 +26,8 @@ import (
 var (
 	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
+	// Deprecated： 临时使用，后续删除
+	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
 )
 
 func init() {
@@ -44,6 +46,7 @@ func main() {
 		DriverName:    *driverName,
 		Endpoint:      *endpoint,
 		VendorVersion: version,
+		VolumeDir:     *volumeDir,
 	}
 
 	driver, err := localstorage.NewLocalStorage(cfg)

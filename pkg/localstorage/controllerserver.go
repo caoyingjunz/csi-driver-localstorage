@@ -17,20 +17,74 @@ limitations under the License.
 package localstorage
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/google/uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog/v2"
 )
 
 // CreateVolume create a volume
 func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	return nil, nil
+	name := req.GetName()
+	if len(name) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "CreateVolume name must be provided")
+	}
+
+	caps := req.GetVolumeCapabilities()
+	if caps == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities missing in request")
+	}
+
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	volumeID := uuid.New().String()
+	// TODO: 临时实现，后续修改
+	err := os.MkdirAll(ls.parseVolumePath(volumeID), 0777)
+	if err != nil {
+		return nil, err
+	}
+
+	topologies := []*csi.Topology{}
+
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			VolumeId:           volumeID,
+			CapacityBytes:      req.GetCapacityRange().GetRequiredBytes(),
+			VolumeContext:      req.GetParameters(),
+			ContentSource:      req.GetVolumeContentSource(),
+			AccessibleTopology: topologies,
+		},
+	}, nil
 }
 
 // DeleteVolume delete a volume
 func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	}
+
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	volId := req.GetVolumeId()
+	// TODO: 临时处理
+	if err := os.RemoveAll(ls.parseVolumePath(volId)); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	klog.Infof("volume %v successfully deleted", volId)
 	return &csi.DeleteVolumeResponse{}, nil
+}
+
+// parseVolumePath returns the canonical path for volume
+func (ls *localStorage) parseVolumePath(volID string) string {
+	return filepath.Join(ls.config.VolumeDir, volID)
 }
 
 func (ls *localStorage) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -58,7 +112,9 @@ func (ls *localStorage) GetCapacity(ctx context.Context, req *csi.GetCapacityReq
 }
 
 func (ls *localStorage) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
-	return nil, nil
+	return &csi.ControllerGetCapabilitiesResponse{
+		Capabilities: ls.getControllerServiceCapabilities(),
+	}, nil
 }
 
 func (ls *localStorage) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
@@ -75,4 +131,29 @@ func (ls *localStorage) ListSnapshots(ctx context.Context, req *csi.ListSnapshot
 
 func (ls *localStorage) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ls *localStorage) getControllerServiceCapabilities() []*csi.ControllerServiceCapability {
+	cl := []csi.ControllerServiceCapability_RPC_Type{
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		csi.ControllerServiceCapability_RPC_GET_VOLUME,
+		csi.ControllerServiceCapability_RPC_GET_CAPACITY,
+		csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
+		csi.ControllerServiceCapability_RPC_VOLUME_CONDITION,
+		csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
+		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+	}
+
+	var csc []*csi.ControllerServiceCapability
+	for _, cap := range cl {
+		csc = append(csc, &csi.ControllerServiceCapability{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: cap,
+				},
+			},
+		})
+	}
+
+	return csc
 }

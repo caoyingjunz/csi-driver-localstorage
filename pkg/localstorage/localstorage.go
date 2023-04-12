@@ -18,29 +18,33 @@ package localstorage
 
 import (
 	"k8s.io/klog/v2"
+	"sync"
 )
 
 const (
-	DefaultDriverName = "localstorage.csi.pixiu.io"
+	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 )
 
 type localStorage struct {
 	config Config
+
+	lock sync.Mutex
 }
 
 type Config struct {
 	DriverName    string
 	Endpoint      string
 	VendorVersion string
+	// Deprecated: 临时使用，后续删除
+	VolumeDir string
 }
 
 func NewLocalStorage(cfg Config) (*localStorage, error) {
 	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.VendorVersion)
 
-	ls := &localStorage{
+	return &localStorage{
 		config: cfg,
-	}
-	return ls, nil
+	}, nil
 }
 
 func (ls *localStorage) Run() error {

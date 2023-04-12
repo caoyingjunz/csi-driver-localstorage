@@ -69,8 +69,9 @@ func (s *nonBlockingGRPCServer) ForceStop() {
 func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, cs csi.ControllerServer, ns csi.NodeServer) {
 	proto, addr, err := parseEndpoint(endpoint)
 	if err != nil {
-		klog.Fatal(err.Error())
+		klog.Fatalf("Failed to parse unix endpoint: %v", err)
 	}
+
 	if proto == "unix" {
 		addr = "/" + addr
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {

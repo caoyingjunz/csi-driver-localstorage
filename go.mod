@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/container-storage-interface/spec v1.8.0
 	github.com/golang/protobuf v1.5.2
+	github.com/google/uuid v1.3.0
 	golang.org/x/net v0.8.0
 	google.golang.org/grpc v1.54.0
 	k8s.io/klog/v2 v2.90.1
