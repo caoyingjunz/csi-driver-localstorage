@@ -52,6 +52,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 
 	topologies := []*csi.Topology{}
 
+	klog.Infof("pvc %v volume %v successfully deleted", name, volumeID)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:           volumeID,
