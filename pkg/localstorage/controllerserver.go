@@ -26,6 +26,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 )
 
 // CreateVolume create a volume
@@ -44,14 +46,28 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	defer ls.lock.Unlock()
 
 	volumeID := uuid.New().String()
+
 	// TODO: 临时实现，后续修改
-	err := os.MkdirAll(ls.parseVolumePath(volumeID), 0777)
+	path := ls.parseVolumePath(volumeID)
+	err := os.MkdirAll(path, 0777)
 	if err != nil {
+		return nil, err
+	}
+
+	vol := cache.Volume{
+		VolID:   volumeID,
+		VolName: req.GetName(),
+		VolPath: path,
+		VolSize: req.GetCapacityRange().GetRequiredBytes(),
+	}
+	klog.Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
+	if err = ls.cache.SetVolume(vol); err != nil {
 		return nil, err
 	}
 
 	topologies := []*csi.Topology{}
 
+	klog.Infof("pvc %v volume %v successfully deleted", name, volumeID)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:           volumeID,
@@ -78,6 +94,11 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 		return nil, err
 	}
 
+	klog.Infof("deleting cache localstorage volume: %s", volId)
+	if err := ls.cache.DeleteVolume(volId); err != nil {
+		return nil, err
+	}
+
 	klog.Infof("volume %v successfully deleted", volId)
 	return &csi.DeleteVolumeResponse{}, nil
 }
@@ -100,11 +121,32 @@ func (ls *localStorage) ControllerGetVolume(ctx context.Context, req *csi.Contro
 }
 
 func (ls *localStorage) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-	return nil, nil
+	return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (ls *localStorage) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	volumes := &csi.ListVolumesResponse{
+		Entries: []*csi.ListVolumesResponse_Entry{},
+	}
+
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	for _, vol := range ls.cache.GetVolumes() {
+		volumes.Entries = append(volumes.Entries, &csi.ListVolumesResponse_Entry{
+			Volume: &csi.Volume{
+				VolumeId:      vol.VolID,
+				CapacityBytes: vol.VolSize,
+			},
+			Status: &csi.ListVolumesResponse_VolumeStatus{
+				PublishedNodeIds: []string{vol.NodeID},
+				VolumeCondition:  &csi.VolumeCondition{},
+			},
+		})
+	}
+
+	klog.Infof("Localstorage volumes are: %+v", volumes)
+	return volumes, nil
 }
 
 func (ls *localStorage) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
