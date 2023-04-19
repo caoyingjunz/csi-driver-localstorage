@@ -12,7 +12,6 @@ env:
   GO_VERSION: '1.17.5'
 
 jobs:
-
   misspell-check:
     runs-on: ubuntu-latest
     container: pouchcontainer/pouchlinter:v0.1.2
@@ -36,8 +35,8 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
 
-    - name: Build the gopixiu binariy
+    - name: Build the localstorage binariy
       run: go build -v ./...
 
-    - name: Run gopixiu unit test
+    - name: Run localstorage unit test
       run: go test -v ./...
