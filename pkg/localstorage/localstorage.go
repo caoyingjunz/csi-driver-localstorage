@@ -18,7 +18,10 @@ package localstorage
 
 import (
 	"k8s.io/klog/v2"
+	"path"
 	"sync"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 )
 
 const (
@@ -27,6 +30,7 @@ const (
 
 type localStorage struct {
 	config Config
+	cache  cache.Cache
 
 	lock sync.Mutex
 }
@@ -42,8 +46,13 @@ type Config struct {
 func NewLocalStorage(cfg Config) (*localStorage, error) {
 	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.VendorVersion)
 
+	s, err := cache.New(path.Join(cfg.VolumeDir, "localstorage.json"))
+	if err != nil {
+		return nil, err
+	}
 	return &localStorage{
 		config: cfg,
+		cache:  s,
 	}, nil
 }
 
