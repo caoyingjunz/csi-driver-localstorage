@@ -40,3 +40,6 @@ jobs:
 
     - name: Run localstorage unit test
       run: go test -v ./...
+      
+    - name: Build the localstorage image
+      run: make image
