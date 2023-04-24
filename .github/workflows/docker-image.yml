@@ -17,5 +17,5 @@ jobs:
           username: ${{ secrets.DOCKER_NAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build the localstorage image
+      - name: Build and push the localstorage image
         run: make image && make push
