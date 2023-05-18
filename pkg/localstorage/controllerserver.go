@@ -49,8 +49,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 
 	// TODO: 临时实现，后续修改
 	path := ls.parseVolumePath(volumeID)
-	err := os.MkdirAll(path, 0777)
-	if err != nil {
+	if err := os.MkdirAll(path, 0750); err != nil {
 		return nil, err
 	}
 
@@ -61,20 +60,24 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		VolSize: req.GetCapacityRange().GetRequiredBytes(),
 	}
 	klog.Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
-	if err = ls.cache.SetVolume(vol); err != nil {
+	if err := ls.cache.SetVolume(vol); err != nil {
 		return nil, err
 	}
 
-	topologies := []*csi.Topology{}
+	volumeContext := req.GetParameters()
+	if volumeContext == nil {
+		volumeContext = make(map[string]string)
+	}
+	volumeContext["localPath.caoyingjunz.io"] = path
 
 	klog.Infof("pvc %v volume %v successfully deleted", name, volumeID)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:           volumeID,
 			CapacityBytes:      req.GetCapacityRange().GetRequiredBytes(),
-			VolumeContext:      req.GetParameters(),
+			VolumeContext:      volumeContext,
 			ContentSource:      req.GetVolumeContentSource(),
-			AccessibleTopology: topologies,
+			AccessibleTopology: []*csi.Topology{},
 		},
 	}, nil
 }
