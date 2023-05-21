@@ -18,6 +18,9 @@ rules:
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["storage.k8s.io"]
     resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
@@ -43,7 +46,7 @@ metadata:
   name: ls-csi-provisioner-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-ls-controller-sa
+    name: csi-ls-node-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
