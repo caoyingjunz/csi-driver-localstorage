@@ -17,6 +17,7 @@ limitations under the License.
 package localstorage
 
 import (
+	"fmt"
 	"k8s.io/klog/v2"
 	"path"
 	"sync"
@@ -40,12 +41,19 @@ type Config struct {
 	DriverName    string
 	Endpoint      string
 	VendorVersion string
+	NodeId        string
 	// Deprecated: 临时使用，后续删除
 	VolumeDir string
 }
 
 func NewLocalStorage(cfg Config) (*localStorage, error) {
-	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.VendorVersion)
+	if cfg.DriverName == "" {
+		return nil, fmt.Errorf("no driver name provided")
+	}
+	if len(cfg.NodeId) == 0 {
+		return nil, fmt.Errorf("no node id provided")
+	}
+	klog.V(2).Infof("Driver: %v version: %v, nodeId: %v", cfg.DriverName, cfg.VendorVersion, cfg.NodeId)
 
 	if err := makeVolumeDir(cfg.VolumeDir); err != nil {
 		return nil, err

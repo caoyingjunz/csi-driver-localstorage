@@ -36,7 +36,9 @@ func (ls *localStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUn
 
 // NodeGetInfo return info of the node on which this plugin is running
 func (ls *localStorage) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return nil, nil
+	return &csi.NodeGetInfoResponse{
+		NodeId: ls.config.NodeId,
+	}, nil
 }
 
 // NodeGetCapabilities return the capabilities of the Node plugin
