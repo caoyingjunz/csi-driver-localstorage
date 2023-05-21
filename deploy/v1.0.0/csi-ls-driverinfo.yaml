@@ -2,7 +2,7 @@
 apiVersion: storage.k8s.io/v1
 kind: CSIDriver
 metadata:
-  name: localstorage.csi.caoyingjunz.io
+  name: hostpath.caoyingjunz.io
 spec:
   attachRequired: false
   volumeLifecycleModes:

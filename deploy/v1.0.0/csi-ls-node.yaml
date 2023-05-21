@@ -17,7 +17,7 @@ spec:
       labels:
         app: csi-ls-node
     spec:
-      hostNetwork: true  # original nfs connection would be broken without hostNetwork setting
+#      hostNetwork: true
       dnsPolicy: Default  # available values: Default, ClusterFirstWithHostNet, ClusterFirst
       serviceAccountName: csi-ls-node-sa
       nodeSelector:
@@ -57,7 +57,7 @@ spec:
             timeoutSeconds: 15
           env:
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/csi-nfsplugin/csi.sock
+              value: /var/lib/kubelet/plugins/csi-localstorage/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -73,7 +73,22 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
-        - name: nfs
+
+        - name: csi-provisioner
+          image: jacky06/csi-provisioner:v0.1
+          args:
+            - -v=5
+            - --csi-address=/csi/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+
+        - name: localstorage
           securityContext:
             privileged: true
             capabilities:
@@ -119,7 +134,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/csi-nfsplugin
+            path: /var/lib/kubelet/plugins/csi-lsplugin
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
