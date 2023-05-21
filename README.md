@@ -1,10 +1,15 @@
-# LocalStorage Overview
-
-This driver allows Kubernetes to access LocalStorage on Linux node.
+# LocalStorage
 
 ![Build Status][build-url]
 [![Release][release-image]][release-url]
 [![License][license-image]][license-url]
+
+## Overview
+This driver allows Kubernetes to access LocalStorage on Linux node.
+
+## Getting Started
+
+
 
 ## 学习分享
 - [go-learning](https://github.com/caoyingjunz/go-learning)
