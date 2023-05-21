@@ -26,6 +26,7 @@ import (
 
 const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
+	StoreFile         = "localstorage.json"
 )
 
 type localStorage struct {
@@ -46,7 +47,13 @@ type Config struct {
 func NewLocalStorage(cfg Config) (*localStorage, error) {
 	klog.V(2).Infof("Driver: %v version: %v", cfg.DriverName, cfg.VendorVersion)
 
-	s, err := cache.New(path.Join(cfg.VolumeDir, "localstorage.json"))
+	if err := makeVolumeDir(cfg.VolumeDir); err != nil {
+		return nil, err
+	}
+	storeFile := path.Join(cfg.VolumeDir, StoreFile)
+	klog.V(2).Infof("localstorage will be store in %s", storeFile)
+
+	s, err := cache.New(storeFile)
 	if err != nil {
 		return nil, err
 	}

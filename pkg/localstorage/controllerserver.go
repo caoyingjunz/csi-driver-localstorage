@@ -37,10 +37,10 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume name must be provided")
 	}
 
-	caps := req.GetVolumeCapabilities()
-	if caps == nil {
-		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities missing in request")
-	}
+	//caps := req.GetVolumeCapabilities()
+	//if caps == nil {
+	//	return nil, status.Error(codes.InvalidArgument, "Volume Capabilities missing in request")
+	//}
 
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
