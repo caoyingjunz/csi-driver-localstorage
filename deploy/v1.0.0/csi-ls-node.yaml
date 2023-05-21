@@ -97,7 +97,6 @@ spec:
           image: pixiuio/lsplugin:latest
           args:
             - "-v=5"
-            - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--volume-dir=/data"
           env:
