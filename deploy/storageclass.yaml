@@ -2,6 +2,8 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: localstorage.caoyingjunz.io
+mountOptions:
+  - owner=caoyingjunz
 parameters:
   project: pixiu
 provisioner: localstorage.csi.caoyingjunz.io

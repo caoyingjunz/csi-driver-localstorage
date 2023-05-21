@@ -3,7 +3,7 @@ kind: StorageClass
 metadata:
   name: localstorage.caoyingjunz.io
 mountOptions:
-  - key1=caoyingjunz
+  - owner=caoyingjunz
 parameters:
   project: pixiu
 provisioner: localstorage.csi.caoyingjunz.io
