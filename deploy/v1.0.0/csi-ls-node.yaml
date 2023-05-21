@@ -57,7 +57,7 @@ spec:
             timeoutSeconds: 15
           env:
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/csi-localstorage/csi.sock
+              value: /var/lib/kubelet/plugins_registry/localstorage.csi.caoyingjunz.io-reg.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
