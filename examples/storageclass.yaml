@@ -1,12 +1,10 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: localstorage.csi.caoyingjunz.io
+  name: localstorage.caoyingjunz.io
 mountOptions:
-  - key1=caoyingjunz1
-  - key2=caoyingjunz2
+  - key1=caoyingjunz
 parameters:
-  name: caoyingjun
   project: pixiu
 provisioner: localstorage.csi.caoyingjunz.io
 reclaimPolicy: Delete
