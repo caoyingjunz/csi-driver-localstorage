@@ -59,7 +59,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		VolPath: path,
 		VolSize: req.GetCapacityRange().GetRequiredBytes(),
 	}
-	klog.Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
+	klog.V(2).Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
 	if err := ls.cache.SetVolume(vol); err != nil {
 		return nil, err
 	}

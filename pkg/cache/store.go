@@ -76,9 +76,6 @@ func New(storeFile string) (Cache, error) {
 }
 
 func (c *cache) dump() error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	data, err := json.Marshal(c.Volumes)
 	if err != nil {
 		return status.Errorf(codes.Internal, "error encoding volumes: %v", err)

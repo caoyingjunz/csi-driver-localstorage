@@ -19,6 +19,7 @@ package localstorage
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"google.golang.org/grpc"
@@ -44,4 +45,18 @@ func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 	}
 
 	return resp, err
+}
+
+func makeVolumeDir(volDir string) error {
+	_, err := os.Stat(volDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if err = os.MkdirAll(volDir, os.ModePerm); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
