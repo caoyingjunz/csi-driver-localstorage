@@ -99,6 +99,7 @@ spec:
             - "-v=5"
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
+            - "--volume-dir=/data"
           env:
             - name: NODE_ID
               valueFrom:
@@ -125,6 +126,8 @@ spec:
             - name: pods-mount-dir
               mountPath: /var/lib/kubelet/pods
               mountPropagation: "Bidirectional"
+            - mountPath: /data
+              name: volume-dir
           resources:
             limits:
               memory: 300Mi
@@ -144,3 +147,7 @@ spec:
             path: /var/lib/kubelet/plugins_registry
             type: Directory
           name: registration-dir
+        - hostPath:
+            path: /data
+            type: DirectoryOrCreate
+          name: volume-dir
