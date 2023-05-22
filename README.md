@@ -40,6 +40,10 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
     test-pvc             Bound    pvc-2b2c809f-33b5-437f-a4b8-61906c10a3e1   1Mi        RWX            hostpath.caoyingjunz.io   5s
     ```
 
+## Feature
+- Schedule with volume status
+- Volume metrics
+
 ## 学习分享
 - [go-learning](https://github.com/caoyingjunz/go-learning)
 
