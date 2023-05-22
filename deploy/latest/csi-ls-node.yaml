@@ -100,7 +100,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: pixiuio/lsplugin:v1.0.0
+          image: pixiuio/lsplugin:latest
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
