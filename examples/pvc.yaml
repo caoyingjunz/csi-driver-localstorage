@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: test-localstorage
   annotations:
-    volume.beta.kubernetes.io/storage-class: "localstorage.caoyingjunz.io"
+    volume.beta.kubernetes.io/storage-class: "hostpath.caoyingjunz.io"
 spec:
   accessModes:
     - ReadWriteMany

@@ -2,7 +2,7 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: csi-ls-node
+  name: pixiu-hostpath-node
   namespace: kube-system
 spec:
   updateStrategy:
@@ -80,6 +80,11 @@ spec:
           args:
             - -v=5
             - --csi-address=/csi/csi.sock
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           securityContext:
             # This is necessary only for systems with SELinux, where
             # non-privileged sidecar containers cannot access unix domain socket
