@@ -2,7 +2,7 @@
 
 dockerhubUser = pixiuio
 releaseName = lsplugin
-tag = latest
+tag = v1.0.0
 
 image:
 	docker build -t $(dockerhubUser)/$(releaseName):$(tag) .

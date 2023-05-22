@@ -16,8 +16,8 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
     # 验证
     kubectl get pod -l app=csi-ls-node -n kube-system
-    NAME                READY   STATUS    RESTARTS   AGE
-    csi-ls-node-kcbvr   3/3     Running   0          13m
+    NAME                        READY   STATUS    RESTARTS   AGE
+    pixiu-hostpath-node-7945j   3/3     Running   0          8m22s
     ```
 
 - 安装 `storageclass`
@@ -25,20 +25,19 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
     kubectl apply -f deploy/storageclass.yaml
 
     # 验证
-    kubectl get sc localstorage.caoyingjunz.io
-    NAME                          PROVISIONER                       RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-    localstorage.caoyingjunz.io   localstorage.csi.caoyingjunz.io   Delete          WaitForFirstConsumer   false                  8m15s
+    kubectl get sc hostpath.caoyingjunz.io
+    NAME                      PROVISIONER                       RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+    hostpath.caoyingjunz.io   localstorage.csi.caoyingjunz.io   Delete          WaitForFirstConsumer   false                  2m54s
     ```
 
-### demo
-- 创建 pvc
+- 创建 `pvc` 验证
     ```shell
     kubectl apply -f examples/pvc.yaml
 
     # 验证
     kubectl get pvc
-    NAME                STATUS   VOLUME                                       CAPACITY   ACCESS MODES   STORAGECLASS                  AGE
-    test-localstorage   Bound    pvc-c9a48b2b-248d-4e8a-917c-4a63c570292b     1Mi        RWX            localstorage.caoyingjunz.io   5s
+    NAME                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS              AGE
+    test-pvc             Bound    pvc-2b2c809f-33b5-437f-a4b8-61906c10a3e1   1Mi        RWX            hostpath.caoyingjunz.io   5s
     ```
 
 ## 学习分享

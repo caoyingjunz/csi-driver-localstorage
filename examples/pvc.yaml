@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: test-localstorage
+  name: test-pvc
   annotations:
     volume.beta.kubernetes.io/storage-class: "hostpath.caoyingjunz.io"
 spec:
@@ -31,4 +31,4 @@ spec:
   volumes:
     - name: ls-pvc
       persistentVolumeClaim:
-        claimName: test-localstorage
+        claimName: test-pvc
