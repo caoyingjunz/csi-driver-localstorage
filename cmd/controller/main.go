@@ -17,8 +17,9 @@ limitations under the License.
 package main
 
 import (
-	"k8s.io/klog/v2"
 	"time"
+
+	"k8s.io/klog/v2"
 )
 
 func main() {
