@@ -6,6 +6,6 @@ mountOptions:
   - owner=caoyingjunz
 parameters:
   project: pixiu
-provisioner: localstorage.caoyingjunz.io
+provisioner: localstorage.csi.caoyingjunz.io
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
