@@ -18,5 +18,5 @@ package localstorage
 
 // GroupName is the group name used in this package
 const (
-	GroupName = "pixiu.caoyingjunz.io"
+	GroupName = "localstorage.caoyingjunz.io"
 )
