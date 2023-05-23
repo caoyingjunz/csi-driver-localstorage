@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
+	DefaultDriverName = "localstorage.caoyingjunz.io"
 	StoreFile         = "localstorage.json"
 )
 
