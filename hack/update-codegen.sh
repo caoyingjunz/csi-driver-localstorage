@@ -18,16 +18,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-
-echo $SCRIPT_ROOT
 ./../code-generator/generate-groups.sh all \
 github.com/caoyingjunz/csi-driver-localstorage/pkg/client \
 github.com/caoyingjunz/csi-driver-localstorage/pkg/apis \
-pixiu.caoyingjunz.io:v1 \
-# 指定头文件
---go-header-file=/Users/caoyuan/workstation/csi-driver-localstorage/hack/boilerplate.go.txt \
-# 指定输出位置，默认为GOPATH
---output-base ./
-
-echo $SCRIPT_ROOT
+localstorage.caoyingjunz.io:v1
