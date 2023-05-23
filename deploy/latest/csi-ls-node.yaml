@@ -2,7 +2,7 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: pixiu-hostpath-node
+  name: pixiu-localstorage-node
   namespace: kube-system
 spec:
   updateStrategy:
