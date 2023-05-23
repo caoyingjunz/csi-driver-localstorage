@@ -1,0 +1,36 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-sts
+spec:
+  selector:
+    matchLabels:
+      app: test-sts
+  serviceName: test-sts
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: test-sts
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: test-sts
+          imagePullPolicy: IfNotPresent
+          image: nginx
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: pixiu
+              mountPath: /usr/share/nginx/html
+  volumeClaimTemplates:
+    - metadata:
+        name: pixiu
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: "pixiu-localstorage"
+        resources:
+          requests:
+            storage: 1Gi
