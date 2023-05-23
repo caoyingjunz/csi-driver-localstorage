@@ -16,7 +16,7 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
     # 验证
     kubectl get pod -l app=csi-ls-node -n kube-system
-    NAME                        READY   STATUS    RESTARTS   AGE
+    NAME                            READY   STATUS    RESTARTS   AGE
     pixiu-localstorage-node-7945j   3/3     Running   0          8m22s
     ```
 
@@ -26,7 +26,7 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
     # 验证
     kubectl get sc localstorage.caoyingjunz.io
-    NAME                      PROVISIONER                       RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+    NAME                          PROVISIONER                       RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
     localstorage.caoyingjunz.io   localstorage.csi.caoyingjunz.io   Delete          WaitForFirstConsumer   false                  2m54s
     ```
 
