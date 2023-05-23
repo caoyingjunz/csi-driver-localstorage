@@ -25,9 +25,9 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
     kubectl apply -f deploy/storageclass.yaml
 
     # 验证
-    kubectl get sc localstorage-pixiu
+    kubectl get sc pixiu-localstorage
     NAME                 PROVISIONER                       RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-    localstorage-pixiu   localstorage.csi.caoyingjunz.io   Delete          WaitForFirstConsumer   false                  2m54s
+    pixiu-localstorage   localstorage.csi.caoyingjunz.io   Delete          WaitForFirstConsumer   false                  2m54s
     ```
 
 - 创建 `pvc` 验证
@@ -37,7 +37,7 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
     # 验证
     kubectl get pvc
     NAME                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS              AGE
-    test-pvc             Bound    pvc-2b2c809f-33b5-437f-a4b8-61906c10a3e1   1Mi        RWX            localstorage-pixiu        5s
+    test-pvc             Bound    pvc-2b2c809f-33b5-437f-a4b8-61906c10a3e1   1Mi        RWX            pixiu-localstorage        5s
     ```
 
 ## Feature

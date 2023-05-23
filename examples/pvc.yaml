@@ -3,7 +3,7 @@ apiVersion: v1
 metadata:
   name: test-pvc
   annotations:
-    volume.beta.kubernetes.io/storage-class: "localstorage-pixiu"
+    volume.beta.kubernetes.io/storage-class: "pixiu-localstorage"
 spec:
   accessModes:
     - ReadWriteMany
