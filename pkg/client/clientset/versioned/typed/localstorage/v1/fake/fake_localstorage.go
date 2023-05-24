@@ -32,12 +32,12 @@ import (
 
 // FakeLocalStorages implements LocalStorageInterface
 type FakeLocalStorages struct {
-	Fake *FakeLocalstorageV1
+	Fake *FakeStorageV1
 }
 
-var localstoragesResource = schema.GroupVersionResource{Group: "localstorage.caoyingjunz.io", Version: "v1", Resource: "localstorages"}
+var localstoragesResource = schema.GroupVersionResource{Group: "storage.caoyingjunz.io", Version: "v1", Resource: "localstorages"}
 
-var localstoragesKind = schema.GroupVersionKind{Group: "localstorage.caoyingjunz.io", Version: "v1", Kind: "LocalStorage"}
+var localstoragesKind = schema.GroupVersionKind{Group: "storage.caoyingjunz.io", Version: "v1", Kind: "LocalStorage"}
 
 // Get takes name of the localStorage, and returns the corresponding localStorage object, and an error if there is any.
 func (c *FakeLocalStorages) Get(ctx context.Context, name string, options v1.GetOptions) (result *localstoragev1.LocalStorage, err error) {

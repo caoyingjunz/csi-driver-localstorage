@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
-	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1"
+	storagev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,19 +30,19 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	LocalstorageV1() localstoragev1.LocalstorageV1Interface
+	StorageV1() storagev1.StorageV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	localstorageV1 *localstoragev1.LocalstorageV1Client
+	storageV1 *storagev1.StorageV1Client
 }
 
-// LocalstorageV1 retrieves the LocalstorageV1Client
-func (c *Clientset) LocalstorageV1() localstoragev1.LocalstorageV1Interface {
-	return c.localstorageV1
+// StorageV1 retrieves the StorageV1Client
+func (c *Clientset) StorageV1() storagev1.StorageV1Interface {
+	return c.storageV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -89,7 +89,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
-	cs.localstorageV1, err = localstoragev1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.storageV1, err = storagev1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.localstorageV1 = localstoragev1.New(c)
+	cs.storageV1 = storagev1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

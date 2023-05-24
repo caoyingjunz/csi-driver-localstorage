@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
-	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1"
-	fakelocalstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1/fake"
+	storagev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1"
+	fakestoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/typed/localstorage/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,7 +79,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// LocalstorageV1 retrieves the LocalstorageV1Client
-func (c *Clientset) LocalstorageV1() localstoragev1.LocalstorageV1Interface {
-	return &fakelocalstoragev1.FakeLocalstorageV1{Fake: &c.Fake}
+// StorageV1 retrieves the StorageV1Client
+func (c *Clientset) StorageV1() storagev1.StorageV1Interface {
+	return &fakestoragev1.FakeStorageV1{Fake: &c.Fake}
 }

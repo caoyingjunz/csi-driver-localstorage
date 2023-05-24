@@ -56,7 +56,7 @@ type localStorages struct {
 }
 
 // newLocalStorages returns a LocalStorages
-func newLocalStorages(c *LocalstorageV1Client) *localStorages {
+func newLocalStorages(c *StorageV1Client) *localStorages {
 	return &localStorages{
 		client: c.RESTClient(),
 	}

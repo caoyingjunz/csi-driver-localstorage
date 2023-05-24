@@ -61,13 +61,13 @@ func NewFilteredLocalStorageInformer(client versioned.Interface, resyncPeriod ti
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.LocalstorageV1().LocalStorages().List(context.TODO(), options)
+				return client.StorageV1().LocalStorages().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.LocalstorageV1().LocalStorages().Watch(context.TODO(), options)
+				return client.StorageV1().LocalStorages().Watch(context.TODO(), options)
 			},
 		},
 		&localstoragev1.LocalStorage{},

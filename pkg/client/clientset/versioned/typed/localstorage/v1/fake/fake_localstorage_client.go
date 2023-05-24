@@ -24,17 +24,17 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeLocalstorageV1 struct {
+type FakeStorageV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeLocalstorageV1) LocalStorages() v1.LocalStorageInterface {
+func (c *FakeStorageV1) LocalStorages() v1.LocalStorageInterface {
 	return &FakeLocalStorages{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeLocalstorageV1) RESTClient() rest.Interface {
+func (c *FakeStorageV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
