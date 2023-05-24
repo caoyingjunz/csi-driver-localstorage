@@ -33,5 +33,8 @@ bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
 cp -r "${SCRIPT_ROOT}"/github.com/caoyingjunz/csi-driver-localstorage/pkg/client "${SCRIPT_ROOT}"/pkg
 cp -r "${SCRIPT_ROOT}"/github.com/caoyingjunz/csi-driver-localstorage/pkg/apis "${SCRIPT_ROOT}"/pkg
 
-# 清理临时文件
-#rm -rf "${SCRIPT_ROOT}"/github.com
+# 生成 crds
+# TODO: 临时解决
+# 需要 podset-operator 作为临时的处理工具，clone 到 csi-driver-localstorage 的同级目录即可
+# 项目地址 https://github.com/caoyingjunz/podset-operator
+../podset-operator/bin/controller-gen crd paths=./pkg/apis/... output:crd:dir=./deploy/crds output:stdout
