@@ -65,6 +65,10 @@ spec:
       - name: VolumeGroup
         type: string
         jsonPath: .spec.volumeGroup
+      - name: Capacity
+        type: string
+        priority: 1
+        jsonPath: .status.capacity
 status:
   acceptedNames:
     kind: ""
