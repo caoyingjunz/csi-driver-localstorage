@@ -55,6 +55,16 @@ spec:
         type: object
     served: true
     storage: true
+    additionalPrinterColumns:
+      - name: AGE
+        type: date
+        jsonPath: .metadata.creationTimestamp
+      - name: Node
+        type: string
+        jsonPath: .spec.node
+      - name: VolumeGroup
+        type: string
+        jsonPath: .spec.volumeGroup
 status:
   acceptedNames:
     kind: ""

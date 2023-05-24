@@ -1,0 +1,7 @@
+kind: LocalStorage
+apiVersion: storage.caoyingjunz.io/v1
+metadata:
+  name: test-ls
+spec:
+  volumeGroup: test-vg
+  node: test-node
