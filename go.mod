@@ -13,9 +13,3 @@ require (
 	k8s.io/code-generator v0.24.9
 	k8s.io/klog/v2 v2.90.1
 )
-
-require (
-	github.com/go-logr/logr v1.2.3 // indirect
-	github.com/go-openapi/jsonreference v0.20.1 // indirect
-	golang.org/x/tools v0.7.0 // indirect
-)
