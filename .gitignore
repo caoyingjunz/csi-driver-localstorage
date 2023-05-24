@@ -27,3 +27,4 @@ testbin/*
 dist
 
 vendor
+github.com
