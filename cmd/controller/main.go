@@ -17,19 +17,49 @@ limitations under the License.
 package main
 
 import (
-	"time"
+	"context"
+	"flag"
+	"fmt"
+	"path/filepath"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+)
+
+var (
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Either this or master needs to be set if the provisioner is being run out of cluster.")
 )
 
 func main() {
 	klog.Infof("Starting localstorage controller")
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			klog.Infof("TODO")
-		}
-	}()
 
-	select {}
+	kubeConfig, err := BuildClientConfig(*kubeconfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube config: %v", err)
+	}
+
+	clientSet, err := versioned.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Fatalf("Failed to build localstorage client: %v", err)
+	}
+
+	ls, err := clientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		klog.Fatalf("Failed to list localstorages: %v", err)
+	}
+
+	fmt.Println(ls.Items)
+}
+
+func BuildClientConfig(configFile string) (*restclient.Config, error) {
+	if len(configFile) == 0 {
+		configFile = filepath.Join(homedir.HomeDir(), ".kube", "config")
+	}
+
+	return clientcmd.BuildConfigFromFlags("", configFile)
 }
