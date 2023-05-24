@@ -26,4 +26,5 @@ testbin/*
 # output
 dist
 
+github.com
 vendor
