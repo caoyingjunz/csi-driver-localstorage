@@ -20,15 +20,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"path/filepath"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 var (
@@ -38,7 +35,7 @@ var (
 func main() {
 	klog.Infof("Starting localstorage controller")
 
-	kubeConfig, err := BuildClientConfig(*kubeconfig)
+	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
@@ -54,12 +51,4 @@ func main() {
 	}
 
 	fmt.Println(ls.Items)
-}
-
-func BuildClientConfig(configFile string) (*restclient.Config, error) {
-	if len(configFile) == 0 {
-		configFile = filepath.Join(homedir.HomeDir(), ".kube", "config")
-	}
-
-	return clientcmd.BuildConfigFromFlags("", configFile)
 }
