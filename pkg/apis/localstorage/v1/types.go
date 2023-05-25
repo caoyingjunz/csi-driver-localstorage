@@ -63,14 +63,14 @@ type DiskSpec struct {
 	Identifier string `json:"identifier,omitempty"`
 }
 
-type ConditionStatus string
+type LocalStorageCondition string
 
 type LocalStorageStatus struct {
-	Allocatable resource.Quantity `json:"allocatable,omitempty"`
-	Capacity    resource.Quantity `json:"capacity,omitempty"`
-	Usage       string            `json:"usage"`
-	Phase       LocalStoragePhase `json:"phase,omitempty"`
-	Message     string            `json:"message,omitempty"`
+	Allocatable resource.Quantity     `json:"allocatable,omitempty"`
+	Capacity    resource.Quantity     `json:"capacity,omitempty"`
+	Usage       string                `json:"usage"`
+	Phase       LocalStoragePhase     `json:"phase,omitempty"`
+	Conditions  LocalStorageCondition `json:"conditions,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
