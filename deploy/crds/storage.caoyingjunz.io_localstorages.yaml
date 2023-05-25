@@ -12,10 +12,26 @@ spec:
     kind: LocalStorage
     listKind: LocalStorageList
     plural: localstorages
+    shortNames:
+    - ls
     singular: localstorage
-  scope: Namespaced
+  scope: Cluster
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .spec.node
+      name: Node
+      type: string
+    - jsonPath: .status.capacity
+      name: Capacity
+      type: string
+    - jsonPath: .spec.volumeGroup
+      name: VolumeGroup
+      priority: 1
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         properties:
@@ -55,20 +71,7 @@ spec:
         type: object
     served: true
     storage: true
-    additionalPrinterColumns:
-      - name: AGE
-        type: date
-        jsonPath: .metadata.creationTimestamp
-      - name: Node
-        type: string
-        jsonPath: .spec.node
-      - name: VolumeGroup
-        type: string
-        jsonPath: .spec.volumeGroup
-      - name: Capacity
-        type: string
-        priority: 1
-        jsonPath: .status.capacity
+    subresources: {}
 status:
   acceptedNames:
     kind: ""

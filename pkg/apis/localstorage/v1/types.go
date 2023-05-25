@@ -25,6 +25,11 @@ type LocalStoragePhase string
 
 // +genclient
 // +genclient:nonNamespaced
+// +kubebuilder:resource:scope=Cluster,shortName=ls
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
+// +kubebuilder:printcolumn:JSONPath=".spec.node",name=Node,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type LocalStorage struct {
