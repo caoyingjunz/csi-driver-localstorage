@@ -47,6 +47,7 @@ type LocalStoragePhase string
 var (
 	LocalStorageInitializing LocalStoragePhase = "Initializing"
 	LocalStorageReady        LocalStoragePhase = "Ready"
+	LocalStorageUnknown      LocalStoragePhase = "Unknown"
 )
 
 type LocalStorageSpec struct {
@@ -60,8 +61,9 @@ type LocalStorageSpec struct {
 type DiskSpec struct {
 	Name       string `json:"name,omitempty"`
 	Identifier string `json:"identifier,omitempty"`
-	Size       string `json:"size,omitempty"`
 }
+
+type ConditionStatus string
 
 type LocalStorageStatus struct {
 	Allocatable resource.Quantity `json:"allocatable,omitempty"`
