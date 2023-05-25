@@ -20,11 +20,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
@@ -45,10 +47,35 @@ func main() {
 		klog.Fatalf("Failed to build localstorage client: %v", err)
 	}
 
-	ls, err := clientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		klog.Fatalf("Failed to list localstorages: %v", err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	fmt.Println(ls.Items)
+	sharedInformer := externalversions.NewSharedInformerFactory(clientSet, time.Second)
+	// lister 需要再 start 之前定义
+	lsLister := sharedInformer.Storage().V1().LocalStorages().Lister()
+
+	sharedInformer.Start(ctx.Done())
+	sharedInformer.WaitForCacheSync(ctx.Done())
+
+	selector := labels.Everything()
+
+	for {
+		time.Sleep(3 * time.Second)
+		localstorages, err := lsLister.List(selector)
+		if err != nil {
+			klog.Errorf("%v", err)
+		}
+
+		for _, localstorage := range localstorages {
+			fmt.Println(localstorage.Name)
+		}
+
+		obj, err := lsLister.Get("default/test-ls2")
+		if err != nil {
+			klog.Errorf("%v", err)
+		}
+		fmt.Println("obj", obj)
+
+		fmt.Println()
+	}
 }
