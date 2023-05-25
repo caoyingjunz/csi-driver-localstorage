@@ -35,7 +35,7 @@ var (
 )
 
 func main() {
-	klog.Infof("Starting localstorage controller")
+	klog.Infof("Starting localstorage manager controller")
 
 	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {
@@ -51,7 +51,6 @@ func main() {
 	defer cancel()
 
 	sharedInformer := externalversions.NewSharedInformerFactory(clientSet, time.Second)
-	// lister 需要再 start 之前定义
 	lsLister := sharedInformer.Storage().V1().LocalStorages().Lister()
 
 	sharedInformer.Start(ctx.Done())
@@ -70,7 +69,7 @@ func main() {
 			fmt.Println(localstorage.Name)
 		}
 
-		obj, err := lsLister.Get("default/test-ls2")
+		obj, err := lsLister.Get(localstorages[0].Name)
 		if err != nil {
 			klog.Errorf("%v", err)
 		}
