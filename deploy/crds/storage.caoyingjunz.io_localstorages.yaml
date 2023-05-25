@@ -13,19 +13,30 @@ spec:
     listKind: LocalStorageList
     plural: localstorages
     shortNames:
-    - ls
+    - pls
     singular: localstorage
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    - jsonPath: .spec.node
-      name: Node
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .status.allocatable
+      name: Allocatable
       type: string
     - jsonPath: .status.capacity
       name: Capacity
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .status.usage
+      name: Usage
+      priority: 1
+      type: string
+    - jsonPath: .spec.node
+      name: Node
+      priority: 1
       type: string
     - jsonPath: .spec.volumeGroup
       name: VolumeGroup
@@ -49,24 +60,46 @@ spec:
             type: object
           spec:
             properties:
+              disks:
+                items:
+                  properties:
+                    identifier:
+                      type: string
+                    name:
+                      type: string
+                    size:
+                      type: string
+                  type: object
+                type: array
               node:
+                description: Node kubernetes node name
+                minLength: 1
                 type: string
               volumeGroup:
                 type: string
-            required:
-            - node
-            - volumeGroup
             type: object
           status:
             properties:
+              allocatable:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               capacity:
                 anyOf:
                 - type: integer
                 - type: string
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
+              message:
+                type: string
               phase:
                 type: string
+              usage:
+                type: string
+            required:
+            - usage
             type: object
         type: object
     served: true

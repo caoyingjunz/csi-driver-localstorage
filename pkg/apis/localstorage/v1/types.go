@@ -21,15 +21,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type LocalStoragePhase string
-
 // +genclient
 // +genclient:nonNamespaced
-// +kubebuilder:resource:scope=Cluster,shortName=ls
-// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
-// +kubebuilder:printcolumn:JSONPath=".spec.node",name=Node,type=string
+// +kubebuilder:resource:scope=Cluster,shortName=pls
+// +kubebuilder:printcolumn:JSONPath=".status.phase",name=Status,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.allocatable",name=Allocatable,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
+// +kubebuilder:printcolumn:JSONPath=".status.usage",name=Usage,type=string,priority=1
+// +kubebuilder:printcolumn:JSONPath=".spec.node",name=Node,type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
+// +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type LocalStorage struct {
@@ -40,14 +42,33 @@ type LocalStorage struct {
 	Status LocalStorageStatus `json:"status,omitempty"`
 }
 
+type LocalStoragePhase string
+
+var (
+	LocalStorageInitializing LocalStoragePhase = "Initializing"
+	LocalStorageReady        LocalStoragePhase = "Ready"
+)
+
 type LocalStorageSpec struct {
-	VolumeGroup string `json:"volumeGroup"`
-	Node        string `json:"node"`
+	VolumeGroup string `json:"volumeGroup,omitempty"`
+	// Node kubernetes node name
+	// +kubebuilder:validation:MinLength=1
+	Node  string     `json:"node,omitempty"`
+	Disks []DiskSpec `json:"disks,omitempty"`
+}
+
+type DiskSpec struct {
+	Name       string `json:"name,omitempty"`
+	Identifier string `json:"identifier,omitempty"`
+	Size       string `json:"size,omitempty"`
 }
 
 type LocalStorageStatus struct {
-	Capacity resource.Quantity `json:"capacity,omitempty"`
-	Phase    LocalStoragePhase `json:"phase,omitempty"`
+	Allocatable resource.Quantity `json:"allocatable,omitempty"`
+	Capacity    resource.Quantity `json:"capacity,omitempty"`
+	Usage       string            `json:"usage"`
+	Phase       LocalStoragePhase `json:"phase,omitempty"`
+	Message     string            `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
