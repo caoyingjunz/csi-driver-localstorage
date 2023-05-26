@@ -18,15 +18,20 @@ package main
 
 import (
 	"flag"
+	"net/http"
+	_ "net/http/pprof"
+
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 )
 
 var (
-	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
-	nodeId     = flag.String("nodeid", "", "node id")
+	endpoint     = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	driverName   = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
+	nodeId       = flag.String("nodeid", "", "node id")
+	pprofEnabled = flag.Bool("pprof", false, "Enable pprof")
+	pprofPort    = flag.String("pprof-port", "6060", "pprof server port")
 
 	// Deprecated： 临时使用，后续删除
 	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
@@ -50,6 +55,16 @@ func main() {
 		VendorVersion: version,
 		NodeId:        *nodeId,
 		VolumeDir:     *volumeDir,
+	}
+
+	// start pprof server
+	if *pprofEnabled {
+		go func() {
+			klog.Info("Pprof server started:", *pprofPort)
+			if err := http.ListenAndServe(":"+*pprofPort, nil); err != nil {
+				klog.Fatalf("Failed to start pprof server: %v", err)
+			}
+		}()
 	}
 
 	driver, err := localstorage.NewLocalStorage(cfg)
