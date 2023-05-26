@@ -75,6 +75,9 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
+	kubeConfig.QPS = 30000
+	kubeConfig.Burst = 30000
+
 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		klog.Fatalf("Failed to build kube clientSet: %v", err)
