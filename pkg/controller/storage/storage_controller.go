@@ -104,3 +104,17 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 func (s *StorageController) worker(ctx context.Context) {
 	fmt.Println("worker")
 }
+
+var (
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+)
+
+func (s *StorageController) enqueue(ls *localstoragev1.LocalStorage) {
+	key, err := KeyFunc(ls)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", ls, err))
+		return
+	}
+
+	s.queue.Add(key)
+}
