@@ -19,15 +19,16 @@ package storage
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"time"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
@@ -36,6 +37,9 @@ import (
 type StorageController struct {
 	client     versioned.Interface
 	kubeClient kubernetes.Interface
+
+	syncHandler         func(ctx context.Context, dKey string) error
+	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
 	lsLister       localstorage.LocalStorageLister
 	lsListerSynced cache.InformerSynced
@@ -48,6 +52,7 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 	sc := &StorageController{
 		client:     lsClientSet,
 		kubeClient: kubeClientSet,
+		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "localstorage"),
 	}
 
 	lsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
