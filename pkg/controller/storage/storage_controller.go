@@ -19,6 +19,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"time"
 
@@ -33,7 +34,8 @@ import (
 )
 
 type StorageController struct {
-	client versioned.Interface
+	client     versioned.Interface
+	kubeClient kubernetes.Interface
 
 	lsLister       localstorage.LocalStorageLister
 	lsListerSynced cache.InformerSynced
@@ -42,9 +44,10 @@ type StorageController struct {
 }
 
 // NewStorageController creates a new StorageController.
-func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface) (*StorageController, error) {
+func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
 	sc := &StorageController{
-		client: lsClientSet,
+		client:     lsClientSet,
+		kubeClient: kubeClientSet,
 	}
 
 	lsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -82,15 +85,15 @@ func (s *StorageController) Run(ctx context.Context, workers int) {
 }
 
 func (s *StorageController) addStorage(obj interface{}) {
-	fmt.Println(obj)
+	fmt.Println("new", obj)
 }
 
 func (s *StorageController) updateStorage(old, cur interface{}) {
-	fmt.Println(old)
+	fmt.Println("update", old)
 }
 
 func (s *StorageController) deleteStorage(obj interface{}) {
-	fmt.Println(obj)
+	fmt.Println("del", obj)
 }
 
 func (s *StorageController) worker(ctx context.Context) {

@@ -19,9 +19,19 @@ package util
 import (
 	"path/filepath"
 
+	"k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/klog/v2"
+)
+
+const (
+	LocalstorageManagerUserAgent = "localstorage-manager"
 )
 
 func BuildClientConfig(configFile string) (*restclient.Config, error) {
@@ -30,4 +40,11 @@ func BuildClientConfig(configFile string) (*restclient.Config, error) {
 	}
 
 	return clientcmd.BuildConfigFromFlags("", configFile)
+}
+
+func CreateRecorder(kubeClient kubernetes.Interface) record.EventRecorder {
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
+	return eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: LocalstorageManagerUserAgent})
 }

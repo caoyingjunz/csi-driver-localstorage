@@ -19,10 +19,13 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
@@ -72,6 +75,10 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube clientSet: %v", err)
+	}
 
 	run := func(ctx context.Context) {
 		lsClientSet, err := versioned.NewForConfig(kubeConfig)
@@ -83,6 +90,7 @@ func main() {
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
 			lsClientSet,
+			kubeClient,
 		)
 		if err != nil {
 			klog.Fatalf("Failed to new storage controller: %s", err)
@@ -108,6 +116,36 @@ func main() {
 		klog.Fatalf("Failed to get hostname: %v", err)
 	}
 	// add a uniquifier so that two processes on the same host don't accidentally both become active
+	id = id + "_" + string(uuid.NewUUID())
 
-	fmt.Println(id)
+	rl, err := resourcelock.New(
+		*resourceLock,
+		*resourceNamespace,
+		*resourceName,
+		kubeClient.CoreV1(),
+		kubeClient.CoordinationV1(),
+		resourcelock.ResourceLockConfig{
+			Identity:      id,
+			EventRecorder: util.CreateRecorder(kubeClient),
+		})
+	if err != nil {
+		klog.Fatalf("error creating lock: %v", err)
+	}
+
+	leaderelection.RunOrDie(context.TODO(), leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: time.Duration(*leaseDuration) * time.Second,
+		RenewDeadline: time.Duration(*renewDeadline) * time.Second,
+		RetryPeriod:   time.Duration(*retryPeriod) * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: run,
+			OnStoppedLeading: func() {
+				klog.Fatalf("leader election lost")
+			},
+		},
+		//WatchDog: electionChecker,
+		Name: "localstorage-manager",
+	})
+
+	klog.Fatalf("unreachable")
 }
