@@ -18,20 +18,81 @@ package storage
 
 import (
 	"context"
+	"fmt"
+	"k8s.io/klog/v2"
+	"time"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 )
 
-type StorageController struct{}
+type StorageController struct {
+	client versioned.Interface
+
+	lsLister       localstorage.LocalStorageLister
+	lsListerSynced cache.InformerSynced
+
+	queue workqueue.RateLimitingInterface
+}
 
 // NewStorageController creates a new StorageController.
-func NewStorageController(ctx context.Context, clientSet versioned.Interface, sLister v1.LocalStorageLister) (*StorageController, error) {
-	sc := &StorageController{}
+func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface) (*StorageController, error) {
+	sc := &StorageController{
+		client: lsClientSet,
+	}
 
+	lsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			sc.addStorage(obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			sc.updateStorage(oldObj, newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			sc.deleteStorage(obj)
+		},
+	})
+
+	sc.lsLister = lsInformer.Lister()
+	sc.lsListerSynced = lsInformer.Informer().HasSynced
 	return sc, nil
 }
 
-func (s *StorageController) Run(ctx context.Context, workers int) error {
-	return nil
+func (s *StorageController) Run(ctx context.Context, workers int) {
+	defer utilruntime.HandleCrash()
+
+	klog.Infof("Starting Localstorage Manager")
+	defer klog.Infof("Shutting down Localstorage Manager")
+
+	if !cache.WaitForNamedCacheSync("localstorage-manager", ctx.Done(), s.lsListerSynced) {
+		return
+	}
+
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, s.worker, time.Second)
+	}
+
+	<-ctx.Done()
+}
+
+func (s *StorageController) addStorage(obj interface{}) {
+	fmt.Println(obj)
+}
+
+func (s *StorageController) updateStorage(old, cur interface{}) {
+	fmt.Println(old)
+}
+
+func (s *StorageController) deleteStorage(obj interface{}) {
+	fmt.Println(obj)
+}
+
+func (s *StorageController) worker(ctx context.Context) {
+	fmt.Println("worker")
 }

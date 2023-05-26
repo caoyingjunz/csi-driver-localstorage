@@ -17,7 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"os"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -29,8 +32,29 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
+const (
+	workers = 5
+
+	LeaseDuration = 15
+	RenewDeadline = 10
+	RetryPeriod   = 2
+
+	ResourceLock      = "endpointsleases"
+	ResourceName      = "localstorage-manager"
+	ResourceNamespace = "kube-system"
+)
+
 var (
 	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Either this or master needs to be set if the provisioner is being run out of cluster.")
+
+	// leaderElect
+	leaderElect       = flag.Bool("leader-elect", true, "Start a leader election client and gain leadership before executing the main loop. Enable this when running replicated components for high availability.")
+	retryPeriod       = flag.Int("leader-elect-retry-period", RetryPeriod, "The duration the clients should wait between attempting acquisition and renewal of a leadership.")
+	resourceLock      = flag.String("leader-elect-resource-lock", ResourceLock, "The type of resource object that is used for locking during leader election. Supported options are `endpoints` (default) and `configmaps`.")
+	resourceName      = flag.String("leader-elect-resource-name", ResourceName, "The name of resource object that is used for locking during leader election.")
+	resourceNamespace = flag.String("leader-elect-resource-namespace", ResourceNamespace, "The namespace of resource object that is used for locking during leader election.")
+	leaseDuration     = flag.Int("leader-elect-lease-duration", LeaseDuration, "The duration that non-leader candidates will wait")
+	renewDeadline     = flag.Int("leader-elect-renew-deadline", RenewDeadline, "The interval between attempts by the acting master to renew a leadership slot before it stops leading.")
 )
 
 func init() {
@@ -48,23 +72,42 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	clientSet, err := versioned.NewForConfig(kubeConfig)
+
+	run := func(ctx context.Context) {
+		lsClientSet, err := versioned.NewForConfig(kubeConfig)
+		if err != nil {
+			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
+		}
+
+		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, time.Second)
+		sc, err := storage.NewStorageController(ctx,
+			sharedInformer.Storage().V1().LocalStorages(),
+			lsClientSet,
+		)
+		if err != nil {
+			klog.Fatalf("Failed to new storage controller: %s", err)
+		}
+
+		klog.Infof("Starting localstorage controller")
+		go sc.Run(ctx, workers)
+
+		sharedInformer.Start(ctx.Done())
+		sharedInformer.WaitForCacheSync(ctx.Done())
+
+		// always wait
+		select {}
+	}
+
+	if !*leaderElect {
+		run(ctx)
+		klog.Fatalf("unreachable")
+	}
+
+	id, err := os.Hostname()
 	if err != nil {
-		klog.Fatalf("Failed to build localstorage clientSet: %v", err)
+		klog.Fatalf("Failed to get hostname: %v", err)
 	}
+	// add a uniquifier so that two processes on the same host don't accidentally both become active
 
-	sharedInformer := externalversions.NewSharedInformerFactory(clientSet, time.Second)
-	lsLister := sharedInformer.Storage().V1().LocalStorages().Lister()
-
-	sc, err := storage.NewStorageController(ctx, clientSet, lsLister)
-	if err != nil {
-		klog.Fatalf("Failed to new storage controller: %s", err)
-	}
-	sharedInformer.Start(ctx.Done())
-	sharedInformer.WaitForCacheSync(ctx.Done())
-
-	klog.Infof("Starting localstorage controller")
-	if err = sc.Run(ctx, 4); err != nil {
-		klog.Fatalf("failed to start localstorage controller: %v", err)
-	}
+	fmt.Println(id)
 }
