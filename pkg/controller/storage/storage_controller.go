@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	v1core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -32,6 +34,10 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+)
+
+const (
+	maxRetries = 15
 )
 
 type StorageController struct {
@@ -67,9 +73,28 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 		},
 	})
 
+	sc.syncHandler = sc.syncStorage
+	sc.enqueueLocalstorage = sc.enqueue
+
 	sc.lsLister = lsInformer.Lister()
 	sc.lsListerSynced = lsInformer.Informer().HasSynced
 	return sc, nil
+}
+
+func (s *StorageController) addStorage(obj interface{}) {
+	fmt.Println("new", obj)
+}
+
+func (s *StorageController) updateStorage(old, cur interface{}) {
+	fmt.Println("update", old)
+}
+
+func (s *StorageController) deleteStorage(obj interface{}) {
+	fmt.Println("del", obj)
+}
+
+func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
+	return nil
 }
 
 func (s *StorageController) Run(ctx context.Context, workers int) {
@@ -89,20 +114,43 @@ func (s *StorageController) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (s *StorageController) addStorage(obj interface{}) {
-	fmt.Println("new", obj)
-}
-
-func (s *StorageController) updateStorage(old, cur interface{}) {
-	fmt.Println("update", old)
-}
-
-func (s *StorageController) deleteStorage(obj interface{}) {
-	fmt.Println("del", obj)
-}
-
 func (s *StorageController) worker(ctx context.Context) {
-	fmt.Println("worker")
+	for s.processNextWorkItem(ctx) {
+	}
+}
+
+func (s *StorageController) processNextWorkItem(ctx context.Context) bool {
+	key, quit := s.queue.Get()
+	if quit {
+		return false
+	}
+	defer s.queue.Done(key)
+
+	err := s.syncHandler(ctx, key.(string))
+	s.handleErr(ctx, err, key)
+
+	return true
+}
+
+func (s *StorageController) handleErr(ctx context.Context, err error, key interface{}) {
+	if err == nil || errors.HasStatusCause(err, v1core.NamespaceTerminatingCause) {
+		s.queue.Forget(key)
+		return
+	}
+	ns, name, keyErr := cache.SplitMetaNamespaceKey(key.(string))
+	if keyErr != nil {
+		klog.Error(err, "Failed to split meta namespace cache key", "cacheKey", key)
+	}
+
+	if s.queue.NumRequeues(key) < maxRetries {
+		klog.V(2).Info("Error syncing deployment", "deployment", klog.KRef(ns, name), "err", err)
+		s.queue.AddRateLimited(key)
+		return
+	}
+
+	utilruntime.HandleError(err)
+	klog.V(2).Info("Dropping deployment out of the queue", "deployment", klog.KRef(ns, name), "err", err)
+	s.queue.Forget(key)
 }
 
 var (
