@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
 	"k8s.io/klog/v2"
@@ -27,14 +28,14 @@ import (
 )
 
 var (
-	endpoint     = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName   = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
-	nodeId       = flag.String("nodeid", "", "node id")
-	pprofEnabled = flag.Bool("pprof", false, "Enable pprof")
-	pprofPort    = flag.String("pprof-port", "6060", "pprof server port")
-
+	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
+	nodeId     = flag.String("nodeid", "", "node id")
 	// Deprecated： 临时使用，后续删除
 	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
+
+	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
+	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
 )
 
 func init() {
@@ -57,10 +58,10 @@ func main() {
 		VolumeDir:     *volumeDir,
 	}
 
-	// start pprof server
-	if *pprofEnabled {
+	// Start pprof and gain leadership before executing the main loop
+	if *enablePprof {
 		go func() {
-			klog.Info("Pprof server started:", *pprofPort)
+			klog.Infof("Starting the pprof server on: %s", *pprofPort)
 			if err := http.ListenAndServe(":"+*pprofPort, nil); err != nil {
 				klog.Fatalf("Failed to start pprof server: %v", err)
 			}
