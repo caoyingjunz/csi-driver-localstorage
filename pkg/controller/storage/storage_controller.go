@@ -86,15 +86,35 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 }
 
 func (s *StorageController) addStorage(obj interface{}) {
-	fmt.Println("new", obj)
+	ls := obj.(*localstoragev1.LocalStorage)
+	klog.V(2).Info("Adding localstorage", "localstorage", klog.KObj(ls))
+	s.enqueueLocalstorage(ls)
 }
 
 func (s *StorageController) updateStorage(old, cur interface{}) {
 	fmt.Println("update", old)
+	oldLs := old.(*localstoragev1.LocalStorage)
+	curLs := cur.(*localstoragev1.LocalStorage)
+	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
+	s.enqueueLocalstorage(curLs)
 }
 
 func (s *StorageController) deleteStorage(obj interface{}) {
-	fmt.Println("del", obj)
+	ls, ok := obj.(*localstoragev1.LocalStorage)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		ls, ok = tombstone.Obj.(*localstoragev1.LocalStorage)
+		if !ok {
+			utilruntime.HandleError(fmt.Errorf("tombstone contained object that is not a localstorage %#v", obj))
+			return
+		}
+	}
+	klog.V(2).Info("Deleting localstorage", "localstorage", klog.KObj(ls))
+	s.enqueueLocalstorage(ls)
 }
 
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
