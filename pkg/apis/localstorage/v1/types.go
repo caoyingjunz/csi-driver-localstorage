@@ -44,10 +44,10 @@ type LocalStorage struct {
 
 type LocalStoragePhase string
 
-var (
-	LocalStorageInitializing LocalStoragePhase = "Initializing"
-	LocalStorageReady        LocalStoragePhase = "Ready"
-	LocalStorageUnknown      LocalStoragePhase = "Unknown"
+const (
+	LocalStoragePending LocalStoragePhase = "Pending"
+	LocalStorageReady   LocalStoragePhase = "Ready"
+	LocalStorageUnknown LocalStoragePhase = "Unknown"
 )
 
 type LocalStorageSpec struct {
@@ -71,6 +71,14 @@ type LocalStorageStatus struct {
 	Usage       string                `json:"usage"`
 	Phase       LocalStoragePhase     `json:"phase,omitempty"`
 	Conditions  LocalStorageCondition `json:"conditions,omitempty"`
+
+	// List of mount volumes on this node
+	// +optional
+	VolumeInfo []Volume `json:"volumeInfo,omitempty"`
+}
+
+type Volume struct {
+	Name string `json:"name"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -96,6 +96,16 @@ spec:
                 type: string
               usage:
                 type: string
+              volumeInfo:
+                description: List of mount volumes on this node
+                items:
+                  properties:
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
             required:
             - usage
             type: object
