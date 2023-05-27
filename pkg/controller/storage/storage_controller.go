@@ -40,6 +40,10 @@ const (
 	maxRetries = 15
 )
 
+var (
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
+)
+
 type StorageController struct {
 	client     versioned.Interface
 	kubeClient kubernetes.Interface
@@ -94,6 +98,12 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 }
 
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
+	startTime := time.Now()
+	klog.V(2).InfoS("Started syncing localstorage manager", "localstorage", "startTime", startTime)
+	defer func() {
+		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
+	}()
+
 	return nil
 }
 
@@ -153,10 +163,6 @@ func (s *StorageController) handleErr(ctx context.Context, err error, key interf
 	s.queue.Forget(key)
 }
 
-var (
-	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
-)
-
 func (s *StorageController) enqueue(ls *localstoragev1.LocalStorage) {
 	key, err := KeyFunc(ls)
 	if err != nil {
@@ -165,4 +171,24 @@ func (s *StorageController) enqueue(ls *localstoragev1.LocalStorage) {
 	}
 
 	s.queue.Add(key)
+}
+
+func (s *StorageController) enqueueRateLimited(ls *localstoragev1.LocalStorage) {
+	key, err := KeyFunc(ls)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", ls, err))
+		return
+	}
+
+	s.queue.AddRateLimited(key)
+}
+
+func (s *StorageController) enqueueAfter(ls *localstoragev1.LocalStorage, after time.Duration) {
+	key, err := KeyFunc(ls)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", ls, err))
+		return
+	}
+
+	s.queue.AddAfter(key, after)
 }
