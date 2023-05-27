@@ -124,6 +124,8 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
 	}()
 
+	fmt.Println("dkey", dKey)
+
 	return nil
 }
 

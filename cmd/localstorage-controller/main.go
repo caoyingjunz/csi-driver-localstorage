@@ -89,7 +89,7 @@ func main() {
 			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
 		}
 
-		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, time.Second)
+		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
 			lsClientSet,

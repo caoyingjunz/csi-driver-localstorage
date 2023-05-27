@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
 	"k8s.io/klog/v2"
@@ -27,14 +28,14 @@ import (
 )
 
 var (
-	endpoint    = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName  = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
-	nodeId      = flag.String("nodeid", "", "node id")
-	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
-	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
-
+	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
+	nodeId     = flag.String("nodeid", "", "node id")
 	// Deprecated： 临时使用，后续删除
 	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
+
+	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
+	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
 )
 
 func init() {
