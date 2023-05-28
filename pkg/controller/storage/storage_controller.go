@@ -27,7 +27,10 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
@@ -50,6 +53,9 @@ type StorageController struct {
 	client     versioned.Interface
 	kubeClient kubernetes.Interface
 
+	eventBroadcaster record.EventBroadcaster
+	eventRecorder    record.EventRecorder
+
 	syncHandler         func(ctx context.Context, dKey string) error
 	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
@@ -61,10 +67,16 @@ type StorageController struct {
 
 // NewStorageController creates a new StorageController.
 func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
+
 	sc := &StorageController{
-		client:     lsClientSet,
-		kubeClient: kubeClientSet,
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "localstorage"),
+		client:           lsClientSet,
+		kubeClient:       kubeClientSet,
+		eventBroadcaster: eventBroadcaster,
+		eventRecorder:    eventBroadcaster.NewRecorder(scheme.Scheme, v1core.EventSource{Component: util.LocalstorageManagerUserAgent}),
+		queue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "localstorage"),
 	}
 
 	lsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -152,7 +164,13 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
 		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-		return err
+		if err != nil {
+			s.eventRecorder.Eventf(ls, v1core.EventTypeWarning, "initialize", fmt.Sprintf("failed to initialize localstorage %s status: %v", ls.Name, err))
+			return err
+		}
+
+		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("wait for plugin to initialize %s localstorage", ls.Name))
+		return nil
 	}
 
 	return nil
@@ -160,6 +178,8 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 
 func (s *StorageController) Run(ctx context.Context, workers int) {
 	defer utilruntime.HandleCrash()
+	defer s.eventBroadcaster.Shutdown()
+	defer s.queue.ShutDown()
 
 	klog.Infof("Starting Localstorage Manager")
 	defer klog.Infof("Shutting down Localstorage Manager")
