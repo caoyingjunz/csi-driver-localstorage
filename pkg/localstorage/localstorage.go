@@ -17,17 +17,36 @@ limitations under the License.
 package localstorage
 
 import (
+	"context"
 	"fmt"
-	"k8s.io/klog/v2"
 	"path"
 	"sync"
+	"time"
 
+	v1core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	kubecache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
+
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 	StoreFile         = "localstorage.json"
+
+	maxRetries = 15
 )
 
 type localStorage struct {
@@ -35,6 +54,14 @@ type localStorage struct {
 	cache  cache.Cache
 
 	lock sync.Mutex
+
+	client     versioned.Interface
+	kubeClient kubernetes.Interface
+
+	lsLister       localstorage.LocalStorageLister
+	lsListerSynced kubecache.InformerSynced
+
+	queue workqueue.RateLimitingInterface
 }
 
 type Config struct {
@@ -46,7 +73,7 @@ type Config struct {
 	VolumeDir string
 }
 
-func NewLocalStorage(cfg Config) (*localStorage, error) {
+func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*localStorage, error) {
 	if cfg.DriverName == "" {
 		return nil, fmt.Errorf("no driver name provided")
 	}
@@ -65,17 +92,147 @@ func NewLocalStorage(cfg Config) (*localStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &localStorage{
-		config: cfg,
-		cache:  s,
+
+	ls, err := &localStorage{
+		config:     cfg,
+		cache:      s,
+		kubeClient: kubeClientSet,
+		client:     lsClientSet,
+		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plugin"),
 	}, nil
+	if err != nil {
+		return nil, err
+	}
+
+	lsInformer.Informer().AddEventHandler(kubecache.FilteringResourceEventHandler{
+		Handler: kubecache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				ls.addStorage(obj)
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				ls.updateStorage(oldObj, newObj)
+			},
+		},
+		FilterFunc: func(obj interface{}) bool {
+			switch t := obj.(type) {
+			case *localstoragev1.LocalStorage:
+				return util.AssignedLocalstorage(t, cfg.NodeId)
+			default:
+				klog.Infof("handle object error")
+				return false
+			}
+		},
+	})
+
+	ls.lsLister = lsInformer.Lister()
+	ls.lsListerSynced = lsInformer.Informer().HasSynced
+	return ls, nil
 }
 
-func (ls *localStorage) Run() error {
+func (ls *localStorage) Run(ctx context.Context) error {
+	defer utilruntime.HandleCrash()
+	defer ls.queue.ShutDown()
+
+	if !kubecache.WaitForNamedCacheSync("localstorage-plugin", ctx.Done(), ls.lsListerSynced) {
+		return fmt.Errorf("failed to WaitForNamedCacheSync")
+	}
+	go wait.UntilWithContext(ctx, ls.worker, time.Second)
+
 	s := NewNonBlockingGRPCServer()
 
 	s.Start(ls.config.Endpoint, ls, ls, ls)
 	s.Wait()
 
 	return nil
+}
+
+func (ls *localStorage) sync(ctx context.Context, dKey string) error {
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	startTime := time.Now()
+	klog.V(2).InfoS("Started syncing localstorage plugin", "localstorage", "startTime", startTime)
+	defer func() {
+		klog.V(2).InfoS("Finished syncing localstorage plugin", "localstorage", "duration", time.Since(startTime))
+	}()
+
+	localstorage, err := ls.lsLister.Get(dKey)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(2).Infof("localstorage has been deleted", dKey)
+			return nil
+		}
+		return err
+	}
+
+	// Deep copy otherwise we are mutating the cache.
+	l := localstorage.DeepCopy()
+
+	// TODO: do init
+	l.Status.Capacity, _ = resource.ParseQuantity("500Gi")
+	l.Status.Allocatable, _ = resource.ParseQuantity("0Gi")
+	l.Status.Phase = localstoragev1.LocalStorageReady
+	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
+	return err
+}
+
+func (ls *localStorage) updateStorage(old, cur interface{}) {
+	oldLs := old.(*localstoragev1.LocalStorage)
+	curLs := cur.(*localstoragev1.LocalStorage)
+	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
+
+	ls.enqueue(curLs)
+}
+
+func (ls *localStorage) addStorage(obj interface{}) {
+	localstorage := obj.(*localstoragev1.LocalStorage)
+	klog.V(2).Info("Adding localstorage", "localstorage", klog.KObj(localstorage))
+	ls.enqueue(localstorage)
+}
+
+func (ls *localStorage) worker(ctx context.Context) {
+	for ls.processNextWorkItem(ctx) {
+	}
+}
+
+func (ls *localStorage) processNextWorkItem(ctx context.Context) bool {
+	key, quit := ls.queue.Get()
+	if quit {
+		return false
+	}
+	defer ls.queue.Done(key)
+
+	ls.handleErr(ctx, ls.sync(ctx, key.(string)), key)
+	return true
+}
+
+func (ls *localStorage) handleErr(ctx context.Context, err error, key interface{}) {
+	if err == nil || errors.HasStatusCause(err, v1core.NamespaceTerminatingCause) {
+		ls.queue.Forget(key)
+		return
+	}
+	ns, name, keyErr := kubecache.SplitMetaNamespaceKey(key.(string))
+	if keyErr != nil {
+		klog.Error(err, "Failed to split meta namespace cache key", "cacheKey", key)
+	}
+
+	if ls.queue.NumRequeues(key) < maxRetries {
+		klog.V(2).Info("Error syncing localstorage", "localstorage", klog.KRef(ns, name), "err", err)
+		ls.queue.AddRateLimited(key)
+		return
+	}
+
+	utilruntime.HandleError(err)
+	klog.V(2).Info("Dropping localstorage out of the queue", "localstorage", klog.KRef(ns, name), "err", err)
+	ls.queue.Forget(key)
+}
+
+func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
+	key, err := util.KeyFunc(s)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", ls, err))
+		return
+	}
+
+	ls.queue.Add(key)
 }
