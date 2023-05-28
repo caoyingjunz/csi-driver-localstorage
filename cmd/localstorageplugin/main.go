@@ -109,6 +109,5 @@ func main() {
 	sharedInformer.Start(ctx.Done())
 	sharedInformer.WaitForCacheSync(ctx.Done())
 
-	// always wait
-	select {}
+	<-ctx.Done()
 }
