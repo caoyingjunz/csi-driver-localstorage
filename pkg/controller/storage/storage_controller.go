@@ -96,7 +96,11 @@ func (s *StorageController) updateStorage(old, cur interface{}) {
 	oldLs := old.(*localstoragev1.LocalStorage)
 	curLs := cur.(*localstoragev1.LocalStorage)
 	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
-	s.enqueueLocalstorage(curLs)
+
+	// TODO
+	klog.V(2).Info("old localstorage", oldLs)
+	klog.V(2).Info("new localstorage", curLs)
+	//s.enqueueLocalstorage(curLs)
 }
 
 func (s *StorageController) deleteStorage(obj interface{}) {
@@ -124,7 +128,21 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
 	}()
 
-	fmt.Println("dkey", dKey)
+	localstorage, err := s.lsLister.Get(dKey)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(2).Infof("localstorage has been deleted", dKey)
+			return nil
+		}
+		return err
+	}
+
+	// Deep copy otherwise we are mutating the cache.
+	ls := localstorage.DeepCopy()
+
+	if len(ls.Status.Phase) == 0 {
+
+	}
 
 	return nil
 }
