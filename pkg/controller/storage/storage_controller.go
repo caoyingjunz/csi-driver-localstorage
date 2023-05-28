@@ -148,6 +148,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		return err
 	}
 
+	// Init the localstorage status
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
 		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
