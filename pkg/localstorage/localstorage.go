@@ -25,6 +25,8 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -165,9 +167,13 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
-	fmt.Println("localstorage.DeepCopy()", l)
 
-	return nil
+	// TODO: do init
+	l.Status.Capacity, _ = resource.ParseQuantity("500Gi")
+	l.Status.Allocatable, _ = resource.ParseQuantity("0Gi")
+	l.Status.Phase = localstoragev1.LocalStorageReady
+	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
+	return err
 }
 
 func (ls *localStorage) updateStorage(old, cur interface{}) {
