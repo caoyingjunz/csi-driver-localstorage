@@ -75,9 +75,6 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 	if ls.Spec.Node != nodeId {
 		return false
 	}
-	if ls.Status.Phase == localstoragev1.LocalStoragePending {
-		return true
-	}
 
-	return false
+	return ls.Status.Phase == localstoragev1.LocalStoragePending
 }

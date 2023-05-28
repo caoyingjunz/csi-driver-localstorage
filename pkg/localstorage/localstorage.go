@@ -21,8 +21,12 @@ import (
 	"fmt"
 	"path"
 	"sync"
+	"time"
 
+	v1core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	kubecache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -39,6 +43,8 @@ import (
 const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 	StoreFile         = "localstorage.json"
+
+	maxRetries = 15
 )
 
 type localStorage struct {
@@ -101,9 +107,9 @@ func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorage
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				ls.updateStorage(oldObj, newObj)
 			},
-			DeleteFunc: func(obj interface{}) {
-				ls.deleteStorage(obj)
-			},
+			//DeleteFunc: func(obj interface{}) {
+			//	ls.deleteStorage(obj)
+			//},
 		},
 		FilterFunc: func(obj interface{}) bool {
 			switch t := obj.(type) {
@@ -121,7 +127,15 @@ func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorage
 	return ls, nil
 }
 
-func (ls *localStorage) Run() error {
+func (ls *localStorage) Run(ctx context.Context) error {
+	defer utilruntime.HandleCrash()
+	defer ls.queue.ShutDown()
+
+	if !kubecache.WaitForNamedCacheSync("localstorage-plugin", ctx.Done(), ls.lsListerSynced) {
+		return fmt.Errorf("failed to WaitForNamedCacheSync")
+	}
+	go wait.UntilWithContext(ctx, ls.worker, time.Second)
+
 	s := NewNonBlockingGRPCServer()
 
 	s.Start(ls.config.Endpoint, ls, ls, ls)
@@ -130,13 +144,68 @@ func (ls *localStorage) Run() error {
 	return nil
 }
 
+func (ls *localStorage) sync(ctx context.Context, dKey string) error {
+	localstorage, err := ls.lsLister.Get(dKey)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(2).Infof("localstorage has been deleted", dKey)
+			return nil
+		}
+		return err
+	}
+	// Deep copy otherwise we are mutating the cache.
+	l := localstorage.DeepCopy()
+	fmt.Println("localstorage.DeepCopy()", l)
+
+	return nil
+}
+
 func (ls *localStorage) updateStorage(old, cur interface{}) {
 	oldLs := old.(*localstoragev1.LocalStorage)
 	curLs := cur.(*localstoragev1.LocalStorage)
-	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs), curLs)
+	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
+
+	ls.enqueue(curLs)
 }
 
 func (ls *localStorage) deleteStorage(obj interface{}) {}
+
+func (ls *localStorage) worker(ctx context.Context) {
+	for ls.processNextWorkItem(ctx) {
+	}
+}
+
+func (ls *localStorage) processNextWorkItem(ctx context.Context) bool {
+	key, quit := ls.queue.Get()
+	if quit {
+		return false
+	}
+	defer ls.queue.Done(key)
+
+	ls.handleErr(ctx, ls.sync(ctx, key.(string)), key)
+	return true
+}
+
+func (ls *localStorage) handleErr(ctx context.Context, err error, key interface{}) {
+	if err == nil || errors.HasStatusCause(err, v1core.NamespaceTerminatingCause) {
+		ls.queue.Forget(key)
+		return
+	}
+	ns, name, keyErr := kubecache.SplitMetaNamespaceKey(key.(string))
+	if keyErr != nil {
+		klog.Error(err, "Failed to split meta namespace cache key", "cacheKey", key)
+	}
+
+	if ls.queue.NumRequeues(key) < maxRetries {
+		klog.V(2).Info("Error syncing localstorage", "localstorage", klog.KRef(ns, name), "err", err)
+		ls.queue.AddRateLimited(key)
+		return
+	}
+
+	utilruntime.HandleError(err)
+	klog.V(2).Info("Dropping localstorage out of the queue", "localstorage", klog.KRef(ns, name), "err", err)
+	ls.queue.Forget(key)
+}
 
 func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 	key, err := util.KeyFunc(s)

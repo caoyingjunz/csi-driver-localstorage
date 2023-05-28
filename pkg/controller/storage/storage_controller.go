@@ -223,13 +223,13 @@ func (s *StorageController) handleErr(ctx context.Context, err error, key interf
 	}
 
 	if s.queue.NumRequeues(key) < maxRetries {
-		klog.V(2).Info("Error syncing deployment", "deployment", klog.KRef(ns, name), "err", err)
+		klog.V(2).Info("Error syncing localstorage", "localstorage", klog.KRef(ns, name), "err", err)
 		s.queue.AddRateLimited(key)
 		return
 	}
 
 	utilruntime.HandleError(err)
-	klog.V(2).Info("Dropping deployment out of the queue", "deployment", klog.KRef(ns, name), "err", err)
+	klog.V(2).Info("Dropping localstorage out of the queue", "localstorage", klog.KRef(ns, name), "err", err)
 	s.queue.Forget(key)
 }
 
