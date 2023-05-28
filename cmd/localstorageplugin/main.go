@@ -18,12 +18,19 @@ package main
 
 import (
 	"flag"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
+	"time"
+
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 )
 
@@ -36,6 +43,8 @@ var (
 
 	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
 	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
+
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
 )
 
 func init() {
@@ -49,6 +58,23 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
+
+	// set up signals so we handle the shutdown signal gracefully
+	ctx := signals.SetupSignalHandler()
+
+	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube config: %v", err)
+	}
+	kubeConfig.QPS = 30000
+	kubeConfig.Burst = 30000
+
+	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
+	if err != nil {
+		klog.Fatal("failed to build clientSets: %v", err)
+	}
+
+	sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 
 	cfg := localstorage.Config{
 		DriverName:    *driverName,

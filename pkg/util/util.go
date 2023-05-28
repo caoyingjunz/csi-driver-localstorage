@@ -28,6 +28,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 )
 
 const (
@@ -40,6 +42,19 @@ func BuildClientConfig(configFile string) (*restclient.Config, error) {
 	}
 
 	return clientcmd.BuildConfigFromFlags("", configFile)
+}
+
+func NewClientSets(kubeConfig *restclient.Config) (kubernetes.Interface, versioned.Interface, error) {
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	lsClientSet, err := versioned.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return kubeClient, lsClientSet, nil
 }
 
 func CreateRecorder(kubeClient kubernetes.Interface) record.EventRecorder {

@@ -48,7 +48,7 @@ const (
 )
 
 var (
-	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Either this or master needs to be set if the provisioner is being run out of cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the controller is being run out of cluster.")
 
 	// leaderElect
 	leaderElect       = flag.Bool("leader-elect", true, "Start a leader election client and gain leadership before executing the main loop. Enable this when running replicated components for high availability.")
