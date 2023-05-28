@@ -145,6 +145,15 @@ func (ls *localStorage) Run(ctx context.Context) error {
 }
 
 func (ls *localStorage) sync(ctx context.Context, dKey string) error {
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	startTime := time.Now()
+	klog.V(2).InfoS("Started syncing localstorage plugin", "localstorage", "startTime", startTime)
+	defer func() {
+		klog.V(2).InfoS("Finished syncing localstorage plugin", "localstorage", "duration", time.Since(startTime))
+	}()
+
 	localstorage, err := ls.lsLister.Get(dKey)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -153,6 +162,7 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 		}
 		return err
 	}
+
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
 	fmt.Println("localstorage.DeepCopy()", l)
