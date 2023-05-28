@@ -17,12 +17,18 @@ limitations under the License.
 package localstorage
 
 import (
+	"context"
 	"fmt"
-	"k8s.io/klog/v2"
+
 	"path"
 	"sync"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
+	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 )
 
 const (
@@ -46,7 +52,7 @@ type Config struct {
 	VolumeDir string
 }
 
-func NewLocalStorage(cfg Config) (*localStorage, error) {
+func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*localStorage, error) {
 	if cfg.DriverName == "" {
 		return nil, fmt.Errorf("no driver name provided")
 	}

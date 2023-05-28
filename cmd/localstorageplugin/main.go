@@ -18,20 +18,17 @@ package main
 
 import (
 	"flag"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"time"
-
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 var (
@@ -59,23 +56,6 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	// set up signals so we handle the shutdown signal gracefully
-	ctx := signals.SetupSignalHandler()
-
-	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
-	if err != nil {
-		klog.Fatalf("Failed to build kube config: %v", err)
-	}
-	kubeConfig.QPS = 30000
-	kubeConfig.Burst = 30000
-
-	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
-	if err != nil {
-		klog.Fatal("failed to build clientSets: %v", err)
-	}
-
-	sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
-
 	cfg := localstorage.Config{
 		DriverName:    *driverName,
 		Endpoint:      *endpoint,
@@ -94,12 +74,41 @@ func main() {
 		}()
 	}
 
-	driver, err := localstorage.NewLocalStorage(cfg)
+	// set up signals so we handle the shutdown signal gracefully
+	ctx := signals.SetupSignalHandler()
+
+	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube config: %v", err)
+	}
+	kubeConfig.QPS = 30000
+	kubeConfig.Burst = 30000
+
+	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
+	if err != nil {
+		klog.Fatal("failed to build clientSets: %v", err)
+	}
+
+	sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+	driver, err := localstorage.NewLocalStorage(ctx, cfg,
+		sharedInformer.Storage().V1().LocalStorages(),
+		lsClientSet,
+		kubeClient,
+	)
 	if err != nil {
 		klog.Fatalf("Failed to initialize localstorage driver :%v", err)
 	}
 
-	if err = driver.Run(); err != nil {
-		klog.Fatalf("Failed to run localstorage driver :%v", err)
-	}
+	go func() {
+		klog.Infof("Starting localstorage driver")
+		if err = driver.Run(); err != nil {
+			klog.Fatalf("Failed to run localstorage driver :%v", err)
+		}
+	}()
+
+	sharedInformer.Start(ctx.Done())
+	sharedInformer.WaitForCacheSync(ctx.Done())
+
+	// always wait
+	select {}
 }
