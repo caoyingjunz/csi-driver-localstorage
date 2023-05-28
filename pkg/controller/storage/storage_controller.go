@@ -165,11 +165,10 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		ls.Status.Phase = localstoragev1.LocalStoragePending
 		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
 		if err != nil {
-			s.eventRecorder.Eventf(ls, v1core.EventTypeWarning, "initialize", fmt.Sprintf("failed to initialize localstorage %s status: %v", ls.Name, err))
 			return err
 		}
 
-		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("wait for plugin to initialize %s localstorage", ls.Name))
+		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
 		return nil
 	}
 
