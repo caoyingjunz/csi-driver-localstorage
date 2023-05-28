@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/homedir"
@@ -34,6 +35,10 @@ import (
 
 const (
 	LocalstorageManagerUserAgent = "localstorage-manager"
+)
+
+var (
+	KeyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
 
 func BuildClientConfig(configFile string) (*restclient.Config, error) {

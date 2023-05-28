@@ -19,16 +19,21 @@ package localstorage
 import (
 	"context"
 	"fmt"
-
 	"path"
 	"sync"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
+	kubecache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 const (
@@ -41,6 +46,14 @@ type localStorage struct {
 	cache  cache.Cache
 
 	lock sync.Mutex
+
+	client     versioned.Interface
+	kubeClient kubernetes.Interface
+
+	lsLister       localstorage.LocalStorageLister
+	lsListerSynced kubecache.InformerSynced
+
+	queue workqueue.RateLimitingInterface
 }
 
 type Config struct {
@@ -71,10 +84,30 @@ func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorage
 	if err != nil {
 		return nil, err
 	}
-	return &localStorage{
-		config: cfg,
-		cache:  s,
+
+	ls, err := &localStorage{
+		config:     cfg,
+		cache:      s,
+		kubeClient: kubeClientSet,
+		client:     lsClientSet,
+		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plugin"),
 	}, nil
+	if err != nil {
+		return nil, err
+	}
+
+	lsInformer.Informer().AddEventHandler(kubecache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			ls.updateStorage(oldObj, newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			ls.deleteStorage(obj)
+		},
+	})
+
+	ls.lsLister = lsInformer.Lister()
+	ls.lsListerSynced = lsInformer.Informer().HasSynced
+	return ls, nil
 }
 
 func (ls *localStorage) Run() error {
@@ -84,4 +117,22 @@ func (ls *localStorage) Run() error {
 	s.Wait()
 
 	return nil
+}
+
+func (ls *localStorage) updateStorage(old, cur interface{}) {
+	oldLs := old.(*localstoragev1.LocalStorage)
+	curLs := cur.(*localstoragev1.LocalStorage)
+	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs), curLs)
+}
+
+func (ls *localStorage) deleteStorage(obj interface{}) {}
+
+func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
+	key, err := util.KeyFunc(s)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", ls, err))
+		return
+	}
+
+	ls.queue.Add(key)
 }
