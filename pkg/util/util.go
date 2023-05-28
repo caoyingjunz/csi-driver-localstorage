@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
 
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 )
 
@@ -67,4 +68,16 @@ func CreateRecorder(kubeClient kubernetes.Interface) record.EventRecorder {
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: kubeClient.CoreV1().Events("")})
 	return eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: LocalstorageManagerUserAgent})
+}
+
+// AssignedLocalstorage selects ls that are assigned (scheduled and running).
+func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
+	if ls.Spec.Node != nodeId {
+		return false
+	}
+	if ls.Status.Phase == localstoragev1.LocalStoragePending {
+		return true
+	}
+
+	return false
 }

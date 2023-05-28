@@ -96,12 +96,23 @@ func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorage
 		return nil, err
 	}
 
-	lsInformer.Informer().AddEventHandler(kubecache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			ls.updateStorage(oldObj, newObj)
+	lsInformer.Informer().AddEventHandler(kubecache.FilteringResourceEventHandler{
+		Handler: kubecache.ResourceEventHandlerFuncs{
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				ls.updateStorage(oldObj, newObj)
+			},
+			DeleteFunc: func(obj interface{}) {
+				ls.deleteStorage(obj)
+			},
 		},
-		DeleteFunc: func(obj interface{}) {
-			ls.deleteStorage(obj)
+		FilterFunc: func(obj interface{}) bool {
+			switch t := obj.(type) {
+			case *localstoragev1.LocalStorage:
+				return util.AssignedLocalstorage(t, cfg.NodeId)
+			default:
+				klog.Infof("handle object error")
+				return false
+			}
 		},
 	})
 
