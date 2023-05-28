@@ -23,10 +23,14 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
@@ -34,6 +38,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 const (
@@ -48,6 +53,9 @@ type StorageController struct {
 	client     versioned.Interface
 	kubeClient kubernetes.Interface
 
+	eventBroadcaster record.EventBroadcaster
+	eventRecorder    record.EventRecorder
+
 	syncHandler         func(ctx context.Context, dKey string) error
 	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
@@ -59,10 +67,16 @@ type StorageController struct {
 
 // NewStorageController creates a new StorageController.
 func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(klog.Infof)
+	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
+
 	sc := &StorageController{
-		client:     lsClientSet,
-		kubeClient: kubeClientSet,
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "localstorage"),
+		client:           lsClientSet,
+		kubeClient:       kubeClientSet,
+		eventBroadcaster: eventBroadcaster,
+		eventRecorder:    eventBroadcaster.NewRecorder(scheme.Scheme, v1core.EventSource{Component: util.LocalstorageManagerUserAgent}),
+		queue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "localstorage"),
 	}
 
 	lsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -92,10 +106,10 @@ func (s *StorageController) addStorage(obj interface{}) {
 }
 
 func (s *StorageController) updateStorage(old, cur interface{}) {
-	fmt.Println("update", old)
 	oldLs := old.(*localstoragev1.LocalStorage)
 	curLs := cur.(*localstoragev1.LocalStorage)
 	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
+
 	s.enqueueLocalstorage(curLs)
 }
 
@@ -124,13 +138,47 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
 	}()
 
-	fmt.Println("dkey", dKey)
+	localstorage, err := s.lsLister.Get(dKey)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(2).Infof("localstorage has been deleted", dKey)
+			return nil
+		}
+		return err
+	}
+	// Deep copy otherwise we are mutating the cache.
+	ls := localstorage.DeepCopy()
+
+	if !ls.DeletionTimestamp.IsZero() {
+		// TODO: ignore localstorage deleted 删除外部资源
+		return nil
+	}
+
+	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
+		util.AddFinalizer(ls, util.LsProtectionFinalizer)
+		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+		return err
+	}
+
+	// Init the localstorage status
+	if len(ls.Status.Phase) == 0 {
+		ls.Status.Phase = localstoragev1.LocalStoragePending
+		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+
+		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
+		return nil
+	}
 
 	return nil
 }
 
 func (s *StorageController) Run(ctx context.Context, workers int) {
 	defer utilruntime.HandleCrash()
+	defer s.eventBroadcaster.Shutdown()
+	defer s.queue.ShutDown()
 
 	klog.Infof("Starting Localstorage Manager")
 	defer klog.Infof("Shutting down Localstorage Manager")

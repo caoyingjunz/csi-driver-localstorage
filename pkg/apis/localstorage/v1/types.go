@@ -59,7 +59,8 @@ type LocalStorageSpec struct {
 }
 
 type DiskSpec struct {
-	Name       string `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
+	// disk identifier, plugin will fill it
 	Identifier string `json:"identifier,omitempty"`
 }
 
