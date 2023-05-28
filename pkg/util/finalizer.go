@@ -20,3 +20,14 @@ const (
 	// LsProtectionFinalizer is the name of finalizer on ls.
 	LsProtectionFinalizer = "caoyingjunz.io/ls-protection"
 )
+
+// ContainsFinalizer checks an Object that the provided finalizer is present.
+func ContainsFinalizer(o client.Object, finalizer string) bool {
+	f := o.GetFinalizers()
+	for _, e := range f {
+		if e == finalizer {
+			return true
+		}
+	}
+	return false
+}
