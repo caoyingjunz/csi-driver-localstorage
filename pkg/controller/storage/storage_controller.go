@@ -23,6 +23,7 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -34,6 +35,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 const (
@@ -92,15 +94,11 @@ func (s *StorageController) addStorage(obj interface{}) {
 }
 
 func (s *StorageController) updateStorage(old, cur interface{}) {
-	fmt.Println("update", old)
 	oldLs := old.(*localstoragev1.LocalStorage)
 	curLs := cur.(*localstoragev1.LocalStorage)
 	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
 
-	// TODO
-	klog.V(2).Info("old localstorage", oldLs)
-	klog.V(2).Info("new localstorage", curLs)
-	//s.enqueueLocalstorage(curLs)
+	s.enqueueLocalstorage(curLs)
 }
 
 func (s *StorageController) deleteStorage(obj interface{}) {
@@ -136,12 +134,24 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		}
 		return err
 	}
-
 	// Deep copy otherwise we are mutating the cache.
 	ls := localstorage.DeepCopy()
 
-	if len(ls.Status.Phase) == 0 {
+	if !ls.DeletionTimestamp.IsZero() {
+		// TODO: ignore localstorage deleted 删除外部资源
+		return nil
+	}
 
+	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
+		util.AddFinalizer(ls, util.LsProtectionFinalizer)
+		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+		return err
+	}
+
+	if len(ls.Status.Phase) == 0 {
+		ls.Status.Phase = localstoragev1.LocalStoragePending
+		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+		return err
 	}
 
 	return nil
