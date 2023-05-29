@@ -169,8 +169,9 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 	l := localstorage.DeepCopy()
 
 	// TODO: do init
-	l.Status.Capacity, _ = resource.ParseQuantity("500Gi")
-	l.Status.Allocatable, _ = resource.ParseQuantity("0Gi")
+	caps, _ := resource.ParseQuantity("512000Mi")
+	l.Status.Capacity = caps
+	l.Status.Allocatable = caps
 	l.Status.Phase = localstoragev1.LocalStorageReady
 	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
 	return err
