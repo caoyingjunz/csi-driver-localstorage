@@ -4,7 +4,7 @@ metadata:
   name: pixiu-localstorage-controller
   namespace: kube-system
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: pixiu-ls-controller
@@ -17,7 +17,7 @@ spec:
         - args:
             - -v=2
           image: pixiuio/localstorage-controller:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           name: ls-controller
       dnsPolicy: Default
       nodeSelector:
