@@ -4,7 +4,7 @@ metadata:
   name: pixiu-localstorage-controller
   namespace: kube-system
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: pixiu-ls-controller
@@ -13,6 +13,7 @@ spec:
       labels:
         app: pixiu-ls-controller
     spec:
+      serviceAccountName: csi-ls-node-sa
       containers:
         - args:
             - -v=2
@@ -23,6 +24,4 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: Always
-      volumes:
-        - emptyDir: {}
-          name: socket-dir
+
