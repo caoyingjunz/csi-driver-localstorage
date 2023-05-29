@@ -38,6 +38,12 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: [ "get", "list", "watch", "create", "update", "patch" ]
+  - apiGroups: ["storage.caoyingjunz.io"]
+    resources: ["localstorages"]
+    verbs: [ "get", "list", "watch", "create", "update", "patch" ]
 ---
 
 kind: ClusterRoleBinding
