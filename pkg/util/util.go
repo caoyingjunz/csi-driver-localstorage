@@ -43,11 +43,19 @@ var (
 )
 
 func BuildClientConfig(configFile string) (*restclient.Config, error) {
-	if len(configFile) == 0 {
-		configFile = filepath.Join(homedir.HomeDir(), ".kube", "config")
+	if len(configFile) != 0 {
+		klog.Infof("kubeconfig specified. building kube config from that")
+		return clientcmd.BuildConfigFromFlags("", configFile)
 	}
 
-	return clientcmd.BuildConfigFromFlags("", configFile)
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	if err == nil {
+		klog.Infof("kubeconfig not specified. try to building kube config from ~/.kube/config")
+		return kubeConfig, nil
+	}
+
+	klog.Infof("Building kube configs for running in cluster...")
+	return restclient.InClusterConfig()
 }
 
 func NewClientSets(kubeConfig *restclient.Config) (kubernetes.Interface, versioned.Interface, error) {
