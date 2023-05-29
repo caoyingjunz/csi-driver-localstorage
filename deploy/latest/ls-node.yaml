@@ -94,13 +94,13 @@ spec:
             - mountPath: /csi
               name: socket-dir
 
-        - name: localstorage
+        - name: ls-plugin
           securityContext:
             privileged: true
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: pixiuio/lsplugin:latest
+          image: pixiuio/localstorageplugin:latest
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -125,7 +125,7 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           volumeMounts:
             - name: socket-dir
               mountPath: /csi

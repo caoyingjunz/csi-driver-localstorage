@@ -13,16 +13,15 @@ spec:
       labels:
         app: pixiu-ls-controller
     spec:
+      serviceAccountName: csi-ls-node-sa
       containers:
         - args:
             - -v=2
           image: pixiuio/localstorage-controller:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           name: ls-controller
       dnsPolicy: Default
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: Always
-      volumes:
-        - emptyDir: {}
-          name: socket-dir
+
