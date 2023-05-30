@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -85,4 +86,9 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 	}
 
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
+}
+
+func BytesToQuantity(bytes int64) resource.Quantity {
+	quantity := resource.NewQuantity(bytes, resource.BinarySI)
+	return *quantity
 }

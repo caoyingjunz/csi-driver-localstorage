@@ -25,9 +25,13 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
 // CreateVolume create a volume
@@ -53,12 +57,32 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		return nil, err
 	}
 
+	volSize := req.GetCapacityRange().GetRequiredBytes()
 	vol := cache.Volume{
 		VolID:   volumeID,
 		VolName: req.GetName(),
 		VolPath: path,
-		VolSize: req.GetCapacityRange().GetRequiredBytes(),
+		VolSize: volSize,
 	}
+
+	lsNodes, err := ls.lsLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	var targetNode *localstoragev1.LocalStorage
+	for _, lsNode := range lsNodes {
+		if lsNode.Spec.Node == ls.GetNode() {
+			targetNode = lsNode
+		}
+	}
+
+	if targetNode != nil {
+		t := targetNode.DeepCopy()
+		volSizeCap := util.BytesToQuantity(volSize)
+		t.Status.Allocatable.Sub(volSizeCap)
+		_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
+	}
+
 	klog.V(2).Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
 	if err := ls.cache.SetVolume(vol); err != nil {
 		return nil, err
@@ -95,6 +119,27 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	// TODO: 临时处理
 	if err := os.RemoveAll(ls.parseVolumePath(volId)); err != nil && !os.IsNotExist(err) {
 		return nil, err
+	}
+
+	toDel, err := ls.cache.GetVolumeByID(volId)
+	if err == nil {
+		lsNodes, err := ls.lsLister.List(labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+		var targetNode *localstoragev1.LocalStorage
+		for _, lsNode := range lsNodes {
+			if lsNode.Spec.Node == ls.GetNode() {
+				targetNode = lsNode
+			}
+		}
+
+		if targetNode != nil {
+			t := targetNode.DeepCopy()
+			volSizeCap := util.BytesToQuantity(toDel.VolSize)
+			t.Status.Allocatable.Add(volSizeCap)
+			_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
+		}
 	}
 
 	klog.Infof("deleting cache localstorage volume: %s", volId)

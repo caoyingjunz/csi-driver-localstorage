@@ -25,7 +25,6 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -169,7 +168,7 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 	l := localstorage.DeepCopy()
 
 	// TODO: do init
-	caps, _ := resource.ParseQuantity("512000Mi")
+	caps := util.BytesToQuantity(536870912000)
 	l.Status.Capacity = caps
 	l.Status.Allocatable = caps
 	l.Status.Phase = localstoragev1.LocalStorageReady
@@ -236,4 +235,8 @@ func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 	}
 
 	ls.queue.Add(key)
+}
+
+func (ls *localStorage) GetNode() string {
+	return ls.config.NodeId
 }
