@@ -26,6 +26,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
@@ -35,11 +36,11 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
-type ResourceOperator string
+type Operate string
 
 const (
-	Add ResourceOperator = "add"
-	Sub ResourceOperator = "sub"
+	Add Operate = "add"
+	Sub Operate = "sub"
 )
 
 // CreateVolume create a volume
@@ -54,13 +55,13 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities missing in request")
 	}
 
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
 	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
-
-	ls.lock.Lock()
-	defer ls.lock.Unlock()
 
 	volumeID := uuid.New().String()
 
@@ -79,9 +80,10 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	}
 
 	newObj := lsObj.DeepCopy()
-	volSizeCap := util.BytesToQuantity(volSize)
-	t.Status.Allocatable.Sub(volSizeCap)
-	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, Sub)
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
+		return nil, err
+	}
 
 	klog.V(2).Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
 	if err := ls.cache.SetVolume(vol); err != nil {
@@ -106,16 +108,52 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	}, nil
 }
 
-func (ls *localStorage) calculateAllocated(sizeCap resource.Quantity, op ResourceOperator) resource.Quantity {
-	var caps resource.Quantity
-	switch op {
-	case Add:
-
-	case Sub:
-
+// DeleteVolume delete a volume
+func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
 
-	return caps
+	ls.lock.Lock()
+	defer ls.lock.Unlock()
+
+	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	if err != nil {
+		return nil, err
+	}
+	volId := req.GetVolumeId()
+
+	toDel, err := ls.cache.GetVolumeByID(volId)
+	newObj := lsObj.DeepCopy()
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, Add)
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
+		return nil, err
+	}
+
+	klog.Infof("deleting cache localstorage volume: %s", volId)
+	if err := ls.cache.DeleteVolume(volId); err != nil {
+		return nil, err
+	}
+
+	// TODO: 临时处理
+	if err := os.RemoveAll(ls.parseVolumePath(volId)); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	klog.Infof("volume %v successfully deleted", volId)
+
+	return &csi.DeleteVolumeResponse{}, nil
+}
+
+func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operate) resource.Quantity {
+	volSizeCap := util.BytesToQuantity(volSize)
+	switch op {
+	case Add:
+		allocatableSize.Add(volSizeCap)
+	case Sub:
+		allocatableSize.Sub(volSizeCap)
+	}
+
+	return allocatableSize
 }
 
 // get localstorage object by nodeName, error when not found
@@ -137,51 +175,6 @@ func (ls *localStorage) getLocalStorageByNode(nodeName string) (*localstoragev1.
 	}
 
 	return lsNode, nil
-}
-
-// DeleteVolume delete a volume
-func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
-	}
-
-	ls.lock.Lock()
-	defer ls.lock.Unlock()
-
-	volId := req.GetVolumeId()
-	// TODO: 临时处理
-	if err := os.RemoveAll(ls.parseVolumePath(volId)); err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	toDel, err := ls.cache.GetVolumeByID(volId)
-	if err == nil {
-		lsNodes, err := ls.lsLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		var targetNode *localstoragev1.LocalStorage
-		for _, lsNode := range lsNodes {
-			if lsNode.Spec.Node == ls.GetNode() {
-				targetNode = lsNode
-			}
-		}
-
-		if targetNode != nil {
-			t := targetNode.DeepCopy()
-			volSizeCap := util.BytesToQuantity(toDel.VolSize)
-			t.Status.Allocatable.Add(volSizeCap)
-			_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
-		}
-	}
-
-	klog.Infof("deleting cache localstorage volume: %s", volId)
-	if err := ls.cache.DeleteVolume(volId); err != nil {
-		return nil, err
-	}
-
-	klog.Infof("volume %v successfully deleted", volId)
-	return &csi.DeleteVolumeResponse{}, nil
 }
 
 // parseVolumePath returns the canonical path for volume
