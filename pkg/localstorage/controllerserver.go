@@ -17,6 +17,7 @@ limitations under the License.
 package localstorage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -34,6 +35,13 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
+type ResourceOperator string
+
+const (
+	Add ResourceOperator = "add"
+	Sub ResourceOperator = "sub"
+)
+
 // CreateVolume create a volume
 func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	name := req.GetName()
@@ -44,6 +52,11 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	caps := req.GetVolumeCapabilities()
 	if caps == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume Capabilities missing in request")
+	}
+
+	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	if err != nil {
+		return nil, err
 	}
 
 	ls.lock.Lock()
@@ -65,23 +78,10 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		VolSize: volSize,
 	}
 
-	lsNodes, err := ls.lsLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-	var targetNode *localstoragev1.LocalStorage
-	for _, lsNode := range lsNodes {
-		if lsNode.Spec.Node == ls.GetNode() {
-			targetNode = lsNode
-		}
-	}
-
-	if targetNode != nil {
-		t := targetNode.DeepCopy()
-		volSizeCap := util.BytesToQuantity(volSize)
-		t.Status.Allocatable.Sub(volSizeCap)
-		_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
-	}
+	newObj := lsObj.DeepCopy()
+	volSizeCap := util.BytesToQuantity(volSize)
+	t.Status.Allocatable.Sub(volSizeCap)
+	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, t, metav1.UpdateOptions{})
 
 	klog.V(2).Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
 	if err := ls.cache.SetVolume(vol); err != nil {
@@ -104,6 +104,39 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 			AccessibleTopology: []*csi.Topology{},
 		},
 	}, nil
+}
+
+func (ls *localStorage) calculateAllocated(sizeCap resource.Quantity, op ResourceOperator) resource.Quantity {
+	var caps resource.Quantity
+	switch op {
+	case Add:
+
+	case Sub:
+
+	}
+
+	return caps
+}
+
+// get localstorage object by nodeName, error when not found
+func (ls *localStorage) getLocalStorageByNode(nodeName string) (*localstoragev1.LocalStorage, error) {
+	lsNodes, err := ls.lsLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	var lsNode *localstoragev1.LocalStorage
+	for _, l := range lsNodes {
+		if l.Spec.Node == nodeName {
+			lsNode = l
+		}
+	}
+	if lsNode == nil {
+		return nil, fmt.Errorf("failed to found localstorage with node %s", nodeName)
+
+	}
+
+	return lsNode, nil
 }
 
 // DeleteVolume delete a volume
