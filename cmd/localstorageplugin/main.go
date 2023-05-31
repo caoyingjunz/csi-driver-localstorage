@@ -45,7 +45,7 @@ var (
 
 	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
 
-	metricsPort = flag.Int("metricsport", 8080, "metrics port")
+	metricsPort = flag.Int("metrics-port", 8080, "The port of metrics to listen on")
 )
 
 func init() {
