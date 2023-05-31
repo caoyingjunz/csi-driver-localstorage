@@ -18,9 +18,18 @@ package localstorage
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/kubernetes-csi/csi-lib-utils/connection"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 type IdentityServer struct {
@@ -34,7 +43,42 @@ func (ls *localStorage) GetPluginInfo(ctx context.Context, req *csi.GetPluginInf
 	}, nil
 }
 
+// 从以下三个方面判断 plugin 的健康
+// 1. informer synced检查
+// 2. CR 资源获取
+// 3. gRPC 接口可以连接
 func (ls *localStorage) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
+	// 1. informer sync检查
+	synced := ls.lsListerSynced()
+	if !synced {
+		return &csi.ProbeResponse{
+			Ready: &wrappers.BoolValue{Value: false}}, status.Error(codes.FailedPrecondition, "plugin is not ready")
+	}
+
+	// 2. crd 资源获取
+	_, err := ls.lsLister.List(labels.Everything())
+	if err != nil {
+		return &csi.ProbeResponse{
+			Ready: &wrappers.BoolValue{Value: false}}, status.Error(codes.FailedPrecondition, "plugin is not ready")
+	}
+
+	// 3. grpc 接口可以连接
+	unixPrefix := "unix://"
+	endpoint := ls.config.Endpoint
+	dialOptions := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: time.Second}}),
+		grpc.WithChainUnaryInterceptor(connection.LogGRPC),
+	}
+
+	if strings.HasPrefix(endpoint, unixPrefix) {
+		_, err := grpc.DialContext(ctx, endpoint, dialOptions...)
+		if err != nil {
+			return &csi.ProbeResponse{
+				Ready: &wrappers.BoolValue{Value: false}}, status.Error(codes.FailedPrecondition, "plugin is not ready")
+		}
+	}
+
 	return &csi.ProbeResponse{Ready: &wrappers.BoolValue{Value: true}}, nil
 }
 
