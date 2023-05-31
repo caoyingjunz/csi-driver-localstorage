@@ -26,11 +26,15 @@ import (
 
 // NodePublishVolume mount the volume
 func (ls *localStorage) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	VolumeTotal.Inc()
+
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 // NodeUnpublishVolume unmount the volume
 func (ls *localStorage) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	VolumeTotal.Dec()
+
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
