@@ -124,6 +124,9 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	volId := req.GetVolumeId()
 
 	toDel, err := ls.cache.GetVolumeByID(volId)
+	if err != nil {
+		return nil, err
+	}
 	newObj := lsObj.DeepCopy()
 	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, Add)
 	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
