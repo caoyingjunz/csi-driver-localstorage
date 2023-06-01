@@ -64,6 +64,7 @@ spec:
                 items:
                   properties:
                     identifier:
+                      description: disk identifier, plugin will fill it
                       type: string
                     name:
                       type: string
