@@ -1,4 +1,4 @@
-name: Generate api clients
+name: Client-gen
 
 on:
   pull_request:
@@ -15,5 +15,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: generate api clients
+      - name: client-gen
         run: make client-gen
