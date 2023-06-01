@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.7.1
-	github.com/prometheus/client_golang v1.4.1 // indirect
+	github.com/prometheus/client_golang v1.15.1
 	golang.org/x/net v0.8.0
 	google.golang.org/grpc v1.54.0
 	k8s.io/api v0.24.8
