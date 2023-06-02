@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"net/http"
+	"os"
 	"time"
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
@@ -40,8 +41,7 @@ var (
 
 	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
 	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
-
-	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
+	kubeconfig  = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
 )
 
 func init() {
@@ -62,6 +62,9 @@ func main() {
 		VendorVersion: version,
 		NodeId:        *nodeId,
 		VolumeDir:     *volumeDir,
+	}
+	if len(cfg.NodeId) == 0 {
+		cfg.NodeId = os.Getenv("NODE_NAME")
 	}
 
 	// Start pprof and gain leadership before executing the main loop
