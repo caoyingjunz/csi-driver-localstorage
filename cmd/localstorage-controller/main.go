@@ -161,5 +161,6 @@ func main() {
 }
 
 func HealthZ(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
 	w.Write([]byte("main func still running, storage-manager is health"))
 }
