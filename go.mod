@@ -13,6 +13,7 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 	k8s.io/api v0.24.8
 	k8s.io/apimachinery v0.24.8
+	k8s.io/apiserver v0.24.8
 	k8s.io/client-go v0.24.8
 	k8s.io/code-generator v0.24.9
 	k8s.io/klog/v2 v2.90.1
