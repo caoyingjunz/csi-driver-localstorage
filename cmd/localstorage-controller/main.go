@@ -33,6 +33,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/controller/storage"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -150,5 +151,16 @@ func main() {
 		Name: "localstorage-manager",
 	})
 
+	engine := gin.Default()
+	engine.GET("/healthz", HealthZ)
+	err = engine.Run(":9999")
+	if err != nil {
+		klog.Fatalf("engine run failed")
+	}
+
 	klog.Fatalf("unreachable")
+}
+
+func HealthZ(c *gin.Context) {
+	c.JSON(200, "main func still running, storage-manager is health")
 }
