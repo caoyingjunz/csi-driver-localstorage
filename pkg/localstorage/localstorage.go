@@ -172,6 +172,7 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 	if !ok {
 		return fmt.Errorf("failed to found node localstorage size")
 	}
+	klog.Infof("get node size %s from annotations", nodeSize)
 	quantity, err := resource.ParseQuantity(nodeSize)
 	if err != nil {
 		return fmt.Errorf("failed to parse node quantity: %v", err)

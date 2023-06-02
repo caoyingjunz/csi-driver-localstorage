@@ -154,6 +154,8 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		return nil
 	}
 
+	// TODO: 对于未匹配到的localstorage，补充不匹配信息到 message
+
 	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
 		util.AddFinalizer(ls, util.LsProtectionFinalizer)
 		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
