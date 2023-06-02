@@ -4,12 +4,13 @@ go 1.16
 
 require (
 	github.com/container-storage-interface/spec v1.6.0
-	github.com/gin-gonic/gin v1.9.1
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/imdario/mergo v0.3.15 // indirect
+	github.com/stretchr/testify v1.8.3 // indirect
 	golang.org/x/net v0.10.0
 	google.golang.org/grpc v1.54.0
+	google.golang.org/protobuf v1.30.0 // indirect
 	k8s.io/api v0.24.8
 	k8s.io/apimachinery v0.24.8
 	k8s.io/client-go v0.24.8

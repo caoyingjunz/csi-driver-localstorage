@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 	"os"
 	"time"
 
@@ -33,7 +34,6 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/controller/storage"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -151,16 +151,15 @@ func main() {
 		Name: "localstorage-manager",
 	})
 
-	engine := gin.Default()
-	engine.GET("/healthz", HealthZ)
-	err = engine.Run(":9999")
+	http.HandleFunc("/healthz", HealthZ)
+	err = http.ListenAndServe(":9999", nil)
 	if err != nil {
-		klog.Fatalf("engine run failed")
+		klog.Fatalf("http listen and serve failed")
 	}
 
 	klog.Fatalf("unreachable")
 }
 
-func HealthZ(c *gin.Context) {
-	c.JSON(200, "main func still running, storage-manager is health")
+func HealthZ(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("main func still running, storage-manager is health"))
 }
