@@ -14,6 +14,7 @@ spec:
     plural: localstorages
     shortNames:
     - pls
+    - ls
     singular: localstorage
   scope: Cluster
   versions:
