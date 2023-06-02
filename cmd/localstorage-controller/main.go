@@ -72,6 +72,8 @@ func main() {
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
 
+	go HealthZ()
+
 	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
@@ -151,16 +153,18 @@ func main() {
 		Name: "localstorage-manager",
 	})
 
-	http.HandleFunc("/healthz", HealthZ)
-	err = http.ListenAndServe(":9999", nil)
-	if err != nil {
-		klog.Fatalf("http listen and serve failed")
-	}
-
 	klog.Fatalf("unreachable")
 }
 
-func HealthZ(w http.ResponseWriter, r *http.Request) {
+func healthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte("main func still running, storage-manager is health"))
+}
+
+func HealthZ() {
+	http.HandleFunc("/healthz", healthz)
+	err := http.ListenAndServe(":9999", nil)
+	if err != nil {
+		klog.Fatalf("http listen and serve failed")
+	}
 }
