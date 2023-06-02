@@ -66,6 +66,7 @@ func main() {
 		VolumeDir:     *volumeDir,
 	}
 	if len(cfg.NodeId) == 0 {
+		klog.V(2).Infof("Get node name from env")
 		cfg.NodeId = os.Getenv("NODE_NAME")
 	}
 
