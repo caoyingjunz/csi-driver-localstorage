@@ -25,6 +25,7 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -45,7 +46,8 @@ const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 	StoreFile         = "localstorage.json"
 
-	maxRetries = 15
+	annNodeSize = "volume.caoyingjunz.io/node-size"
+	maxRetries  = 15
 )
 
 type localStorage struct {
@@ -166,11 +168,17 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
+	nodeSize, ok := l.Annotations[annNodeSize]
+	if !ok {
+		return fmt.Errorf("failed to found node localstorage size")
+	}
+	quantity, err := resource.ParseQuantity(nodeSize)
+	if err != nil {
+		return fmt.Errorf("failed to parse node quantity: %v", err)
+	}
 
-	// TODO: do init
-	caps := util.BytesToQuantity(536870912000)
-	l.Status.Capacity = caps
-	l.Status.Allocatable = caps
+	l.Status.Capacity = quantity
+	l.Status.Allocatable = quantity
 	l.Status.Phase = localstoragev1.LocalStorageReady
 	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
 	return err
