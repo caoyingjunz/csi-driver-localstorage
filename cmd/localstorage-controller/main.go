@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -46,6 +47,8 @@ const (
 	ResourceLock      = "endpointsleases"
 	ResourceName      = "localstorage-manager"
 	ResourceNamespace = "kube-system"
+
+	HealthPort = "9999"
 )
 
 var (
@@ -59,6 +62,8 @@ var (
 	resourceNamespace = flag.String("leader-elect-resource-namespace", ResourceNamespace, "The namespace of resource object that is used for locking during leader election.")
 	leaseDuration     = flag.Int("leader-elect-lease-duration", LeaseDuration, "The duration that non-leader candidates will wait")
 	renewDeadline     = flag.Int("leader-elect-renew-deadline", RenewDeadline, "The interval between attempts by the acting master to renew a leadership slot before it stops leading.")
+
+	healthPort = flag.String("healthport", HealthPort, "The port of storage-manager health check")
 )
 
 func init() {
@@ -163,7 +168,7 @@ func healthz(w http.ResponseWriter, r *http.Request) {
 
 func HealthZ() {
 	http.HandleFunc("/healthz", healthz)
-	err := http.ListenAndServe(":9999", nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", *healthPort), nil)
 	if err != nil {
 		klog.Fatalf("http listen and serve failed")
 	}
