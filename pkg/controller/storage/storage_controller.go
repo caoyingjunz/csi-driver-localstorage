@@ -148,6 +148,8 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	}
 	// Deep copy otherwise we are mutating the cache.
 	ls := localstorage.DeepCopy()
+
+	// handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: ignore localstorage deleted 删除外部资源
 		return nil
