@@ -22,14 +22,10 @@ spec:
           image: pixiuio/localstorage-controller:latest
           imagePullPolicy: Always
           name: ls-controller
-          ports:
-            - containerPort: 10258
-              name: healthz
-              protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
-              port: healthz
+              port: 10258
             failureThreshold: 5
             initialDelaySeconds: 30
             timeoutSeconds: 5
