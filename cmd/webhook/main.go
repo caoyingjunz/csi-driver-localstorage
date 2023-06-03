@@ -16,9 +16,23 @@ limitations under the License.
 
 package main
 
-import "fmt"
+import (
+	"flag"
+
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+func init() {
+	_ = flag.Set("logtostderr", "true")
+}
+
+type LocalstorageWebhook struct {
+	decoder *admission.Decoder
+}
 
 func main() {
-	fmt.Println("todo")
+	klog.InitFlags(nil)
+	flag.Parse()
 
 }
