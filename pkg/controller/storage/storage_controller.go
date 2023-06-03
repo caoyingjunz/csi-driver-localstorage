@@ -177,16 +177,6 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		return s.onlyUpdate(ctx, ls)
 	}
 
-	// Check whether the spec.node exists or not
-	if _, err = s.kubeClient.CoreV1().Nodes().Get(ctx, ls.Spec.Node, metav1.GetOptions{}); err != nil {
-		if errors.IsNotFound(err) {
-			klog.Errorf("kube node %q not found", ls.Spec.Node)
-			ls.Status.Message = fmt.Sprintf("kube node %s not found", ls.Spec.Node)
-			return s.onlyUpdate(ctx, ls)
-		}
-		return err
-	}
-
 	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
 	return nil
 }
