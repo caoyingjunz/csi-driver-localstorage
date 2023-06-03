@@ -17,9 +17,19 @@ spec:
       containers:
         - args:
             - -v=2
+            # port's value equals 0 means health check func disabled
+            - --healthz-port=10258
           image: pixiuio/localstorage-controller:latest
           imagePullPolicy: Always
           name: ls-controller
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10258
+            failureThreshold: 5
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 5
       dnsPolicy: Default
       nodeSelector:
         kubernetes.io/os: linux
