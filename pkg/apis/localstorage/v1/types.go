@@ -77,7 +77,7 @@ type LocalStorageStatus struct {
 	// +optional
 	VolumeInfo []Volume `json:"volumeInfo,omitempty"`
 
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type Volume struct {

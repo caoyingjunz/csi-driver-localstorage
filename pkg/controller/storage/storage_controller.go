@@ -131,6 +131,11 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 	s.enqueueLocalstorage(ls)
 }
 
+func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	_, err := s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+	return err
+}
+
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
 	startTime := time.Now()
 	klog.V(2).InfoS("Started syncing localstorage manager", "localstorage", "startTime", startTime)
@@ -149,42 +154,35 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	// Deep copy otherwise we are mutating the cache.
 	ls := localstorage.DeepCopy()
 
-	// handler deletion event
+	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: ignore localstorage deleted 删除外部资源
 		return nil
 	}
 
-	// 检查 localstorage 的 spec.node 是否正常在
-	_, err = s.kubeClient.CoreV1().Nodes().Get(ctx, ls.Spec.Node, metav1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			klog.V(2).Infof("localstorage spec.node %s not exists in cluster", ls.Spec.Node)
-			ls.Status.ErrorMessage = fmt.Sprintf("spec.node %s not exists in cluster", ls.Spec.Node)
-			_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-			return err
-		}
-		return err
-	}
-
-	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
-		util.AddFinalizer(ls, util.LsProtectionFinalizer)
-		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-		return err
-	}
-
 	// Init the localstorage status
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
-		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-
-		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
-		return nil
+		return s.onlyUpdate(ctx, ls)
 	}
 
+	// AddFinalizer
+	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
+		util.AddFinalizer(ls, util.LsProtectionFinalizer)
+		return s.onlyUpdate(ctx, ls)
+	}
+
+	// Check whether the spec.node exists or not
+	if _, err = s.kubeClient.CoreV1().Nodes().Get(ctx, ls.Spec.Node, metav1.GetOptions{}); err != nil {
+		if errors.IsNotFound(err) {
+			klog.Errorf("kube node %q not found", ls.Spec.Node)
+			ls.Status.Message = fmt.Sprintf("kube node %s not found", ls.Spec.Node)
+			return s.onlyUpdate(ctx, ls)
+		}
+		return err
+	}
+
+	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
 	return nil
 }
 
