@@ -104,10 +104,9 @@ spec:
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--nodeid=$(KUBE_NODE_NAME)"
             - "--volume-dir=/data"
           env:
-            - name: NODE_ID
+            - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName

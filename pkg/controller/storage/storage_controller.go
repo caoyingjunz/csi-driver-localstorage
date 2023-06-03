@@ -131,6 +131,16 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 	s.enqueueLocalstorage(ls)
 }
 
+func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	_, err := s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("Failed to update localstorage %s: %v", ls, err)
+		return err
+	}
+
+	return nil
+}
+
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
 	startTime := time.Now()
 	klog.V(2).InfoS("Started syncing localstorage manager", "localstorage", "startTime", startTime)
@@ -149,29 +159,25 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	// Deep copy otherwise we are mutating the cache.
 	ls := localstorage.DeepCopy()
 
+	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: ignore localstorage deleted 删除外部资源
 		return nil
 	}
 
-	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
-		util.AddFinalizer(ls, util.LsProtectionFinalizer)
-		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-		return err
-	}
-
 	// Init the localstorage status
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
-		_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
-
-		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
-		return nil
+		return s.onlyUpdate(ctx, ls)
 	}
 
+	// AddFinalizer
+	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
+		util.AddFinalizer(ls, util.LsProtectionFinalizer)
+		return s.onlyUpdate(ctx, ls)
+	}
+
+	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
 	return nil
 }
 

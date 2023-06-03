@@ -18,13 +18,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
+	"os"
 	"time"
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
@@ -40,12 +39,11 @@ var (
 	// Deprecated： 临时使用，后续删除
 	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
 
-	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
-	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
-
 	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
 
-	metricsPort = flag.Int("metrics-port", 8080, "The port of metrics to listen on")
+	// pprof flags
+	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
+	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
 )
 
 func init() {
@@ -67,6 +65,10 @@ func main() {
 		NodeId:        *nodeId,
 		VolumeDir:     *volumeDir,
 	}
+	if len(cfg.NodeId) == 0 {
+		klog.V(2).Infof("Get node name from env")
+		cfg.NodeId = os.Getenv("NODE_NAME")
+	}
 
 	// Start pprof and gain leadership before executing the main loop
 	if *enablePprof {
@@ -80,15 +82,6 @@ func main() {
 
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
-
-	// Start prometheus metrics
-	go func() {
-		klog.Infof("Listening for Prometheus metrics on port: %v", *metricsPort)
-		http.Handle("/metrics", promhttp.Handler())
-		if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil); err != nil {
-			klog.Fatalf("Failed to initialize prometheus metrics, %v", err)
-		}
-	}()
 
 	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {

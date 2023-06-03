@@ -19,10 +19,15 @@ package main
 import (
 	"context"
 	"flag"
+	"net"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -48,7 +53,8 @@ const (
 )
 
 var (
-	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the controller is being run out of cluster.")
+	kubeconfig  = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the controller is being run out of cluster.")
+	healthzPort = flag.Int("healthz-port", 0, "healthzPort is the port of the localhost healthz endpoint (set to 0 to disable)")
 
 	// leaderElect
 	leaderElect       = flag.Bool("leader-elect", true, "Start a leader election client and gain leadership before executing the main loop. Enable this when running replicated components for high availability.")
@@ -107,6 +113,17 @@ func main() {
 
 		// always wait
 		select {}
+	}
+
+	if *healthzPort > 0 {
+		mux := http.NewServeMux()
+		healthz.InstallHandler(mux)
+		go wait.Until(func() {
+			err = http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(*healthzPort)), mux)
+			if err != nil {
+				klog.ErrorS(err, "Failed to start healthz server")
+			}
+		}, 5*time.Second, wait.NeverStop)
 	}
 
 	if !*leaderElect {

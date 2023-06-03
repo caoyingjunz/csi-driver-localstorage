@@ -128,8 +128,8 @@ func (in *LocalStorageStatus) DeepCopyInto(out *LocalStorageStatus) {
 	*out = *in
 	out.Allocatable = in.Allocatable.DeepCopy()
 	out.Capacity = in.Capacity.DeepCopy()
-	if in.VolumeInfo != nil {
-		in, out := &in.VolumeInfo, &out.VolumeInfo
+	if in.Volumes != nil {
+		in, out := &in.Volumes, &out.Volumes
 		*out = make([]Volume, len(*in))
 		copy(*out, *in)
 	}

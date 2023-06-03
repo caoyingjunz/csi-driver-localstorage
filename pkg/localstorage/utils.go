@@ -20,38 +20,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 )
-
-var (
-	requests = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "grpc_requests",
-			Help:    "gRPC request metrics.",
-			Buckets: []float64{0.001, 0.01, 0.1, 1, 10, 100, 1000},
-		},
-		[]string{"method", "path", "status"},
-	)
-
-	VolumeTotal = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "volume_total",
-			Help: "Total number of Node Volume",
-		},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(requests)
-	prometheus.MustRegister(VolumeTotal)
-}
 
 func parseEndpoint(ep string) (string, string, error) {
 	if strings.HasPrefix(strings.ToLower(ep), "unix://") {
@@ -64,18 +37,12 @@ func parseEndpoint(ep string) (string, string, error) {
 }
 
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	start := time.Now()
 	klog.V(2).Infof("GRPC call: %s", info.FullMethod)
 
 	resp, err := handler(ctx, req)
 	if err != nil {
 		klog.Errorf("GRPC error: %v", err)
 	}
-
-	requests.With(prometheus.Labels{
-		"method": info.FullMethod,
-		"status": strconv.Itoa(int(status.Code(err))),
-	}).Observe(float64(time.Since(start).Milliseconds()))
 
 	return resp, err
 }

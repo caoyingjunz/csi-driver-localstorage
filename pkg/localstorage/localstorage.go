@@ -46,7 +46,8 @@ const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 	StoreFile         = "localstorage.json"
 
-	maxRetries = 15
+	annNodeSize = "volume.caoyingjunz.io/node-size"
+	maxRetries  = 15
 )
 
 type localStorage struct {
@@ -167,11 +168,18 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
+	nodeSize, ok := l.Annotations[annNodeSize]
+	if !ok {
+		return fmt.Errorf("failed to found node localstorage size")
+	}
+	klog.Infof("get node size %s from annotations", nodeSize)
+	quantity, err := resource.ParseQuantity(nodeSize)
+	if err != nil {
+		return fmt.Errorf("failed to parse node quantity: %v", err)
+	}
 
-	// TODO: do init
-	caps, _ := resource.ParseQuantity("512000Mi")
-	l.Status.Capacity = caps
-	l.Status.Allocatable = caps
+	l.Status.Capacity = quantity
+	l.Status.Allocatable = quantity
 	l.Status.Phase = localstoragev1.LocalStorageReady
 	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
 	return err
@@ -236,4 +244,8 @@ func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 	}
 
 	ls.queue.Add(key)
+}
+
+func (ls *localStorage) GetNode() string {
+	return ls.config.NodeId
 }
