@@ -148,13 +148,22 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	}
 	// Deep copy otherwise we are mutating the cache.
 	ls := localstorage.DeepCopy()
-
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: ignore localstorage deleted 删除外部资源
 		return nil
 	}
 
-	// TODO: 对于未匹配到的localstorage，补充不匹配信息到 message
+	// 检查 localstorage 的 spec.node 是否正常在
+	_, err = s.kubeClient.CoreV1().Nodes().Get(ctx, ls.Spec.Node, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.V(2).Infof("localstorage spec.node %s not exists in cluster", ls.Spec.Node)
+			ls.Status.ErrorMessage = fmt.Sprintf("spec.node %s not exists in cluster", ls.Spec.Node)
+			_, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
+			return err
+		}
+		return err
+	}
 
 	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
 		util.AddFinalizer(ls, util.LsProtectionFinalizer)

@@ -94,6 +94,8 @@ spec:
                 x-kubernetes-int-or-string: true
               conditions:
                 type: string
+              errorMessage:
+                type: string
               phase:
                 type: string
               usage:

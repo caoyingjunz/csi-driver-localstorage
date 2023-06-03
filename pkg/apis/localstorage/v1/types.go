@@ -76,6 +76,8 @@ type LocalStorageStatus struct {
 	// List of mount volumes on this node
 	// +optional
 	VolumeInfo []Volume `json:"volumeInfo,omitempty"`
+
+	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
 type Volume struct {
