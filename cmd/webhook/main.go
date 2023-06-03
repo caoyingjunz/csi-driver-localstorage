@@ -20,13 +20,18 @@ import (
 	"flag"
 
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/webhook"
+	localstoragewebhook "github.com/caoyingjunz/csi-driver-localstorage/pkg/webhook"
+)
+
+var (
+	certDir  = flag.String("cert-dir", "", "certDir is the directory that contains the server key and certificate")
+	certName = flag.String("cert-name", "tls.crt", "certName is the server certificate name. Defaults to tls.crt")
+	keyName  = flag.String("key-name", "tls.key", "keyName is the server key name. Defaults to tls.key.")
 )
 
 func init() {
@@ -37,20 +42,25 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
+	if len(*certDir) == 0 {
+		klog.Fatalf("cert-dir is the directory that contains the server key and certificate, it must be provide")
+	}
+
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		klog.Fatalf("unable to set up overall controller manager: %v", err)
 	}
 
-	if err = builder.WebhookManagedBy(mgr).For(&localstoragev1.LocalStorage{}).
-		WithDefaulter(&webhook.LocalstorageMutator{}).WithValidator(&webhook.LocalstorageValidator{}).
-		Complete(); err != nil {
-		klog.Fatalf("failed to create localstorage webhook: %v", err)
-	}
+	mgr.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: mgr.GetClient()}})
+
+	// Set up the cert options
+	mgr.GetWebhookServer().CertDir = *certDir
+	mgr.GetWebhookServer().CertName = *certName
+	mgr.GetWebhookServer().KeyName = *keyName
 
 	klog.Infof("Starting localstorage webhook server")
 	ctx := signals.SetupSignalHandler()
 	if err = mgr.Start(ctx); err != nil {
-		klog.Fatalf("failed to run localstorage webhook: %v", err)
+		klog.Fatalf("failed start localstorage webhook: %v", err)
 	}
 }
