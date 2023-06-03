@@ -22,9 +22,6 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
-    - jsonPath: .spec.node
-      name: Node
-      type: string
     - jsonPath: .status.allocatable
       name: Allocatable
       type: string
@@ -36,6 +33,10 @@ spec:
       type: date
     - jsonPath: .status.usage
       name: Usage
+      priority: 1
+      type: string
+    - jsonPath: .spec.node
+      name: Node
       priority: 1
       type: string
     - jsonPath: .spec.volumeGroup
