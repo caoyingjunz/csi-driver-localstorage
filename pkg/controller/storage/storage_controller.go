@@ -133,7 +133,12 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 
 func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	_, err := s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-	return err
+	if err != nil {
+		klog.Errorf("Failed to update localstorage %s: %v", ls, err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
