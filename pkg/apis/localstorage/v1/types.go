@@ -23,7 +23,7 @@ import (
 
 // +genclient
 // +genclient:nonNamespaced
-// +kubebuilder:resource:scope=Cluster,shortName=pls
+// +kubebuilder:resource:scope=Cluster,shortName={pls, ls}
 // +kubebuilder:printcolumn:JSONPath=".status.phase",name=Status,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.allocatable",name=Allocatable,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
@@ -69,13 +69,13 @@ type LocalStorageCondition string
 type LocalStorageStatus struct {
 	Allocatable resource.Quantity     `json:"allocatable,omitempty"`
 	Capacity    resource.Quantity     `json:"capacity,omitempty"`
-	Usage       string                `json:"usage"`
+	Usage       string                `json:"usage,omitempty"`
 	Phase       LocalStoragePhase     `json:"phase,omitempty"`
 	Conditions  LocalStorageCondition `json:"conditions,omitempty"`
 
 	// List of mount volumes on this node
 	// +optional
-	VolumeInfo []Volume `json:"volumeInfo,omitempty"`
+	Volumes []Volume `json:"volumes,omitempty"`
 }
 
 type Volume struct {
