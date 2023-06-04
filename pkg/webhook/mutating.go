@@ -19,6 +19,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/klog/v2"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +39,11 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	// TODO: mutate
+	klog.Infof("implementing %s default object", ls.Name)
+	if len(ls.Status.Phase) == 0 {
+		ls.Status.Phase = localstoragev1.LocalStoragePending
+	}
+
 	data, err := json.Marshal(ls)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
