@@ -5,20 +5,21 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: selfsigned-issuer
-  namespace: cert-manager
+  namespace: kube-system
 spec:
   selfSigned: {}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: serving-cert  # this name should match the one appeared in kustomizeconfig.yaml
-  namespace: cert-manager
+  name: serving-cert
+  namespace: kube-system
 spec:
   dnsNames:
+    - 127.0.0.1
     - webhook-service.kube-system.svc
     - webhook-service.kube-system.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer
-  secretName: webhook-server-cert # this secret will not be prefixed, since it's not managed by kustomize
+  secretName: webhook-server-cert
