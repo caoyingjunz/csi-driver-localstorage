@@ -29,7 +29,12 @@ import (
 )
 
 var (
-	certDir  = flag.String("cert-dir", "", "certDir is the directory that contains the server key and certificate")
+	// webhook
+	host = flag.String("host", "127.0.0.1", "ost is the hostname that the webhook server binds to")
+	port = flag.Int("port", 8443, "port is the port that the webhook server serves at")
+
+	// cert
+	certDir  = flag.String("cert-dir", "/tmp/webhook-server", "certDir is the directory that contains the server key and certificate")
 	certName = flag.String("cert-name", "tls.crt", "certName is the server certificate name. Defaults to tls.crt")
 	keyName  = flag.String("key-name", "tls.key", "keyName is the server key name. Defaults to tls.key.")
 )
@@ -42,25 +47,28 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	if len(*certDir) == 0 {
-		klog.Fatalf("cert-dir is the directory that contains the server key and certificate, it must be provide")
-	}
-
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+		Host: *host,
+		Port: *port,
+	})
 	if err != nil {
 		klog.Fatalf("unable to set up overall controller manager: %v", err)
 	}
+	installCert(mgr.GetWebhookServer())
 
+	// Register webhook APIs
 	mgr.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: mgr.GetClient()}})
-
-	// Set up the cert options
-	mgr.GetWebhookServer().CertDir = *certDir
-	mgr.GetWebhookServer().CertName = *certName
-	mgr.GetWebhookServer().KeyName = *keyName
 
 	klog.Infof("Starting localstorage webhook server")
 	ctx := signals.SetupSignalHandler()
 	if err = mgr.Start(ctx); err != nil {
 		klog.Fatalf("failed start localstorage webhook: %v", err)
 	}
+}
+
+// install the cert
+func installCert(s *webhook.Server) {
+	s.CertDir = *certDir
+	s.CertName = *certName
+	s.KeyName = *keyName
 }
