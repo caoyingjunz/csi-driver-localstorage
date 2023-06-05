@@ -5,10 +5,33 @@ import (
 	"testing"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/caoyingjunz/pixiulib/exec"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
+func preTestCreate() error {
+	exec := exec.New()
+	_, err := exec.LookPath(lvCreate)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func preTestRemove() error {
+	exec := exec.New()
+	_, err := exec.LookPath(lvRemove)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestCreateLV(t *testing.T) {
+	if err := preTestCreate(); err != nil {
+		return
+	}
+
 	pathPrefix := "/dev"
 	volumeID := "123456789"
 	vgname := "vg1"
@@ -33,6 +56,10 @@ func TestCreateLV(t *testing.T) {
 }
 
 func TestRemoveLV(t *testing.T) {
+	if err := preTestRemove(); err != nil {
+		return
+	}
+
 	volume := &cache.Volume{
 		VolPath: "/dev/vg1/testLV",
 	}
