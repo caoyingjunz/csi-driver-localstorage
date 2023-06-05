@@ -39,7 +39,7 @@ var (
 	// Deprecated： 临时使用，后续删除
 	volumeDir = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
 
-	kubeconfig = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the plugin is being run out of cluster.")
+	kubeconfig = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
 
 	// pprof flags
 	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
