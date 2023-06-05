@@ -3,6 +3,7 @@ module github.com/caoyingjunz/csi-driver-localstorage
 go 1.16
 
 require (
+	github.com/caoyingjunz/pixiulib v0.0.0-20230531125410-557b467b1a5e
 	github.com/container-storage-interface/spec v1.6.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
