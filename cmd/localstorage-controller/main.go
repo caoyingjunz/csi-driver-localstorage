@@ -53,7 +53,7 @@ const (
 )
 
 var (
-	kubeconfig  = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Needs to be set if the controller is being run out of cluster.")
+	kubeconfig  = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
 	healthzPort = flag.Int("healthz-port", 0, "healthzPort is the port of the localhost healthz endpoint (set to 0 to disable)")
 
 	// leaderElect
