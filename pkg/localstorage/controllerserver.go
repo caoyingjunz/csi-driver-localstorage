@@ -36,11 +36,11 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
-type Operate string
+type Operation string
 
 const (
-	Add Operate = "add"
-	Sub Operate = "sub"
+	AddOperation Operation = "add"
+	SubOperation Operation = "sub"
 )
 
 // CreateVolume create a volume
@@ -147,12 +147,12 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
-func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operate) resource.Quantity {
+func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operation) resource.Quantity {
 	volSizeCap := util.BytesToQuantity(volSize)
 	switch op {
-	case Add:
+	case AddOperation:
 		allocatableSize.Add(volSizeCap)
-	case Sub:
+	case SubOperation:
 		allocatableSize.Sub(volSizeCap)
 	}
 
