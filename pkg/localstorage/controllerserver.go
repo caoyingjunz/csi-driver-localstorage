@@ -80,7 +80,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	}
 
 	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, Sub)
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, SubOperation)
 	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 		return nil, err
 	}
 	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, Add)
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, AddOperation)
 	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
