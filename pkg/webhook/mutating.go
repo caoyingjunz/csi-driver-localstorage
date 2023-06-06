@@ -33,13 +33,15 @@ type LocalstorageMutate struct {
 	decoder *admission.Decoder
 }
 
+var _ admission.Handler = &LocalstorageMutate{}
+
 func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
 	if err := s.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	klog.Infof("implementing %s default object", ls.Name)
+	klog.Infof("Mutating localstorage %s for %s", ls.Name, req.Operation)
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
 	}

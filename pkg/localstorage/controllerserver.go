@@ -36,11 +36,11 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 )
 
-type Operate string
+type Operation string
 
 const (
-	Add Operate = "add"
-	Sub Operate = "sub"
+	AddOperation Operation = "add"
+	SubOperation Operation = "sub"
 )
 
 // CreateVolume create a volume
@@ -80,7 +80,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	}
 
 	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, Sub)
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, SubOperation)
 	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 		return nil, err
 	}
 	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, Add)
+	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, AddOperation)
 	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
@@ -147,12 +147,12 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
-func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operate) resource.Quantity {
+func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operation) resource.Quantity {
 	volSizeCap := util.BytesToQuantity(volSize)
 	switch op {
-	case Add:
+	case AddOperation:
 		allocatableSize.Add(volSizeCap)
-	case Sub:
+	case SubOperation:
 		allocatableSize.Sub(volSizeCap)
 	}
 
