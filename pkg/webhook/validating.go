@@ -42,7 +42,6 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	klog.Infof("Validating localstorage %s for operation: %s", ls.Name, req.Operation)
-
+	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
 	return admission.Allowed("")
 }

@@ -41,7 +41,7 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	klog.Infof("Mutating localstorage %s for operation: %s", ls.Name)
+	klog.Infof("Mutating localstorage %s for %s", ls.Name, req.Operation)
 	if len(ls.Status.Phase) == 0 {
 		ls.Status.Phase = localstoragev1.LocalStoragePending
 	}
