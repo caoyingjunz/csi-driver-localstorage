@@ -33,6 +33,8 @@ type LocalstorageMutate struct {
 	decoder *admission.Decoder
 }
 
+var _ admission.Handler = &LocalstorageMutate{}
+
 func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
 	if err := s.decoder.Decode(req, ls); err != nil {

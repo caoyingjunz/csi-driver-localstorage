@@ -19,20 +19,30 @@ package webhook
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
+	"net/http"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 )
 
 type LocalstorageValidator struct {
+	Client client.Client
+
 	decoder *admission.Decoder
 }
 
-func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return nil
-}
-func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return nil
-}
-func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+var _ admission.Handler = &LocalstorageValidator{}
+
+func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	ls := &localstoragev1.LocalStorage{}
+	if err := v.decoder.Decode(req, ls); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	klog.Infof("Validating localstorage %s for operation: %s", ls.Name, req.Operation)
+
+	return admission.Allowed("")
 }

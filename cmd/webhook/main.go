@@ -30,7 +30,7 @@ import (
 
 var (
 	// webhook
-	host = flag.String("host", "127.0.0.1", "ost is the hostname that the webhook server binds to")
+	host = flag.String("host", "127.0.0.1", "host is the ip address that the webhook server binds to")
 	port = flag.Int("port", 8443, "port is the port that the webhook server serves at")
 
 	// cert
@@ -47,22 +47,24 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{
+	webhookManager, err := manager.New(config.GetConfigOrDie(), manager.Options{
 		Host: *host,
 		Port: *port,
 	})
 	if err != nil {
 		klog.Fatalf("unable to set up overall controller manager: %v", err)
 	}
-	installCert(mgr.GetWebhookServer())
+	installCert(webhookManager.GetWebhookServer())
 
+	kubeClient := webhookManager.GetClient()
 	// Register webhook APIs
-	mgr.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: mgr.GetClient()}})
+	webhookManager.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: kubeClient}})
+	webhookManager.GetWebhookServer().Register("/validate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageValidator{Client: kubeClient}})
 
 	klog.Infof("Starting localstorage webhook server")
 	ctx := signals.SetupSignalHandler()
-	if err = mgr.Start(ctx); err != nil {
-		klog.Fatalf("failed start localstorage webhook: %v", err)
+	if err = webhookManager.Start(ctx); err != nil {
+		klog.Fatalf("failed to start localstorage webhook server: %v", err)
 	}
 }
 
