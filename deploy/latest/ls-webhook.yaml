@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pixiu-localstorage-webhook
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pixiu-ls-webhook
+  template:
+    metadata:
+      labels:
+        app: pixiu-ls-webhook
+    spec:
+      serviceAccountName: csi-ls-node-sa
+      containers:
+        - args:
+            - -v=2
+            - --cert-dir=/tmp/cert
+            - --port 8443
+          image: pixiuio/webhook:latest
+          imagePullPolicy: Always
+          name: ls-webhook
+      dnsPolicy: Default
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
