@@ -30,7 +30,7 @@ import (
 
 var (
 	// webhook
-	host = flag.String("host", "127.0.0.1", "host is the ip address that the webhook server binds to")
+	host = flag.String("host", "", "host is the ip address that the webhook server binds to")
 	port = flag.Int("port", 8443, "port is the port that the webhook server serves at")
 
 	// cert
