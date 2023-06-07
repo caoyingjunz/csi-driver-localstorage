@@ -6,7 +6,7 @@ metadata:
 spec:
   ports:
     - name: tcp-8443
-      port: 8443
+      port: 443
       protocol: TCP
       targetPort: 8443
   selector:
