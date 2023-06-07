@@ -30,14 +30,14 @@ import (
 
 type LocalstorageMutate struct {
 	Client  client.Client
-	decoder *admission.Decoder
+	Decoder *admission.Decoder
 }
 
 var _ admission.Handler = &LocalstorageMutate{}
 
 func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
-	if err := s.decoder.Decode(req, ls); err != nil {
+	if err := s.Decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -52,4 +52,9 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	return admission.PatchResponseFromRaw(req.Object.Raw, data)
+}
+
+func (s *LocalstorageMutate) InjectDecoder(d *admission.Decoder) error {
+	s.Decoder = d
+	return nil
 }

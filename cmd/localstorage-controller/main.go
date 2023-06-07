@@ -34,6 +34,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
@@ -108,9 +109,14 @@ func main() {
 	installCert(webhookManager.GetWebhookServer())
 
 	webhookClient := webhookManager.GetClient()
+	decoder, err := admission.NewDecoder(webhookClient.Scheme())
+	if err != nil {
+		klog.Fatalf("Failed to build admission decoder: %v", err)
+	}
+
 	// Register webhook APIs
-	webhookManager.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: webhookClient}})
-	webhookManager.GetWebhookServer().Register("/validate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageValidator{Client: webhookClient}})
+	webhookManager.GetWebhookServer().Register("/mutate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageMutate{Client: webhookClient, Decoder: decoder}})
+	webhookManager.GetWebhookServer().Register("/validate-v1-localstorage", &webhook.Admission{Handler: &localstoragewebhook.LocalstorageValidator{Client: webhookClient, Decoder: decoder}})
 	go func() {
 		klog.Infof("Starting localstorage webhook server")
 		if err = webhookManager.Start(ctx); err != nil {
