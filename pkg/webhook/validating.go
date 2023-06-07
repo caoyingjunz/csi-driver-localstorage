@@ -29,16 +29,15 @@ import (
 )
 
 type LocalstorageValidator struct {
-	Client client.Client
-
-	decoder *admission.Decoder
+	Client  client.Client
+	Decoder *admission.Decoder
 }
 
 var _ admission.Handler = &LocalstorageValidator{}
 
 func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
-	if err := v.decoder.Decode(req, ls); err != nil {
+	if err := v.Decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
