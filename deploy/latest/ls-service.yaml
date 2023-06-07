@@ -10,5 +10,5 @@ spec:
       protocol: TCP
       targetPort: 8443
   selector:
-    app: pixiu-ls-webhook
+    app: pixiu-ls-controller
   type: ClusterIP
