@@ -22,7 +22,16 @@ spec:
           image: pixiuio/webhook:latest
           imagePullPolicy: Always
           name: ls-webhook
+          volumeMounts:
+            - mountPath: /tmp/cert
+              name: cert
+              readOnly: true
       dnsPolicy: Default
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: Always
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: pixiu-localstorage-cert
