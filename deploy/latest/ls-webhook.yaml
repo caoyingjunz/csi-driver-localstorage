@@ -18,7 +18,7 @@ spec:
         - args:
             - -v=2
             - --cert-dir=/tmp/cert
-            - --port 8443
+            - --port=8443
           image: pixiuio/webhook:latest
           imagePullPolicy: Always
           name: ls-webhook
