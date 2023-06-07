@@ -19,9 +19,15 @@ spec:
             - -v=2
             # port's value equals 0 means health check func disabled
             - --healthz-port=10258
+            - --cert-dir=/tmp/cert
+            - --port=8443
           image: pixiuio/localstorage-controller:latest
           imagePullPolicy: Always
           name: ls-controller
+          volumeMounts:
+            - mountPath: /tmp/cert
+              name: cert
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -34,4 +40,8 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: Always
-
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: pixiu-localstorage-cert
