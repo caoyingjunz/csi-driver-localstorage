@@ -14,6 +14,7 @@ spec:
     plural: localstorages
     shortNames:
     - pls
+    - ls
     singular: localstorage
   scope: Cluster
   versions:
@@ -64,6 +65,7 @@ spec:
                 items:
                   properties:
                     identifier:
+                      description: disk identifier, plugin will fill it
                       type: string
                     name:
                       type: string
@@ -96,7 +98,7 @@ spec:
                 type: string
               usage:
                 type: string
-              volumeInfo:
+              volumes:
                 description: List of mount volumes on this node
                 items:
                   properties:
@@ -106,8 +108,6 @@ spec:
                   - name
                   type: object
                 type: array
-            required:
-            - usage
             type: object
         type: object
     served: true

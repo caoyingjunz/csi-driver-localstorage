@@ -94,20 +94,19 @@ spec:
             - mountPath: /csi
               name: socket-dir
 
-        - name: localstorage
+        - name: ls-plugin
           securityContext:
             privileged: true
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: pixiuio/lsplugin:latest
+          image: pixiuio/localstorageplugin:latest
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--nodeid=$(KUBE_NODE_NAME)"
             - "--volume-dir=/data"
           env:
-            - name: NODE_ID
+            - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
@@ -125,7 +124,7 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30
-          imagePullPolicy: "IfNotPresent"
+          imagePullPolicy: "Always"
           volumeMounts:
             - name: socket-dir
               mountPath: /csi

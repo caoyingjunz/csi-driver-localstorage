@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -43,11 +44,19 @@ var (
 )
 
 func BuildClientConfig(configFile string) (*restclient.Config, error) {
-	if len(configFile) == 0 {
-		configFile = filepath.Join(homedir.HomeDir(), ".kube", "config")
+	if len(configFile) != 0 {
+		klog.Infof("kubeconfig specified. building kube config from that")
+		return clientcmd.BuildConfigFromFlags("", configFile)
 	}
 
-	return clientcmd.BuildConfigFromFlags("", configFile)
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", filepath.Join(homedir.HomeDir(), ".kube", "config"))
+	if err == nil {
+		klog.Infof("kubeconfig not specified. try to building kube config from ~/.kube/config")
+		return kubeConfig, nil
+	}
+
+	klog.Infof("Building kube configs for running in cluster...")
+	return restclient.InClusterConfig()
 }
 
 func NewClientSets(kubeConfig *restclient.Config) (kubernetes.Interface, versioned.Interface, error) {
@@ -77,4 +86,9 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 	}
 
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
+}
+
+func BytesToQuantity(bytes int64) resource.Quantity {
+	quantity := resource.NewQuantity(bytes, resource.BinarySI)
+	return *quantity
 }

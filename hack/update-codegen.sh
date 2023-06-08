@@ -18,8 +18,14 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+CONTROLLER_TOOLS_VERSION=v0.8.0
+
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null)}
+GO_BIN=$(pwd)/vendor/bin
+
+test -s "${GO_BIN}"/controller-gen && "${GO_BIN}"/controller-gen --version | grep -q ${CONTROLLER_TOOLS_VERSION} || \
+GOBIN=${GO_BIN} go install sigs.k8s.io/controller-tools/cmd/controller-gen@${CONTROLLER_TOOLS_VERSION}
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
@@ -33,8 +39,6 @@ bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
 cp -r "${SCRIPT_ROOT}"/github.com/caoyingjunz/csi-driver-localstorage/pkg/client "${SCRIPT_ROOT}"/pkg
 cp -r "${SCRIPT_ROOT}"/github.com/caoyingjunz/csi-driver-localstorage/pkg/apis "${SCRIPT_ROOT}"/pkg
 
-# 生成 crds
-# TODO: 临时解决
-# 需要 podset-operator 作为临时的处理工具，clone 到 csi-driver-localstorage 的同级目录即可
-# 项目地址 https://github.com/caoyingjunz/podset-operator
-../podset-operator/bin/controller-gen crd paths=./pkg/apis/... output:crd:dir=./deploy/crds output:stdout
+# 生成 CRDs
+echo "Generating localstorage CRDs"
+"${GO_BIN}"/controller-gen crd paths=./pkg/apis/... output:crd:dir=./deploy/crds output:stdout
