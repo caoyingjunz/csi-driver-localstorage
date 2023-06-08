@@ -19,9 +19,9 @@ package webhook
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/klog/v2"
 	"net/http"
 
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -31,14 +31,15 @@ import (
 
 type LocalstorageMutate struct {
 	Client  client.Client
-	Decoder *admission.Decoder
+	decoder *admission.Decoder
 }
 
 var _ admission.Handler = &LocalstorageMutate{}
+var _ admission.DecoderInjector = &LocalstorageMutate{}
 
 func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
-	if err := s.Decoder.Decode(req, ls); err != nil {
+	if err := s.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -61,7 +62,9 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, data)
 }
 
+// InjectDecoder implements admission.DecoderInjector interface.
+// A decoder will be automatically injected by InjectDecoderInto.
 func (s *LocalstorageMutate) InjectDecoder(d *admission.Decoder) error {
-	s.Decoder = d
+	s.decoder = d
 	return nil
 }
