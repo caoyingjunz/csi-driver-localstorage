@@ -18,6 +18,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"k8s.io/klog/v2"
@@ -39,6 +40,19 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	ls := &localstoragev1.LocalStorage{}
 	if err := v.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	// 确保一个 node 只能有一个 LocalStorage
+	lsList := &localstoragev1.LocalStorageList{}
+	if err := v.Client.List(ctx, lsList); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	for _, lsObj := range lsList.Items {
+		if lsObj.Spec.Node == ls.Spec.Node {
+			return admission.Errored(http.StatusBadRequest,
+				fmt.Errorf("node: %s, already have a LocalStorage", ls.Spec.Node))
+		}
 	}
 
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
