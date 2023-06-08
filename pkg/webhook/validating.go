@@ -42,17 +42,8 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	// 确保一个 node 只能有一个 LocalStorage
-	lsList := &localstoragev1.LocalStorageList{}
-	if err := v.Client.List(ctx, lsList); err != nil {
+	if err := v.lsBindNodeValidate(ctx, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	for _, lsObj := range lsList.Items {
-		if lsObj.Spec.Node == ls.Spec.Node {
-			return admission.Errored(http.StatusBadRequest,
-				fmt.Errorf("node: %s, already have a LocalStorage", ls.Spec.Node))
-		}
 	}
 
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
@@ -63,5 +54,22 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 // A decoder will be automatically injected by InjectDecoderInto.
 func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
+	return nil
+}
+
+// make sure one node just have one LocalStorage
+func (v *LocalstorageValidator) lsBindNodeValidate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	lsList := &localstoragev1.LocalStorageList{}
+	if err := v.Client.List(ctx, lsList); err != nil {
+		return err
+	}
+
+	for _, lsObj := range lsList.Items {
+		if lsObj.Spec.Node == ls.Spec.Node {
+			return fmt.Errorf("node: %s, already have a LocalStorage", ls.Spec.Node)
+		}
+	}
+
+	klog.Infof("about localstorage: %s, lsBindNodeValidate succeed", ls.Name)
 	return nil
 }
