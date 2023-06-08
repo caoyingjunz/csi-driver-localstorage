@@ -22,11 +22,11 @@ image: check
 	@if [ -z "$(appName)" ]; then \
 		for app in $(apps); do \
           	echo "Building $$app"; \
-        	docker build -t $(dockerhubUser)/$$app:$(tag) --build-arg APP=$$app .; \
+        	docker build -t $(dockerhubUser)/$$app:$(tag) --no-cache --build-arg APP=$$app .; \
     	done \
     else \
 		echo "Building $(appName)"; \
-		docker build -t $(dockerhubUser)/$(appName):$(tag) --build-arg APP=$(appName) .; \
+		docker build -t $(dockerhubUser)/$(appName):$(tag) --no-cache --build-arg APP=$(appName) .; \
 	fi
 
 # push all images
