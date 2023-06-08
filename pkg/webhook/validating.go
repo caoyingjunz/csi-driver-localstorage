@@ -18,10 +18,9 @@ package webhook
 
 import (
 	"context"
-
-	"k8s.io/klog/v2"
 	"net/http"
 
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -30,17 +29,25 @@ import (
 
 type LocalstorageValidator struct {
 	Client  client.Client
-	Decoder *admission.Decoder
+	decoder *admission.Decoder
 }
 
 var _ admission.Handler = &LocalstorageValidator{}
+var _ admission.DecoderInjector = &LocalstorageValidator{}
 
 func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
-	if err := v.Decoder.Decode(req, ls); err != nil {
+	if err := v.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
 	return admission.Allowed("")
+}
+
+// InjectDecoder implements admission.DecoderInjector interface.
+// A decoder will be automatically injected by InjectDecoderInto.
+func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
+	v.decoder = d
+	return nil
 }
