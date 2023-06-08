@@ -5,41 +5,19 @@ tag = latest
 apps ?= $(shell ls cmd)
 appName ?= $(app)
 
-# check if app name is valid
-check:
-	@if [ ! -d "cmd/$(appName)" ]; then \
-		echo "cmd/$(appName) not exist"; \
-		echo "Please check your app name"; \
-		for app in $(apps); do \
-			echo "Example: make xxx app=$$app"; \
-			break; \
-		done; \
-		exit 1; \
-	fi
-
 # build all images
-image: check
-	@if [ -z "$(appName)" ]; then \
-		for app in $(apps); do \
-          	echo "Building $$app"; \
-        	docker build -t $(dockerhubUser)/$$app:$(tag) --no-cache --build-arg APP=$$app .; \
-    	done \
-    else \
-		echo "Building $(appName)"; \
-		docker build -t $(dockerhubUser)/$(appName):$(tag) --no-cache --build-arg APP=$(appName) .; \
-	fi
+image:
+	for app in $(apps); do \
+  		echo "Building $$app"; \
+		docker build -t $(dockerhubUser)/$$app:$(tag) --build-arg APP=$$app .; \
+	done
 
 # push all images
 push: image
-	@if [ -z "$(appName)" ]; then \
-		for app in $(apps); do \
-			echo "Pushing $$app"; \
-			docker push $(dockerhubUser)/$$app:$(tag); \
-		done \
-    else \
-		echo "Pushing $(appName)"; \
-		docker push $(dockerhubUser)/$(appName):$(tag); \
-    fi
+	for app in $(apps); do \
+  		echo "Pushing $$app"; \
+		docker push $(dockerhubUser)/$$app:$(tag); \
+	done
 
 # install vendor
 vendor:
