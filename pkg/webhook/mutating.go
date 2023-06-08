@@ -42,23 +42,25 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	if err := s.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-
 	klog.Infof("Mutating localstorage %s for %s", ls.Name, req.Operation)
-	if len(ls.Status.Phase) == 0 {
-		ls.Status.Phase = localstoragev1.LocalStoragePending
-	}
 
 	// AddFinalizer
 	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
 		util.AddFinalizer(ls, util.LsProtectionFinalizer)
 	}
-	klog.Infof("Mutated localstorage %+v for %s", ls, req.Operation)
+	// Set localstorage phase when created
+	if len(ls.Status.Phase) == 0 {
+		ls.Status.Phase = localstoragev1.LocalStoragePending
+	}
+
+	// TODO: set the other spec
 
 	data, err := json.Marshal(ls)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
+	klog.Infof("Mutated localstorage %+v for %s", ls, req.Operation)
 	return admission.PatchResponseFromRaw(req.Object.Raw, data)
 }
 
