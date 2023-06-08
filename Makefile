@@ -11,8 +11,7 @@ check:
 		echo "cmd/$(appName) not exist"; \
 		echo "Please check your app name"; \
 		for app in $(apps); do \
-			echo "Example: make image app=$$app"; \
-			echo "Example: make push app=$$app"; \
+			echo "Example: make xxx app=$$app"; \
 			break; \
 		done; \
 		exit 1; \
@@ -23,11 +22,11 @@ image: check
 	@if [ -z "$(appName)" ]; then \
 		for app in $(apps); do \
           	echo "Building $$app"; \
-        	docker build -t $(dockerhubUser)/$$app:$(tag) --build-arg APP=$$app .; \
+        	docker build -t $(dockerhubUser)/$$app:$(tag) --no-cache --build-arg APP=$$app .; \
     	done \
     else \
 		echo "Building $(appName)"; \
-		docker build -t $(dockerhubUser)/$(appName):$(tag) --build-arg APP=$(appName) .; \
+		docker build -t $(dockerhubUser)/$(appName):$(tag) --no-cache --build-arg APP=$(appName) .; \
 	fi
 
 # push all images
