@@ -3,7 +3,6 @@
 dockerhubUser = pixiuio
 tag = latest
 apps ?= $(shell ls cmd)
-appName ?= $(app)
 
 # build all images
 image:
