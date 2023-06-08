@@ -165,18 +165,6 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		return nil
 	}
 
-	// Init the localstorage status
-	if len(ls.Status.Phase) == 0 {
-		ls.Status.Phase = localstoragev1.LocalStoragePending
-		return s.onlyUpdate(ctx, ls)
-	}
-
-	// AddFinalizer
-	if !util.ContainsFinalizer(ls, util.LsProtectionFinalizer) {
-		util.AddFinalizer(ls, util.LsProtectionFinalizer)
-		return s.onlyUpdate(ctx, ls)
-	}
-
 	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
 	return nil
 }
