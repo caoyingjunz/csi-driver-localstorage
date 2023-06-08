@@ -11,8 +11,7 @@ check:
 		echo "cmd/$(appName) not exist"; \
 		echo "Please check your app name"; \
 		for app in $(apps); do \
-			echo "Example: make image app=$$app"; \
-			echo "Example: make push app=$$app"; \
+			echo "Example: make xxx app=$$app"; \
 			break; \
 		done; \
 		exit 1; \
