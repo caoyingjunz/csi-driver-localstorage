@@ -3,20 +3,44 @@
 dockerhubUser = pixiuio
 tag = latest
 apps ?= $(shell ls cmd)
+appName ?= $(app)
+
+# check if app name is valid
+check:
+	@if [ ! -d "cmd/$(appName)" ]; then \
+		echo "cmd/$(appName) not exist"; \
+		echo "Please check your app name"; \
+		for app in $(apps); do \
+			echo "Example: make image app=$$app"; \
+			echo "Example: make push app=$$app"; \
+			break; \
+		done; \
+		exit 1; \
+	fi
 
 # build all images
-image:
-	for app in $(apps); do \
-  		echo "Building $$app"; \
-		docker build -t $(dockerhubUser)/$$app:$(tag) --build-arg APP=$$app .; \
-	done
+image: check
+	@if [ -z "$(appName)" ]; then \
+		for app in $(apps); do \
+          	echo "Building $$app"; \
+        	docker build -t $(dockerhubUser)/$$app:$(tag) --build-arg APP=$$app .; \
+    	done \
+    else \
+		echo "Building $(appName)"; \
+		docker build -t $(dockerhubUser)/$(appName):$(tag) --build-arg APP=$(appName) .; \
+	fi
 
 # push all images
 push: image
-	for app in $(apps); do \
-  		echo "Pushing $$app"; \
-		docker push $(dockerhubUser)/$$app:$(tag); \
-	done
+	@if [ -z "$(appName)" ]; then \
+		for app in $(apps); do \
+			echo "Pushing $$app"; \
+			docker push $(dockerhubUser)/$$app:$(tag); \
+		done \
+    else \
+		echo "Pushing $(appName)"; \
+		docker push $(dockerhubUser)/$(appName):$(tag); \
+    fi
 
 # install vendor
 vendor:
