@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -109,6 +110,8 @@ func main() {
 
 	// build webhook client
 	webhookClient := webhookManager.GetClient()
+
+	fmt.Println("ddd")
 
 	// Register webhook APIs
 	klog.Info("Registering webhooks for localstorage APIs")
