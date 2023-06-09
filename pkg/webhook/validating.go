@@ -42,7 +42,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err := v.lsBindNodeValidate(ctx, ls); err != nil {
+	if err := v.validateLocalStorageNode(ctx, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -58,7 +58,7 @@ func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
 }
 
 // make sure one node just have one LocalStorage
-func (v *LocalstorageValidator) lsBindNodeValidate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	lsList := &localstoragev1.LocalStorageList{}
 	if err := v.Client.List(ctx, lsList); err != nil {
 		return err
