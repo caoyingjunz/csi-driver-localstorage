@@ -18,9 +18,10 @@ package webhook
 
 import (
 	"context"
+	"k8s.io/klog/v2"
 	"net/http"
 
-	"k8s.io/klog/v2"
+	admissionv1 "k8s.io/api/admission/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -40,9 +41,37 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	if err := v.decoder.Decode(req, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
+
+	var err error
+	switch req.Operation {
+	case admissionv1.Create:
+		err = v.ValidateCreate(ctx, ls)
+	case admissionv1.Update:
+		err = v.ValidateUpdate(ctx, ls)
+	case admissionv1.Delete:
+		err = v.ValidateDelete(ctx, ls)
+	}
+	if err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	return admission.Allowed("")
+}
+
+func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	klog.V(2).Infof("validate create", "name", ls.Name)
+	return nil
+}
+
+func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	klog.V(2).Infof("validate update", "name", ls.Name)
+	return nil
+}
+
+func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	klog.V(2).Infof("validate delete", "name", ls.Name)
+	return nil
 }
 
 // InjectDecoder implements admission.DecoderInjector interface.
