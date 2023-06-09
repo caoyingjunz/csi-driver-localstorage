@@ -38,6 +38,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/controller/storage"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/runtime"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 	localstoragewebhook "github.com/caoyingjunz/csi-driver-localstorage/pkg/webhook"
@@ -99,15 +100,16 @@ func main() {
 	kubeConfig.Burst = *kubeAPIBurst
 
 	webhookManager, err := manager.New(kubeConfig, manager.Options{
-		Host: *host,
-		Port: *port,
+		Scheme: runtime.NewScheme(),
+		Host:   *host,
+		Port:   *port,
 	})
 	if err != nil {
 		klog.Fatalf("unable to set up overall controller manager: %v", err)
 	}
 	installCert(webhookManager.GetWebhookServer())
 
-	// build webhook client
+	// Build client to perform kubernetes objects.
 	webhookClient := webhookManager.GetClient()
 
 	// Register webhook APIs
