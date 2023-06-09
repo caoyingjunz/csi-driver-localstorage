@@ -109,7 +109,7 @@ func main() {
 	}
 	installCert(webhookManager.GetWebhookServer())
 
-	// Build client knows how to perform CRUD operations on Kubernetes objects.
+	// Build client to perform kubernetes objects.
 	webhookClient := webhookManager.GetClient()
 
 	// Register webhook APIs
