@@ -18,7 +18,6 @@ package webhook
 
 import (
 	"context"
-
 	"fmt"
 	"net/http"
 
@@ -59,15 +58,16 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 		return admission.Denied(err.Error())
 	}
 
-	if err := v.ValidateLocalStorageNode(ctx, ls); err != nil {
-		return admission.Denied(err.Error())
-	}
-
 	return admission.Allowed("")
 }
 
 func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	klog.V(2).Infof("validate create", "name", ls.Name)
+
+        if err := v.ValidateLocalStorageNode(ctx, ls); err != nil {
+	    return admission.Denied(err.Error())
+	}
+
 	return nil
 }
 
@@ -81,26 +81,25 @@ func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localsto
 	return nil
 }
 
+// make sure one node just have one LocalStorage
+func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	localstorages := &localstoragev1.LocalStorageList{}
+	if err := v.Client.List(ctx, localstorages); err != nil {
+		return err
+	}
+
+	for _, localstorage := range localstorages.Items {
+		if localstorage.Spec.Node == ls.Spec.Node {
+			return fmt.Errorf("node (%s) already have a LocalStorage", ls.Spec.Node)
+		}
+	}
+
+	return nil
+}
+
 // InjectDecoder implements admission.DecoderInjector interface.
 // A decoder will be automatically injected by InjectDecoderInto.
 func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
-	return nil
-}
-
-// make sure one node just have one LocalStorage
-func (v *LocalstorageValidator) ValidateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	lsList := &localstoragev1.LocalStorageList{}
-	if err := v.Client.List(ctx, lsList); err != nil {
-		return err
-	}
-
-	for _, lsObj := range lsList.Items {
-		if lsObj.Spec.Node == ls.Spec.Node {
-			return fmt.Errorf("node: %s, already have a LocalStorage", ls.Spec.Node)
-		}
-	}
-
-	klog.Infof("about localstorage: %s, lsBindNodeValidate succeed", ls.Name)
 	return nil
 }
