@@ -96,8 +96,6 @@ spec:
                 type: string
               phase:
                 type: string
-              usage:
-                type: string
               volumes:
                 description: List of mount volumes on this node
                 items:
