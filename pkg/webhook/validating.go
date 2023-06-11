@@ -81,7 +81,7 @@ func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localsto
 	return nil
 }
 
-// make sure one node just have one LocalStorage
+// validate localstorage node
 func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	if len(ls.Spec.Node) == 0 {
 		return fmt.Errorf("localstraoge (%s) binding node may not be empty", ls.Name)
