@@ -49,7 +49,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
 
 	var err error
-	if err = v.ValidateDefault(ctx, ls); err != nil {
+	if err = v.ValidateName(ctx, ls); err != nil {
 		admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -72,7 +72,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	return admission.Allowed("")
 }
 
-func (v *LocalstorageValidator) ValidateDefault(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+func (v *LocalstorageValidator) ValidateName(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	if len(ls.Name) == 0 {
 		return fmt.Errorf("localstorage (%s) name must be than 0 characters", ls.Name)
 	}
