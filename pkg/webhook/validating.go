@@ -64,8 +64,8 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	klog.V(2).Infof("validate create", "name", ls.Name)
 
-        if err := v.ValidateLocalStorageNode(ctx, ls); err != nil {
-	    return admission.Denied(err.Error())
+	if err := v.validateLocalStorageNode(ctx, ls); err != nil {
+		return err
 	}
 
 	return nil
@@ -83,14 +83,18 @@ func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localsto
 
 // make sure one node just have one LocalStorage
 func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	localstorages := &localstoragev1.LocalStorageList{}
-	if err := v.Client.List(ctx, localstorages); err != nil {
-		return err
+	if len(ls.Spec.Node) == 0 {
+		return fmt.Errorf("localstraoge (%s) binding node may not be empty", ls.Name)
 	}
 
-	for _, localstorage := range localstorages.Items {
+	obj := &localstoragev1.LocalStorageList{}
+	if err := v.Client.List(ctx, obj); err != nil {
+		return fmt.Errorf("failed to list localstorage objects: %v", err)
+	}
+
+	for _, localstorage := range obj.Items {
 		if localstorage.Spec.Node == ls.Spec.Node {
-			return fmt.Errorf("node (%s) already have a LocalStorage", ls.Spec.Node)
+			return fmt.Errorf("node (%s) already binded to the other localstorage", ls.Spec.Node)
 		}
 	}
 
