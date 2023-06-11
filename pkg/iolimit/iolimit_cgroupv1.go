@@ -10,18 +10,8 @@ import (
 )
 
 /*
-	ubuntu 20.04 TLS ARM
+	ubuntu 20.04 TLS ARM  cgroup1
 */
-
-const (
-	baseCgroupPath = "/sys/fs/cgroup"
-	blkioPath      = "/blkio"
-	rbpsFile       = "blkio.throttle.read_bps_device"
-	riopsFile      = "blkio.throttle.read_iops_device"
-	wbpsFile       = "blkio.throttle.write_bps_device"
-	wiopsFile      = "blkio.throttle.write_iops_device"
-	taskFile       = "tasks"
-)
 
 type IOLimit struct {
 	// 使用 VolName 作为子文件夹目录
@@ -31,26 +21,6 @@ type IOLimit struct {
 	Path       string
 	IOInfo     *IOInfo
 	DeviceInfo *DeviceInfo
-}
-
-// 设备需要设置的读写速率
-type IOInfo struct {
-	// 按每秒读取块设备的数据量设定上限
-	Rbps uint
-	// 按每秒读操作次数设定上限
-	Riops uint
-	// 按每秒写入块设备的数据量设定上限
-	Wbps uint
-	// 按每秒写操作次数设定上限
-	Wiops uint
-}
-
-// # ls -l /dev/sda
-// brw-rw---- 1 root disk 8, 0 Jun  9 15:16 /dev/sda1
-// 主子设备号，linux 系统中用来标识设备的 id
-type DeviceInfo struct {
-	Major uint
-	Minor uint
 }
 
 func NewIOLimit(vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (*IOLimit, error) {

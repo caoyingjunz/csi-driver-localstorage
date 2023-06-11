@@ -1,6 +1,13 @@
 package iolimit
 
-import "os"
+import (
+	"errors"
+	"os"
+	"strings"
+	"syscall"
+
+	"github.com/caoyingjunz/pixiulib/exec"
+)
 
 func exists(path string) (os.FileInfo, bool) {
 	info, err := os.Stat(path)
@@ -26,4 +33,37 @@ func FilePerm(path string) (os.FileMode, bool) {
 		return info.Mode().Perm(), present
 	}
 	return 0, present
+}
+
+// 检查系统 cgroup 的版本
+// stat -fc %T /sys/fs/cgroup/
+func GetCGroupVersion() (CGroupVersion, error) {
+	var getVersionArgs []string
+
+	getVersionArgs = append(getVersionArgs, "-fc", "%T", baseCgroupPath)
+
+	exec := exec.New()
+	out, err := exec.Command("stat", getVersionArgs...).CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	if strings.Contains(string(out), "tmpfs") {
+		return CGroupV1, nil
+	} else if strings.Contains(string(out), "cgroup2fs") {
+		return CGroupV2, nil
+	} else {
+		return "", errors.New("error cgroup fomart")
+	}
+}
+
+func getDeviceNumber(deviceName string) (*DeviceInfo, error) {
+	stat := syscall.Stat_t{}
+	if err := syscall.Stat(deviceName, &stat); err != nil {
+		return nil, err
+	}
+	return &DeviceInfo{
+		Major: uint(stat.Rdev / 256),
+		Minor: uint(stat.Rdev % 256),
+	}, nil
 }

@@ -32,3 +32,11 @@ func TestE2E(t *testing.T) {
 	}
 	iolimit.SetIOLimit()
 }
+
+func TestGetCGroupVersion(t *testing.T) {
+	version, err := GetCGroupVersion()
+	if err != nil {
+		t.Fail()
+	}
+	fmt.Println(version)
+}
