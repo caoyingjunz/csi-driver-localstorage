@@ -64,6 +64,11 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, data)
 }
 
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (s *LocalstorageMutate) Default(ls *localstoragev1.LocalStorage) {
+
+}
+
 // InjectDecoder implements admission.DecoderInjector interface.
 // A decoder will be automatically injected by InjectDecoderInto.
 func (s *LocalstorageMutate) InjectDecoder(d *admission.Decoder) error {
