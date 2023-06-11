@@ -57,7 +57,11 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	case admissionv1.Create:
 		err = v.ValidateCreate(ctx, ls)
 	case admissionv1.Update:
-		err = v.ValidateUpdate(ctx, ls)
+		oldLocalstorage := &localstoragev1.LocalStorage{}
+		if err = v.decoder.DecodeRaw(req.OldObject, oldLocalstorage); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		err = v.ValidateUpdate(ctx, oldLocalstorage, ls)
 	case admissionv1.Delete:
 		err = v.ValidateDelete(ctx, ls)
 	}
@@ -92,8 +96,22 @@ func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localsto
 	return nil
 }
 
-func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	klog.V(2).Infof("validate update", "name", ls.Name)
+func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *localstoragev1.LocalStorage) error {
+	klog.V(2).Infof("validate update", "name", cur.Name)
+
+	// validate common object
+	if old.Name != cur.Name || old.APIVersion != cur.APIVersion || old.Kind != cur.Kind {
+		return fmt.Errorf("at least one of apiVersion, kind and name was changed")
+	}
+
+	// validate spec
+	if old.Spec.Node != cur.Spec.Node {
+		return fmt.Errorf("spec.node: Invalid value: %v: field is immutable", cur.Spec.Node)
+	}
+	if old.Spec.VolumeGroup != cur.Spec.VolumeGroup {
+		return fmt.Errorf("spec.volumeGroup: Invalid value: %v: field is immutable", cur.Spec.VolumeGroup)
+	}
+
 	return nil
 }
 
