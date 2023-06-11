@@ -38,6 +38,8 @@ type LocalstorageMutate struct {
 var _ admission.Handler = &LocalstorageMutate{}
 var _ admission.DecoderInjector = &LocalstorageMutate{}
 
+type SetFunc func(ls *localstoragev1.LocalStorage, op admissionv1.Operation)
+
 func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) admission.Response {
 	ls := &localstoragev1.LocalStorage{}
 	if err := s.decoder.Decode(req, ls); err != nil {
@@ -47,8 +49,9 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 
 	// add finalizer into localstorage if necessary
 	s.SetFinalizer(ls)
+
 	// set localstorage default values
-	s.Default(ls, req.Operation)
+	s.Default(ls, req.Operation, s.SetStatus, s.SetDisks, s.SetVolumes)
 
 	// PatchResponseFromRaw
 	data, err := json.Marshal(ls)
@@ -61,9 +64,10 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (s *LocalstorageMutate) Default(ls *localstoragev1.LocalStorage, op admissionv1.Operation) {
-	// Init localstorage status
-	s.SetStatus(ls, op)
+func (s *LocalstorageMutate) Default(ls *localstoragev1.LocalStorage, op admissionv1.Operation, fn ...SetFunc) {
+	for _, f := range fn {
+		f(ls, op)
+	}
 }
 
 func (s *LocalstorageMutate) SetStatus(ls *localstoragev1.LocalStorage, op admissionv1.Operation) {
@@ -91,6 +95,14 @@ func (s *LocalstorageMutate) SetDisks(ls *localstoragev1.LocalStorage, op admiss
 		}
 
 		ls.Spec.Disks = newDisk
+	}
+}
+
+func (s *LocalstorageMutate) SetVolumes(ls *localstoragev1.LocalStorage, op admissionv1.Operation) {
+	if op == admissionv1.Create {
+		if len(ls.Status.Volumes) != 0 {
+			ls.Status.Volumes = nil
+		}
 	}
 }
 
