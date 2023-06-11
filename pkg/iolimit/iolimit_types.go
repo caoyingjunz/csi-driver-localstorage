@@ -1,5 +1,7 @@
 package iolimit
 
+import "github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+
 type CGroupVersion string
 
 const (
@@ -20,6 +22,16 @@ const (
 	mainSubTreeFile = "cgroup.subtree_control"
 	ioMaxFile       = "io.max"
 )
+
+type IOLimit struct {
+	// 使用 VolName 作为子文件夹目录
+	Vol cache.Volume
+	// 需要限速的进程 id
+	Pid        int
+	Path       string
+	IOInfo     *IOInfo
+	DeviceInfo *DeviceInfo
+}
 
 // 设备需要设置的读写速率
 type IOInfo struct {

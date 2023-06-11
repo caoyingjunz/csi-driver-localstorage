@@ -13,17 +13,16 @@ import (
 	ubuntu 20.04 TLS ARM  cgroup1
 */
 
-type IOLimit struct {
-	// 使用 VolName 作为子文件夹目录
-	Vol cache.Volume
-	// 需要限速的进程 id
-	Pid        int
-	Path       string
-	IOInfo     *IOInfo
-	DeviceInfo *DeviceInfo
+type IOLimitV1 struct {
+	CGVersion CGroupVersion
+	*IOLimit
 }
 
-func NewIOLimit(vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (*IOLimit, error) {
+func NewIOLimitV1(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (*IOLimitV1, error) {
+	if version != CGroupV1 {
+		return nil, errors.New("CGroupVersion error")
+	}
+
 	// 检查环境中是否有 cgroup 路径
 	if exist := DirExists(baseCgroupPath); !exist {
 		return nil, errors.New("check cgroup path error")
@@ -45,16 +44,22 @@ func NewIOLimit(vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (
 		return nil, errors.New("pid can't be 0")
 	}
 
-	return &IOLimit{
-		Vol:        *vol,
-		Pid:        pid,
-		Path:       path,
-		IOInfo:     ioInfo,
-		DeviceInfo: dInfo,
+	var a IOLimitV1
+	a.Vol = *vol
+
+	return &IOLimitV1{
+		CGVersion: version,
+		IOLimit: &IOLimit{
+			Vol:        *vol,
+			Pid:        pid,
+			Path:       path,
+			IOInfo:     ioInfo,
+			DeviceInfo: dInfo,
+		},
 	}, nil
 }
 
-func (i *IOLimit) SetIOLimit() error {
+func (i *IOLimitV1) SetIOLimit() error {
 	if err := i.setRbps(); err != nil {
 		return err
 	}
@@ -74,7 +79,7 @@ func (i *IOLimit) SetIOLimit() error {
 	return nil
 }
 
-func (i *IOLimit) setRbps() error {
+func (i *IOLimitV1) setRbps() error {
 	if i.IOInfo.Rbps == 0 {
 		return nil
 	}
@@ -93,7 +98,7 @@ func (i *IOLimit) setRbps() error {
 	return nil
 }
 
-func (i *IOLimit) setRiops() error {
+func (i *IOLimitV1) setRiops() error {
 	if i.IOInfo.Riops == 0 {
 		return nil
 	}
@@ -112,7 +117,7 @@ func (i *IOLimit) setRiops() error {
 	return nil
 }
 
-func (i *IOLimit) setWbps() error {
+func (i *IOLimitV1) setWbps() error {
 	if i.IOInfo.Wbps == 0 {
 		return nil
 	}
@@ -131,7 +136,7 @@ func (i *IOLimit) setWbps() error {
 	return nil
 }
 
-func (i *IOLimit) setWiops() error {
+func (i *IOLimitV1) setWiops() error {
 	if i.IOInfo.Wiops == 0 {
 		return nil
 	}
@@ -150,7 +155,7 @@ func (i *IOLimit) setWiops() error {
 	return nil
 }
 
-func (i *IOLimit) setTasks() error {
+func (i *IOLimitV1) setTasks() error {
 	filePath := filepath.Join(i.Path, taskFile)
 	prem, exist := FilePerm(filePath)
 	if !exist {

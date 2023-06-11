@@ -25,7 +25,7 @@ func TestE2E(t *testing.T) {
 		Major: 8,
 		Minor: 0,
 	}
-	iolimit, err := NewIOLimit(vol, *pid, ioInfo, dInfo)
+	iolimit, err := NewIOLimitV1(CGroupV1, vol, *pid, ioInfo, dInfo)
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
