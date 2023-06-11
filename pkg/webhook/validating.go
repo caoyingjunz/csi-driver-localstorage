@@ -18,8 +18,11 @@ package webhook
 
 import (
 	"context"
-	"k8s.io/klog/v2"
+	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"net/http"
+
+	"k8s.io/klog/v2"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,6 +64,11 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 
 func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	klog.V(2).Infof("validate create", "name", ls.Name)
+
+	if err := v.validateLocalStorageNode(ctx, ls); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -71,6 +79,44 @@ func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, ls *localsto
 
 func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	klog.V(2).Infof("validate delete", "name", ls.Name)
+	return nil
+}
+
+// validate localstorage node
+// 1. localstorage node can't be empty
+// 2. localstorage node must be in kubernetes
+// 3. only the one node to binding to
+func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	if len(ls.Spec.Node) == 0 {
+		return fmt.Errorf("localstraoge (%s) binding node may not be empty", ls.Name)
+	}
+
+	nodes := &v1.NodeList{}
+	if err := v.Client.List(ctx, nodes); err != nil {
+		return fmt.Errorf("failed to list kube node objects: %v", err)
+	}
+	klog.V(2).Infof("found kube nodes %+v", nodes.Items)
+	var found bool
+	for _, node := range nodes.Items {
+		if node.Name == ls.Spec.Node {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("localstorage node (%s) not found in kubernetes", ls.Spec.Node)
+	}
+
+	obj := &localstoragev1.LocalStorageList{}
+	if err := v.Client.List(ctx, obj); err != nil {
+		return fmt.Errorf("failed to list localstorage objects: %v", err)
+	}
+	for _, localstorage := range obj.Items {
+		if localstorage.Spec.Node == ls.Spec.Node {
+			return fmt.Errorf("node (%s) already binded to the other localstorage", ls.Spec.Node)
+		}
+	}
+
 	return nil
 }
 
