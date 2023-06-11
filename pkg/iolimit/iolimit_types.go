@@ -25,7 +25,7 @@ const (
 
 type IOLimit struct {
 	// 使用 VolName 作为子文件夹目录
-	Vol cache.Volume
+	Vol *cache.Volume
 	// 需要限速的进程 id
 	Pid        int
 	Path       string

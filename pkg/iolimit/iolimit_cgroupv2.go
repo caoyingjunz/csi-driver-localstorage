@@ -2,6 +2,8 @@ package iolimit
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 )
@@ -25,16 +27,28 @@ func NewIOLimitV2(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOI
 		return nil, err
 	}
 
+	// 创建目标路径
+	path := filepath.Join(baseCgroupPath, vol.VolName)
+	if err := os.Mkdir(path, 0755); err != nil {
+		return nil, errors.New("create iolimit file failed")
+	}
+
+	if pid == 0 {
+		return nil, errors.New("pid can't be 0")
+	}
+
 	return &IOLimitV2{
 		CGVersion: version,
-		IOLimit:   &IOLimit{},
+		IOLimit: &IOLimit{
+			Vol:        vol,
+			Pid:        pid,
+			Path:       path,
+			IOInfo:     ioInfo,
+			DeviceInfo: dInfo,
+		},
 	}, nil
 }
 
-// 步骤：
-// 1. 创建目标路径
-// 2. 检查 io 相关文件是否存在
-// 3. io.max 写入数据
 func (i *IOLimitV2) SetIOLimit() {
 
 }

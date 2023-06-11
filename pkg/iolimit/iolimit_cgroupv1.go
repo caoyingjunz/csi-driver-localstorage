@@ -44,13 +44,10 @@ func NewIOLimitV1(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOI
 		return nil, errors.New("pid can't be 0")
 	}
 
-	var a IOLimitV1
-	a.Vol = *vol
-
 	return &IOLimitV1{
 		CGVersion: version,
 		IOLimit: &IOLimit{
-			Vol:        *vol,
+			Vol:        vol,
 			Pid:        pid,
 			Path:       path,
 			IOInfo:     ioInfo,
