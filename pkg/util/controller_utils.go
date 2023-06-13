@@ -20,8 +20,21 @@ import (
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 )
 
+// AssignedLocalstorage selects ls that are assigned (scheduled and running).
+func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
+	if ls.Spec.Node != nodeId {
+		return false
+	}
+
+	return IsInitStatus(ls) || IsMaintainStatus(ls)
+}
+
 func IsPendingStatus(ls *localstoragev1.LocalStorage) bool {
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
+}
+
+func IsInitStatus(ls *localstoragev1.LocalStorage) bool {
+	return ls.Status.Phase == localstoragev1.LocalStorageInitiating
 }
 
 func IsMaintainStatus(ls *localstoragev1.LocalStorage) bool {
