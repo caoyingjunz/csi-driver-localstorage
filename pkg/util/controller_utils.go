@@ -26,17 +26,9 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 		return false
 	}
 
-	return IsInitStatus(ls) || IsMaintainStatus(ls)
+	return ls.Status.Phase == localstoragev1.LocalStoragePending || ls.Status.Phase == localstoragev1.LocalStorageMaintaining
 }
 
 func IsPendingStatus(ls *localstoragev1.LocalStorage) bool {
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
-}
-
-func IsInitStatus(ls *localstoragev1.LocalStorage) bool {
-	return ls.Status.Phase == localstoragev1.LocalStorageInitiating
-}
-
-func IsMaintainStatus(ls *localstoragev1.LocalStorage) bool {
-	return ls.Status.Phase == localstoragev1.LocalStorageMaintaining
 }
