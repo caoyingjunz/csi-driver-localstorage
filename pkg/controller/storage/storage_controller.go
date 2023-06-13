@@ -162,7 +162,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: to delete some external localstorage object
-		if s.IsPendingPhase(ls) {
+		if util.IsPendingStatus(ls) {
 			util.RemoveFinalizer(ls, util.LsProtectionFinalizer)
 			if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
 				return err
@@ -172,7 +172,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	}
 
 	// TODO: handler somethings
-	if s.IsPendingPhase(ls) {
+	if util.IsPendingStatus(ls) {
 		ls.Status.Phase = localstoragev1.LocalStorageInitiating
 		if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
 			return err
@@ -181,10 +181,6 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	}
 
 	return nil
-}
-
-func (s *StorageController) IsPendingPhase(localstorage *localstoragev1.LocalStorage) bool {
-	return localstorage.Status.Phase == localstoragev1.LocalStoragePending
 }
 
 func (s *StorageController) Run(ctx context.Context, workers int) {
