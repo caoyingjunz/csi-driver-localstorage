@@ -36,7 +36,7 @@ func IsPendingStatus(ls *localstoragev1.LocalStorage) bool {
 func AddVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
 }
 
-func RemoveVolume(volID string) {
+func RemoveVolume(ls *localstoragev1.LocalStorage, volID string) {
 }
 
 func SetVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
