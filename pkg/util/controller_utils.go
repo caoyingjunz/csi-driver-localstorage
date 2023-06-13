@@ -32,3 +32,12 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 func IsPendingStatus(ls *localstoragev1.LocalStorage) bool {
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
 }
+
+func AddVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
+}
+
+func RemoveVolume(volID string) {
+}
+
+func SetVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
+}
