@@ -45,9 +45,12 @@ type LocalStorage struct {
 type LocalStoragePhase string
 
 const (
-	LocalStoragePending LocalStoragePhase = "Pending"
-	LocalStorageReady   LocalStoragePhase = "Ready"
-	LocalStorageUnknown LocalStoragePhase = "Unknown"
+	LocalStoragePending     LocalStoragePhase = "Pending"
+	LocalStorageInitiating  LocalStoragePhase = "Initiating"
+	LocalStorageExtending   LocalStoragePhase = "Extending"
+	LocalStorageMaintaining LocalStoragePhase = "Maintaining"
+	LocalStorageReady       LocalStoragePhase = "Ready"
+	LocalStorageUnknown     LocalStoragePhase = "Unknown"
 )
 
 type LocalStorageSpec struct {

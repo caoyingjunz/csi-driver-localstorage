@@ -85,7 +85,7 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 		return false
 	}
 
-	return ls.Status.Phase == localstoragev1.LocalStoragePending
+	return ls.Status.Phase == localstoragev1.LocalStorageInitiating || ls.Status.Phase == localstoragev1.LocalStorageMaintaining
 }
 
 func BytesToQuantity(bytes int64) resource.Quantity {
