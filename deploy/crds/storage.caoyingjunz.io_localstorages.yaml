@@ -100,10 +100,19 @@ spec:
                 description: List of mount volumes on this node
                 items:
                   properties:
-                    name:
+                    attached:
+                      type: boolean
+                    nodeId:
                       type: string
-                  required:
-                  - name
+                    volId:
+                      type: string
+                    volName:
+                      type: string
+                    volPath:
+                      type: string
+                    volSize:
+                      format: int64
+                      type: integer
                   type: object
                 type: array
             type: object
