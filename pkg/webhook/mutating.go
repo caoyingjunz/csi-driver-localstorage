@@ -48,7 +48,6 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	klog.Infof("Mutating localstorage %s for %s", ls.Name, req.Operation)
 
 	// add finalizer into localstorage if necessary
-	
 	if req.Operation == admissionv1.Create {
 		s.SetFinalizer(ls)
 	}
