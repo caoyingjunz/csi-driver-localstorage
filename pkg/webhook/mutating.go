@@ -48,7 +48,7 @@ func (s *LocalstorageMutate) Handle(ctx context.Context, req admission.Request) 
 	klog.Infof("Mutating localstorage %s for %s", ls.Name, req.Operation)
 
 	// add finalizer into localstorage if necessary
-	if !ls.DeletionTimestamp.IsZero() {
+	if ls.DeletionTimestamp.IsZero() {
 		s.SetFinalizer(ls)
 	}
 
