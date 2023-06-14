@@ -57,7 +57,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := ls.getLocalStorageByNode(ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -70,17 +70,21 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		return nil, err
 	}
 
-	newObj := lsObj.DeepCopy()
-	volSize := req.GetCapacityRange().GetRequiredBytes()
+	// Deep-copy otherwise we are mutating our cache.
+	// TODO: Deep-copy only when needed.
+	s := localstorage.DeepCopy()
 
-	util.AddVolume(newObj, localstoragev1.Volume{
+	volSize := req.GetCapacityRange().GetRequiredBytes()
+	util.AddVolume(s, localstoragev1.Volume{
 		VolID:   volumeID,
 		VolName: req.GetName(),
 		VolPath: path,
 		VolSize: volSize,
 	})
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, SubOperation)
-	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
+	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, volSize, SubOperation)
+
+	// Update the changes immediately
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
 
@@ -111,16 +115,21 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := ls.getLocalStorageByNode(ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
 	volId := req.GetVolumeId()
 
-	newObj := lsObj.DeepCopy()
-	vol := util.RemoveVolume(newObj, volId)
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, vol.VolSize, AddOperation)
-	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
+	// Deep-copy otherwise we are mutating our cache.
+	// TODO: Deep-copy only when needed.
+	s := localstorage.DeepCopy()
+
+	vol := util.RemoveVolume(s, volId)
+	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, vol.VolSize, AddOperation)
+
+	// Update the changes immediately
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
 
