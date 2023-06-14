@@ -44,15 +44,18 @@ func AddVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
 }
 
 // RemoveVolume accepts a volume ID and removes the provided volID if present.
-func RemoveVolume(ls *localstoragev1.LocalStorage, volID string) {
+func RemoveVolume(ls *localstoragev1.LocalStorage, volID string) localstoragev1.Volume {
 	volumes := GetVolumes(ls)
+	var vol localstoragev1.Volume
 	for i := 0; i < len(volumes); i++ {
 		if volumes[i].VolID == volID {
+			vol = volumes[i]
 			volumes = append(volumes[:i], volumes[i+1:]...)
 		}
 	}
 
 	SetVolume(ls, volumes)
+	return vol
 }
 
 // ContainsVolume checks a volume that the volumeId is present.
