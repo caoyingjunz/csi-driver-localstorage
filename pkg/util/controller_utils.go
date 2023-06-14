@@ -26,18 +26,51 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 		return false
 	}
 
-	return ls.Status.Phase == localstoragev1.LocalStoragePending || ls.Status.Phase == localstoragev1.LocalStorageMaintaining
+	return IsPendingStatus(ls) || ls.Status.Phase == localstoragev1.LocalStorageMaintaining
 }
 
 func IsPendingStatus(ls *localstoragev1.LocalStorage) bool {
 	return ls.Status.Phase == localstoragev1.LocalStoragePending
 }
 
+// AddVolume accepts a volume and adds the provided volume if not present.
 func AddVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
+	if ContainsVolume(ls, volume.VolID) {
+		return
+	}
+
+	volumes := GetVolumes(ls)
+	SetVolume(ls, append(volumes, volume))
 }
 
+// RemoveVolume accepts a volume ID and removes the provided volID if present.
 func RemoveVolume(ls *localstoragev1.LocalStorage, volID string) {
+	volumes := GetVolumes(ls)
+	for i := 0; i < len(volumes); i++ {
+		if volumes[i].VolID == volID {
+			volumes = append(volumes[:i], volumes[i+1:]...)
+		}
+	}
+
+	SetVolume(ls, volumes)
 }
 
-func SetVolume(ls *localstoragev1.LocalStorage, volume localstoragev1.Volume) {
+// ContainsVolume checks a volume that the volumeId is present.
+func ContainsVolume(ls *localstoragev1.LocalStorage, volID string) bool {
+	volumes := GetVolumes(ls)
+	for _, v := range volumes {
+		if v.VolID == volID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func SetVolume(ls *localstoragev1.LocalStorage, volumes []localstoragev1.Volume) {
+	ls.Status.Volumes = volumes
+}
+
+func GetVolumes(ls *localstoragev1.LocalStorage) []localstoragev1.Volume {
+	return ls.Status.Volumes
 }

@@ -81,15 +81,6 @@ type LocalStorageStatus struct {
 	Conditions LocalStorageCondition `json:"conditions,omitempty"`
 }
 
-type Volume struct {
-	VolName  string `json:"volName,omitempty"`
-	VolID    string `json:"volId,omitempty"`
-	VolPath  string `json:"volPath,omitempty"`
-	VolSize  int64  `json:"volSize,omitempty"`
-	NodeID   string `json:"nodeId,omitempty"`
-	Attached bool   `json:"attached,omitempty"`
-}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type LocalStorageList struct {
@@ -97,4 +88,13 @@ type LocalStorageList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []LocalStorage `json:"items"`
+}
+
+type Volume struct {
+	VolName  string `json:"volName,omitempty"`
+	VolID    string `json:"volId,omitempty"`
+	VolPath  string `json:"volPath,omitempty"`
+	VolSize  int64  `json:"volSize,omitempty"`
+	NodeID   string `json:"nodeId,omitempty"`
+	Attached bool   `json:"attached,omitempty"`
 }
