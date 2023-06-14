@@ -161,11 +161,25 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
-		// TODO: ignore localstorage deleted 删除外部资源
+		// TODO: to delete some external localstorage object
+		if util.IsPendingStatus(ls) {
+			util.RemoveFinalizer(ls, util.LsProtectionFinalizer)
+			if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
-	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
+	// TODO: handler somethings
+	if util.IsPendingStatus(ls) {
+		ls.Status.Phase = localstoragev1.LocalStorageInitiating
+		if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
+	}
+
 	return nil
 }
 
