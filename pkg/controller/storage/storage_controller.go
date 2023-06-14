@@ -164,9 +164,11 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		// TODO: to delete some external localstorage object
 		if util.IsPendingStatus(ls) {
 			util.RemoveFinalizer(ls, util.LsProtectionFinalizer)
-			if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
-				return err
-			}
+		} else {
+			ls.Status.Phase = localstoragev1.LocalStorageTerminating
+		}
+		if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+			return err
 		}
 		return nil
 	}

@@ -47,6 +47,7 @@ type LocalStoragePhase string
 const (
 	LocalStoragePending     LocalStoragePhase = "Pending"
 	LocalStorageInitiating  LocalStoragePhase = "Initiating"
+	LocalStorageTerminating LocalStoragePhase = "Terminating"
 	LocalStorageExtending   LocalStoragePhase = "Extending"
 	LocalStorageMaintaining LocalStoragePhase = "Maintaining"
 	LocalStorageReady       LocalStoragePhase = "Ready"
