@@ -51,7 +51,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 
 	var err error
 	if err = v.ValidateName(ctx, ls); err != nil {
-		admission.Errored(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch req.Operation {
