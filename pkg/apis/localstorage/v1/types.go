@@ -71,9 +71,9 @@ type DiskSpec struct {
 type LocalStorageCondition string
 
 type LocalStorageStatus struct {
-	Phase       LocalStoragePhase `json:"phase,omitempty"`
-	Allocatable resource.Quantity `json:"allocatable,omitempty"`
-	Capacity    resource.Quantity `json:"capacity,omitempty"`
+	Phase       LocalStoragePhase  `json:"phase,omitempty"`
+	Allocatable *resource.Quantity `json:"allocatable,omitempty"`
+	Capacity    *resource.Quantity `json:"capacity,omitempty"`
 
 	// List of mount volumes on this node
 	// +optional

@@ -178,8 +178,8 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 		return fmt.Errorf("failed to parse node quantity: %v", err)
 	}
 
-	l.Status.Capacity = quantity
-	l.Status.Allocatable = quantity
+	l.Status.Capacity = &quantity
+	l.Status.Allocatable = &quantity
 	l.Status.Phase = localstoragev1.LocalStorageReady
 	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
 	return err

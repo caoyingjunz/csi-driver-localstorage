@@ -142,7 +142,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
-func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operation) resource.Quantity {
+func (ls *localStorage) calculateAllocatedSize(allocatableSize *resource.Quantity, volSize int64, op Operation) *resource.Quantity {
 	volSizeCap := util.BytesToQuantity(volSize)
 	switch op {
 	case AddOperation:
