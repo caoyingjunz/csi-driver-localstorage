@@ -77,7 +77,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	volSize := req.GetCapacityRange().GetRequiredBytes()
 	util.AddVolume(s, localstoragev1.Volume{
 		VolID:   volumeID,
-		VolName: req.GetName(),
+		VolName: name,
 		VolPath: path,
 		VolSize: volSize,
 	})
@@ -259,11 +259,11 @@ func (ls *localStorage) getControllerServiceCapabilities() []*csi.ControllerServ
 	}
 
 	var csc []*csi.ControllerServiceCapability
-	for _, cap := range cl {
+	for _, capItem := range cl {
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: cap,
+					Type: capItem,
 				},
 			},
 		})

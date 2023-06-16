@@ -152,7 +152,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
 	}()
 
-	localstorage, err := s.lsLister.Get(dKey)
+	storage, err := s.lsLister.Get(dKey)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			klog.V(2).Infof("localstorage has been deleted", dKey)
@@ -161,7 +161,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 		return err
 	}
 	// Deep copy otherwise we are mutating the cache.
-	ls := localstorage.DeepCopy()
+	ls := storage.DeepCopy()
 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
