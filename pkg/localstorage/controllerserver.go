@@ -259,11 +259,11 @@ func (ls *localStorage) getControllerServiceCapabilities() []*csi.ControllerServ
 	}
 
 	var csc []*csi.ControllerServiceCapability
-	for _, capItem := range cl {
+	for _, cap := range cl {
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: capItem,
+					Type: cap,
 				},
 			},
 		})
