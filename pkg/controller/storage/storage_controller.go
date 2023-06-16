@@ -100,7 +100,11 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 }
 
 func (s *StorageController) addStorage(obj interface{}) {
-	ls := obj.(*localstoragev1.LocalStorage)
+	ls, ok := obj.(*localstoragev1.LocalStorage)
+	if !ok {
+		utilruntime.HandleError(fmt.Errorf("expected localstorage in addStorage, but got %#v", obj))
+		return
+	}
 	klog.V(2).Info("Adding localstorage", "localstorage", klog.KObj(ls))
 	s.enqueueLocalstorage(ls)
 }
