@@ -57,7 +57,7 @@ func GetCGroupVersion() (CGroupVersion, error) {
 	}
 }
 
-// deviceName 格式：/dev/sda1
+// deviceName 格式：/dev/vgname/lvname
 func GetDeviceNumber(deviceName string) (*DeviceInfo, error) {
 	stat := syscall.Stat_t{}
 	if err := syscall.Stat(deviceName, &stat); err != nil {
