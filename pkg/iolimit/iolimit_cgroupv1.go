@@ -6,19 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/google/uuid"
 )
-
-/*
-	ubuntu 20.04 TLS ARM  cgroup1
-*/
 
 type IOLimitV1 struct {
 	CGVersion CGroupVersion
 	*IOLimit
 }
 
-func NewIOLimitV1(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (*IOLimitV1, error) {
+func NewIOLimitV1(version CGroupVersion, podUid string, ioInfo *IOInfo, deviceName string) (*IOLimitV1, error) {
 	if version != CGroupV1 {
 		return nil, errors.New("CGroupVersion error")
 	}
@@ -28,28 +24,25 @@ func NewIOLimitV1(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOI
 		return nil, errors.New("check cgroup path error")
 	}
 
-	// 检查 cgroup 下是否有 blkio 文件夹
-	blkioPath := filepath.Join(baseCgroupPath, blkioPath)
-	if exist := DirExists(blkioPath); !exist {
-		return nil, errors.New("check blkio path error")
+	dInfo, err := GetDeviceNumber(deviceName)
+	if err != nil {
+		return nil, err
 	}
 
-	// 创建 iolimit 文件夹
-	path := filepath.Join(blkioPath, vol.VolName)
-	if err := os.Mkdir(path, 0755); err != nil {
-		return nil, errors.New("create iolimit file failed")
+	if _, err := uuid.Parse(podUid); err != nil {
+		return nil, errors.New("uncorrect uuid")
 	}
 
-	if pid == 0 {
-		return nil, errors.New("pid can't be 0")
+	podCGPath, err := getPodCGPathForV1(podUid)
+	if err != nil {
+		return nil, err
 	}
 
 	return &IOLimitV1{
 		CGVersion: version,
 		IOLimit: &IOLimit{
-			Vol:        vol,
-			Pid:        pid,
-			Path:       path,
+			PodUid:     podUid,
+			Path:       podCGPath,
 			IOInfo:     ioInfo,
 			DeviceInfo: dInfo,
 		},
@@ -67,9 +60,6 @@ func (i *IOLimitV1) SetIOLimit() error {
 		return err
 	}
 	if err := i.setWiops(); err != nil {
-		return err
-	}
-	if err := i.setTasks(); err != nil {
 		return err
 	}
 
@@ -152,16 +142,24 @@ func (i *IOLimitV1) setWiops() error {
 	return nil
 }
 
-func (i *IOLimitV1) setTasks() error {
-	filePath := filepath.Join(i.Path, taskFile)
-	prem, exist := FilePerm(filePath)
-	if !exist {
-		return errors.New("miss tasks file")
+// 获取 pod 的 cgroup path
+// /sys/fs/cgroup/blkio/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod74eeef52_8448_46c4_881c_da582fbe5a79.slice
+func getPodCGPathForV1(podUid string) (string, error) {
+	podPathSuffix := GetPodCGPathSuffix(podUid)
+	podCGPath := filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "kubepods-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
 	}
 
-	if err := os.WriteFile(filePath, []byte(fmt.Sprint(i.Pid)), prem); err != nil {
-		return err
+	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "/kubepods-besteffort.slice/kubepods-besteffort-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
 	}
 
-	return nil
+	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "/kubepods-burstable.slice/kubepods-burstable-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
+	}
+
+	return "", errors.New("get pod cgroup path failed, pod's uid is: " + podUid)
 }

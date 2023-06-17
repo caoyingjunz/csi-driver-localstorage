@@ -4,28 +4,20 @@ import (
 	"flag"
 	"fmt"
 	"testing"
-
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 )
 
 var (
-	pid     = flag.Int("pid", 0, "")
-	volName = flag.String("volname", "", "")
+	podUid     = flag.String("poduid", "8cdcf7c3-3595-4dd6-8792-16efcfa36a79", "")
+	deviceName = flag.String("devicename", "", "")
 )
 
 func TestE2E(t *testing.T) {
 	flag.Parse()
-	vol := &cache.Volume{
-		VolName: *volName,
-	}
+
 	ioInfo := &IOInfo{
 		Rbps: 1048576,
 	}
-	dInfo := &DeviceInfo{
-		Major: 8,
-		Minor: 0,
-	}
-	iolimit, err := NewIOLimitV1(CGroupV1, vol, *pid, ioInfo, dInfo)
+	iolimit, err := NewIOLimitV1(CGroupV1, *podUid, ioInfo, "/dev/sda")
 	if err != nil {
 		fmt.Println(err)
 		t.Fail()
@@ -33,10 +25,33 @@ func TestE2E(t *testing.T) {
 	iolimit.SetIOLimit()
 }
 
-func TestGetCGroupVersion(t *testing.T) {
+func TestV2E2E(t *testing.T) {
+	flag.Parse()
+
 	version, err := GetCGroupVersion()
 	if err != nil {
 		t.Fail()
 	}
-	fmt.Println(version)
+
+	switch version {
+	case CGroupV1:
+	case CGroupV2:
+		ioInfo := &IOInfo{
+			Rbps: 1048576,
+		}
+		_, _ = NewIOLimitV2(CGroupV1, *podUid, ioInfo, "/dev/sda")
+
+	default:
+		t.Error("unsupport cgroup version")
+	}
+}
+
+func TestGetDeviceNum(t *testing.T) {
+	flag.Parse()
+
+	dInfo, err := GetDeviceNumber(*deviceName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(dInfo)
 }

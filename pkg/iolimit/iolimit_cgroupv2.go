@@ -5,45 +5,45 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
+	"github.com/google/uuid"
 )
-
-/*
-debian ARM  cgroup2
-*/
 
 type IOLimitV2 struct {
 	CGVersion CGroupVersion
 	*IOLimit
 }
 
-func NewIOLimitV2(version CGroupVersion, vol *cache.Volume, pid int, ioInfo *IOInfo, dInfo *DeviceInfo) (*IOLimitV2, error) {
+func NewIOLimitV2(version CGroupVersion, podUid string, ioInfo *IOInfo, deviceName string) (*IOLimitV2, error) {
 	if version != CGroupV2 {
 		return nil, errors.New("CGroupVersion error")
 	}
 
-	// 确保 cgroup.subtree_control 文件中有 io， 代表开启 io 控制器
+	// 确保 cgroup.subtree_control 文件中有 io，代表开启 io 控制器
 	if err := makeSureMainSubtreeFileExist(); err != nil {
 		return nil, err
 	}
 
-	// 创建目标路径
-	path := filepath.Join(baseCgroupPath, vol.VolName)
-	if err := os.Mkdir(path, 0755); err != nil {
-		return nil, errors.New("create iolimit file failed")
+	dInfo, err := GetDeviceNumber(deviceName)
+	if err != nil {
+		return nil, err
 	}
 
-	if pid == 0 {
-		return nil, errors.New("pid can't be 0")
+	if _, err := uuid.Parse(podUid); err != nil {
+		return nil, errors.New("uncorrect uuid")
+	}
+
+	podCGPath, err := getPodCGPathForV2(podUid)
+	if err != nil {
+		return nil, err
 	}
 
 	return &IOLimitV2{
 		CGVersion: version,
 		IOLimit: &IOLimit{
-			Vol:        vol,
-			Pid:        pid,
-			Path:       path,
+			PodUid:     podUid,
+			Path:       podCGPath,
 			IOInfo:     ioInfo,
 			DeviceInfo: dInfo,
 		},
@@ -82,4 +82,64 @@ func (i *IOLimitV2) getIOLImitStr() string {
 		writeInfo += " wiops=" + fmt.Sprint(i.IOInfo.Wiops)
 	}
 	return writeInfo
+}
+
+// 确保 cgroup.subtree_control 文件中有 io， 代表开启 io 控制器
+func makeSureMainSubtreeFileExist() error {
+	// 检查环境中是否有 cgroup 路径
+	if exist := DirExists(baseCgroupPath); !exist {
+		return errors.New("check cgroup path error")
+	}
+
+	path := filepath.Join(baseCgroupPath, mainSubTreeFile)
+	byteData, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if strings.Contains(string(byteData), "io") {
+		return nil
+	} else {
+		if err := addIOControll(path); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+// 将 io 控制器写入到控制器管理文件
+func addIOControll(path string) error {
+	prem, exist := FilePerm(path)
+	if !exist {
+		return errors.New("path error")
+	}
+
+	if err := os.WriteFile(path, []byte("+io"), prem); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// 获取 pod 的 cgroup path
+// /sys/fs/cgroup/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-poda093bb10_355b_4a3c_9fec_4ff947f8b4ed.slice
+// /sys/fs/cgroup/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod192f4dc5_b502_4c60_a49c_3b3b8ca0ce30.slice
+// /sys/fs/cgroup/kubepods.slice/kubepods-pod192f4dc5_b502_4c60_a49c_3b3b8ca0ce30.slice
+func getPodCGPathForV2(podUid string) (string, error) {
+	podPathSuffix := GetPodCGPathSuffix(podUid)
+	podCGPath := filepath.Join(baseCgroupPath, kubePodsPath) + "kubepods-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
+	}
+
+	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath) + "/kubepods-besteffort.slice/kubepods-besteffort-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
+	}
+
+	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath) + "/kubepods-burstable.slice/kubepods-burstable-" + podPathSuffix + ".slice"
+	if DirExists(podCGPath) {
+		return podCGPath, nil
+	}
+
+	return "", errors.New("get pod cgroup path failed, pod's uid is: " + podUid)
 }

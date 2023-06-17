@@ -1,7 +1,5 @@
 package iolimit
 
-import "github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
-
 type CGroupVersion string
 
 const (
@@ -20,14 +18,16 @@ const (
 
 	// CGroupV2 使用
 	mainSubTreeFile = "cgroup.subtree_control"
+	kubePodsPath    = "/kubepods.slice"
+	besteffortPath  = "/kubepods-besteffort.slice"
+	burstablePath   = "/kubepods-burstable.slice"
 	ioMaxFile       = "io.max"
 )
 
 type IOLimit struct {
-	// 使用 VolName 作为子文件夹目录
-	Vol *cache.Volume
-	// 需要限速的进程 id
-	Pid        int
+	// 需要限速的 pod uid
+	PodUid string
+	// pod CG path
 	Path       string
 	IOInfo     *IOInfo
 	DeviceInfo *DeviceInfo
