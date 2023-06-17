@@ -17,7 +17,10 @@ limitations under the License.
 package storage
 
 import (
+	v1 "k8s.io/api/core/v1"
+
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/types"
 )
 
 // GetLocalStorageByNode Get localstorage object by nodeName, error when not found
@@ -25,4 +28,25 @@ func GetLocalStorageByNode(nodeName string) (*localstoragev1.LocalStorage, error
 	//TODO
 
 	return nil, nil
+}
+
+func UpdateNodeIDInNode(node *v1.Node, csiDriverNodeID string) *v1.Node {
+	if node.ObjectMeta.Annotations == nil {
+		node.ObjectMeta.Annotations = make(map[string]string)
+	}
+	if !IsNodeIDInNode(node) {
+		return node
+	}
+
+	node.ObjectMeta.Annotations[types.AnnotationKeyNodeID] = csiDriverNodeID
+	return node
+}
+
+func IsNodeIDInNode(node *v1.Node) bool {
+	if node.ObjectMeta.Annotations == nil {
+		return false
+	}
+
+	_, found := node.ObjectMeta.Annotations[types.AnnotationKeyNodeID]
+	return found
 }
