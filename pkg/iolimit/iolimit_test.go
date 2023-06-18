@@ -54,3 +54,38 @@ func TestV2E2E(t *testing.T) {
 		t.Error("unsupport cgroup version")
 	}
 }
+
+func TestV1E2E(t *testing.T) {
+	// 定义 cases
+	tests := map[string]struct {
+		uid        string
+		deviceName string
+	}{
+		"besteffort pod": {uid: "4555a76d-f3d2-4bf9-a9b9-478126ae10aa", deviceName: "/dev/ubuntu-vg/test"},
+		"burstable pod":  {uid: "ebb0be89-14b0-4468-9468-f8b480697106", deviceName: "/dev/ubuntu-vg/test1"},
+	}
+
+	version, err := GetCGroupVersion()
+	if err != nil {
+		t.Fail()
+	}
+
+	ioInfo := &IOInfo{
+		Rbps: 1048576,
+	}
+
+	switch version {
+	case CGroupV1:
+		for _, testValue := range tests {
+			iolimit, err := NewIOLimitV1(CGroupV1, testValue.uid, ioInfo, testValue.deviceName)
+			fmt.Println(err)
+			fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
+			if err := iolimit.SetIOLimit(); err != nil {
+				t.Fail()
+			}
+		}
+	case CGroupV2:
+	default:
+		t.Error("unsupport cgroup version")
+	}
+}

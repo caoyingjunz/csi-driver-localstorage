@@ -143,20 +143,21 @@ func (i *IOLimitV1) setWiops() error {
 }
 
 // 获取 pod 的 cgroup path
-// /sys/fs/cgroup/blkio/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod74eeef52_8448_46c4_881c_da582fbe5a79.slice
+// /sys/fs/cgroup/blkio/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod4555a76d_f3d2_4bf9_a9b9_478126ae10aa.slice
+// /sys/fs/cgroup/blkio/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-poda7879371_91e0_4660_a2a3_3ed9cef99a69.slice
 func getPodCGPathForV1(podUid string) (string, error) {
 	podPathSuffix := GetPodCGPathSuffix(podUid)
-	podCGPath := filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "kubepods-" + podPathSuffix + ".slice"
+	podCGPath := filepath.Join(baseCgroupPath, blkioPath, kubePodsPath) + "kubepods-" + podPathSuffix + ".slice"
 	if DirExists(podCGPath) {
 		return podCGPath, nil
 	}
 
-	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "/kubepods-besteffort.slice/kubepods-besteffort-" + podPathSuffix + ".slice"
+	podCGPath = filepath.Join(baseCgroupPath, blkioPath, kubePodsPath) + "/kubepods-besteffort.slice/kubepods-besteffort-" + podPathSuffix + ".slice"
 	if DirExists(podCGPath) {
 		return podCGPath, nil
 	}
 
-	podCGPath = filepath.Join(baseCgroupPath, kubePodsPath, blkioPath) + "/kubepods-burstable.slice/kubepods-burstable-" + podPathSuffix + ".slice"
+	podCGPath = filepath.Join(baseCgroupPath, blkioPath, kubePodsPath) + "/kubepods-burstable.slice/kubepods-burstable-" + podPathSuffix + ".slice"
 	if DirExists(podCGPath) {
 		return podCGPath, nil
 	}

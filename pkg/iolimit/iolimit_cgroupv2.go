@@ -113,7 +113,7 @@ func addIOControll(path string) error {
 		return errors.New("path error")
 	}
 
-	if err := os.WriteFile(path, []byte("+io"), prem); err != nil {
+	if err := os.WriteFile(path, []byte("+io +memory"), prem); err != nil {
 		return err
 	}
 
