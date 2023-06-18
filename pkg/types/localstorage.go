@@ -19,4 +19,6 @@ package types
 const (
 	// AnnotationKeyNodeID Name of node annotation that contains localstorage of driver names to node
 	AnnotationKeyNodeID = "csi.volume.caoyingjunz.io/nodeid"
+
+	AnnotationKeyMaintenance = "localstorage.caoyingjunz.io/maintenance"
 )
