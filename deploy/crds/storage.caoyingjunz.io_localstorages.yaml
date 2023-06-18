@@ -22,6 +22,9 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
+    - jsonPath: .spec.node
+      name: kubeNode
+      type: string
     - jsonPath: .status.allocatable
       name: Allocatable
       type: string
@@ -31,14 +34,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    - jsonPath: .status.usage
-      name: Usage
-      priority: 1
-      type: string
-    - jsonPath: .spec.node
-      name: Node
-      priority: 1
-      type: string
     - jsonPath: .spec.volumeGroup
       name: VolumeGroup
       priority: 1
