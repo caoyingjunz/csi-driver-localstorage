@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -62,8 +63,8 @@ type StorageController struct {
 
 	// lsLister can list/get localstorage from the shared informer's store
 	lsLister localstorage.LocalStorageLister
-	// noLister can list/get nodes from the shared informer's store
-	noLister coreinformers.NodeInformer
+	// nodeLister can list/get nodes from the shared informer's store
+	nodeLister listersv1.NodeLister
 
 	// lsListerSynced returns true if the localstorage store has been synced at least once.
 	lsListerSynced cache.InformerSynced
@@ -75,7 +76,7 @@ type StorageController struct {
 }
 
 // NewStorageController creates a new StorageController.
-func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, noInformer coreinformers.NodeInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
+func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, nodeInformer coreinformers.NodeInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
@@ -104,7 +105,9 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 	sc.enqueueLocalstorage = sc.enqueue
 
 	sc.lsLister = lsInformer.Lister()
+	sc.nodeLister = nodeInformer.Lister()
 	sc.lsListerSynced = lsInformer.Informer().HasSynced
+	sc.noListerSynced = nodeInformer.Informer().HasSynced
 	return sc, nil
 }
 
