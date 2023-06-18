@@ -18,12 +18,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
@@ -44,6 +46,9 @@ var (
 	// pprof flags
 	enablePprof = flag.Bool("enable-pprof", false, "Start pprof and gain leadership before executing the main loop")
 	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
+
+	// promethues flags
+	metricsPort = flag.Int("metricsport", 8080, "metrics port")
 )
 
 func init() {
@@ -82,6 +87,15 @@ func main() {
 
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
+
+	// Start prometheus metrics
+	go func() {
+		klog.Infof("Listening for Prometheus metrics on port: %v", *metricsPort)
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), nil); err != nil {
+			klog.Fatalf("Failed to initialize prometheus metrics, %v", err)
+		}
+	}()
 
 	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {
