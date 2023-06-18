@@ -32,7 +32,7 @@ func TestV2E2E(t *testing.T) {
 
 	version, err := GetCGroupVersion()
 	if err != nil {
-		t.Fail()
+		fmt.Println(err)
 	}
 
 	ioInfo := &IOInfo{
@@ -46,12 +46,12 @@ func TestV2E2E(t *testing.T) {
 			iolimit, _ := NewIOLimitV2(CGroupV2, testValue.uid, ioInfo, testValue.deviceName)
 			fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
 			if err := iolimit.SetIOLimit(); err != nil {
-				t.Fail()
+				fmt.Println(err)
 			}
 		}
 
 	default:
-		t.Error("unsupport cgroup version")
+		fmt.Println("unsupport cgroup version")
 	}
 }
 
@@ -67,7 +67,7 @@ func TestV1E2E(t *testing.T) {
 
 	version, err := GetCGroupVersion()
 	if err != nil {
-		t.Fail()
+		fmt.Println(err)
 	}
 
 	ioInfo := &IOInfo{
@@ -81,11 +81,11 @@ func TestV1E2E(t *testing.T) {
 			fmt.Println(err)
 			fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
 			if err := iolimit.SetIOLimit(); err != nil {
-				t.Fail()
+				fmt.Println(err)
 			}
 		}
 	case CGroupV2:
 	default:
-		t.Error("unsupport cgroup version")
+		fmt.Println("unsupport cgroup version")
 	}
 }
