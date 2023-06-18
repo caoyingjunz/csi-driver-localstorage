@@ -102,11 +102,13 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 	})
 	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			sc.addNode(obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			klog.Infof("todo update", newObj)
+			sc.updateNode(oldObj, newObj)
 		},
 		DeleteFunc: func(obj interface{}) {
+			sc.deleteNode(obj)
 		},
 	})
 
@@ -154,6 +156,22 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 	}
 	klog.V(2).Info("Deleting localstorage", "localstorage", klog.KObj(ls))
 	s.enqueueLocalstorage(ls)
+}
+
+func (s *StorageController) addNode(obj interface{}) {
+	node := obj.(*v1core.Node)
+	klog.Info("Adding node", "node", klog.KObj(node))
+}
+
+func (s *StorageController) updateNode(old, cur interface{}) {
+	//oldNode := old.(*v1core.Node)
+	curNode := cur.(*v1core.Node)
+	klog.V(2).Info("Updating node", "node", klog.KObj(curNode))
+}
+
+func (s *StorageController) deleteNode(obj interface{}) {
+	node := obj.(*v1core.Node)
+	klog.Info("Deleting node", "node", klog.KObj(node))
 }
 
 func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
