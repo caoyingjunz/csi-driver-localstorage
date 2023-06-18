@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/server/healthz"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -61,6 +60,8 @@ var (
 	kubeconfig   = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
 	kubeAPIQPS   = flag.Int("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5")
 	kubeAPIBurst = flag.Int("kube-api-burst", 10, "Burst to use while communicating with the kubernetes apiserver. Defaults to 10.")
+
+	createLocalstorage = flag.Bool("create-localstorage", true, "Create localstorage object if not present")
 
 	// webhook flags
 	host     = flag.String("host", "", "host is the ip address that the webhook server binds to")
@@ -135,11 +136,9 @@ func main() {
 		}
 
 		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
-		kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
 
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
-			kubeInformer.Core().V1().Nodes(),
 			lsClientSet,
 			kubeClient,
 		)
@@ -151,10 +150,7 @@ func main() {
 		go sc.Run(ctx, workers)
 
 		sharedInformer.Start(ctx.Done())
-		kubeInformer.Start(ctx.Done())
-
 		sharedInformer.WaitForCacheSync(ctx.Done())
-		kubeInformer.WaitForCacheSync(ctx.Done())
 
 		// always wait
 		select {}

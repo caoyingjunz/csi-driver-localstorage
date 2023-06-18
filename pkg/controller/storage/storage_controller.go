@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -76,7 +75,7 @@ type StorageController struct {
 }
 
 // NewStorageController creates a new StorageController.
-func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, nodeInformer coreinformers.NodeInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
+func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
@@ -100,25 +99,12 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 			sc.deleteStorage(obj)
 		},
 	})
-	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			sc.addNode(obj)
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			sc.updateNode(oldObj, newObj)
-		},
-		DeleteFunc: func(obj interface{}) {
-			sc.deleteNode(obj)
-		},
-	})
 
 	sc.syncHandler = sc.syncStorage
 	sc.enqueueLocalstorage = sc.enqueue
 
 	sc.lsLister = lsInformer.Lister()
-	sc.nodeLister = nodeInformer.Lister()
 	sc.lsListerSynced = lsInformer.Informer().HasSynced
-	sc.noListerSynced = nodeInformer.Informer().HasSynced
 	return sc, nil
 }
 
@@ -156,22 +142,6 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 	}
 	klog.V(2).Info("Deleting localstorage", "localstorage", klog.KObj(ls))
 	s.enqueueLocalstorage(ls)
-}
-
-func (s *StorageController) addNode(obj interface{}) {
-	node := obj.(*v1core.Node)
-	klog.Info("Adding node", "node", klog.KObj(node))
-}
-
-func (s *StorageController) updateNode(old, cur interface{}) {
-	//oldNode := old.(*v1core.Node)
-	curNode := cur.(*v1core.Node)
-	klog.V(2).Info("Updating node", "node", klog.KObj(curNode))
-}
-
-func (s *StorageController) deleteNode(obj interface{}) {
-	node := obj.(*v1core.Node)
-	klog.Info("Deleting node", "node", klog.KObj(node))
 }
 
 func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
