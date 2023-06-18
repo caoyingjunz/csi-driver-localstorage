@@ -59,9 +59,13 @@ type StorageController struct {
 	syncHandler         func(ctx context.Context, dKey string) error
 	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
-	lsLister       localstorage.LocalStorageLister
+	// lsLister can list/get localstorage from the shared informer's store
+	lsLister localstorage.LocalStorageLister
+
+	// lsListerSynced returns true if the localstorage store has been synced at least once.
 	lsListerSynced cache.InformerSynced
 
+	// localstorage that need to be synced
 	queue workqueue.RateLimitingInterface
 }
 

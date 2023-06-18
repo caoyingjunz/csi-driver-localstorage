@@ -25,11 +25,10 @@ import (
 // +genclient:nonNamespaced
 // +kubebuilder:resource:scope=Cluster,shortName={pls, ls}
 // +kubebuilder:printcolumn:JSONPath=".status.phase",name=Status,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.node",name=kubeNode,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.allocatable",name=Allocatable,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
-// +kubebuilder:printcolumn:JSONPath=".status.usage",name=Usage,type=string,priority=1
-// +kubebuilder:printcolumn:JSONPath=".spec.node",name=Node,type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
