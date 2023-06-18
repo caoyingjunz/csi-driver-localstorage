@@ -44,7 +44,7 @@ func TestV2E2E(t *testing.T) {
 	case CGroupV2:
 		for _, testValue := range tests {
 			iolimit, _ := NewIOLimitV2(CGroupV2, testValue.uid, ioInfo, testValue.deviceName)
-			fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
+			// fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
 			if err := iolimit.SetIOLimit(); err != nil {
 				fmt.Println(err)
 			}
@@ -77,9 +77,8 @@ func TestV1E2E(t *testing.T) {
 	switch version {
 	case CGroupV1:
 		for _, testValue := range tests {
-			iolimit, err := NewIOLimitV1(CGroupV1, testValue.uid, ioInfo, testValue.deviceName)
-			fmt.Println(err)
-			fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
+			iolimit, _ := NewIOLimitV1(CGroupV1, testValue.uid, ioInfo, testValue.deviceName)
+			// fmt.Println(iolimit.PodUid, iolimit.Path, iolimit.DeviceInfo.Major, iolimit.DeviceInfo.Minor)
 			if err := iolimit.SetIOLimit(); err != nil {
 				fmt.Println(err)
 			}
