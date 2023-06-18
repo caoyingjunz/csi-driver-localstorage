@@ -48,7 +48,7 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 - [go-learning](https://github.com/caoyingjunz/go-learning)
 
 ## 沟通交流
-- 搜索微信号 `yingjuncz`, 备注（localstorage）, 验证通过会加入群聊
+- 搜索微信号 `yingjuncz`, 备注（ls）, 验证通过会加入群聊
 - [bilibili](https://space.bilibili.com/3493104248162809?spm_id_from=333.1007.0.0) 技术分享
 
 Copyright 2019 caoyingjun (cao.yingjunz@gmail.com) Apache License 2.0

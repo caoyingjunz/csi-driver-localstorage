@@ -41,6 +41,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/runtime"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 	localstoragewebhook "github.com/caoyingjunz/csi-driver-localstorage/pkg/webhook"
 )
 
@@ -135,8 +136,14 @@ func main() {
 			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
 		}
 
-		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+		if *createLocalstorage {
+			klog.Infof("Creating localstorage cr when controller manager started")
+			if err = storageutil.CreateLocalStorage(kubeClient, lsClientSet); err != nil {
+				klog.Fatalf("Failed to create/init localstorage cr: %v", err)
+			}
+		}
 
+		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
 			lsClientSet,

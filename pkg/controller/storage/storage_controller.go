@@ -29,7 +29,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -62,13 +61,9 @@ type StorageController struct {
 
 	// lsLister can list/get localstorage from the shared informer's store
 	lsLister localstorage.LocalStorageLister
-	// nodeLister can list/get nodes from the shared informer's store
-	nodeLister listersv1.NodeLister
 
 	// lsListerSynced returns true if the localstorage store has been synced at least once.
 	lsListerSynced cache.InformerSynced
-	// noListerSynced returns true if the node store has been synced at least once.
-	noListerSynced cache.InformerSynced
 
 	// localstorage that need to be synced
 	queue workqueue.RateLimitingInterface
