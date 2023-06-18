@@ -100,6 +100,15 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 			sc.deleteStorage(obj)
 		},
 	})
+	nodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			klog.Infof("todo update", newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+		},
+	})
 
 	sc.syncHandler = sc.syncStorage
 	sc.enqueueLocalstorage = sc.enqueue

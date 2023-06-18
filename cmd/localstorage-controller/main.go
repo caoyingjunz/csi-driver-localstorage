@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/server/healthz"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -133,9 +134,13 @@ func main() {
 			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
 		}
 
+		// struct localstorage and kube client informers
 		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+		kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
+
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
+			kubeInformer.Core().V1().Nodes(),
 			lsClientSet,
 			kubeClient,
 		)
@@ -146,8 +151,12 @@ func main() {
 		klog.Infof("Starting localstorage controller")
 		go sc.Run(ctx, workers)
 
+		// Start all informers.
 		sharedInformer.Start(ctx.Done())
+		kubeInformer.Start(ctx.Done())
+		// Wait for all caches to sync.
 		sharedInformer.WaitForCacheSync(ctx.Done())
+		kubeInformer.WaitForCacheSync(ctx.Done())
 
 		// always wait
 		select {}
