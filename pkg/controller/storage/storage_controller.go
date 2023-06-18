@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -59,14 +60,22 @@ type StorageController struct {
 	syncHandler         func(ctx context.Context, dKey string) error
 	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
-	lsLister       localstorage.LocalStorageLister
-	lsListerSynced cache.InformerSynced
+	// lsLister can list/get localstorage from the shared informer's store
+	lsLister localstorage.LocalStorageLister
+	// noLister can list/get nodes from the shared informer's store
+	noLister coreinformers.NodeInformer
 
+	// lsListerSynced returns true if the localstorage store has been synced at least once.
+	lsListerSynced cache.InformerSynced
+	// noListerSynced returns true if the node store has been synced at least once.
+	noListerSynced cache.InformerSynced
+
+	// localstorage that need to be synced
 	queue workqueue.RateLimitingInterface
 }
 
 // NewStorageController creates a new StorageController.
-func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
+func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInformer, noInformer coreinformers.NodeInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*StorageController, error) {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedv1.EventSinkImpl{Interface: kubeClientSet.CoreV1().Events("")})
