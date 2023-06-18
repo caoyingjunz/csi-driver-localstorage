@@ -140,10 +140,6 @@ func (ls *localStorage) Run(ctx context.Context) error {
 	}
 	go wait.UntilWithContext(ctx, ls.worker, time.Second)
 
-	if err := ls.TryUpdateNode(); err != nil {
-		return fmt.Errorf("failed to add nodeid in kube node: %v", err)
-	}
-
 	s := NewNonBlockingGRPCServer()
 
 	s.Start(ls.config.Endpoint, ls, ls, ls)
