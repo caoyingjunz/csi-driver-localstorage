@@ -134,7 +134,6 @@ func main() {
 			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
 		}
 
-		// struct localstorage and kube client informers
 		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 		kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
 
