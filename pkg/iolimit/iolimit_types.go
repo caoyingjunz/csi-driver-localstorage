@@ -14,7 +14,6 @@ const (
 	riopsFile = "blkio.throttle.read_iops_device"
 	wbpsFile  = "blkio.throttle.write_bps_device"
 	wiopsFile = "blkio.throttle.write_iops_device"
-	taskFile  = "tasks"
 
 	// CGroupV2 使用
 	mainSubTreeFile = "cgroup.subtree_control"
