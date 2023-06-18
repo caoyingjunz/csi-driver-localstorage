@@ -150,10 +150,9 @@ func main() {
 		klog.Infof("Starting localstorage controller")
 		go sc.Run(ctx, workers)
 
-		// Start all informers.
 		sharedInformer.Start(ctx.Done())
 		kubeInformer.Start(ctx.Done())
-		// Wait for all caches to sync.
+
 		sharedInformer.WaitForCacheSync(ctx.Done())
 		kubeInformer.WaitForCacheSync(ctx.Done())
 
