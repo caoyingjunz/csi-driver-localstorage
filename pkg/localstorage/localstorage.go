@@ -40,6 +40,7 @@ import (
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 const (
@@ -248,4 +249,25 @@ func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 
 func (ls *localStorage) GetNode() string {
 	return ls.config.NodeId
+}
+
+func (ls *localStorage) TryUpdateNode() error {
+	nodeClient := ls.kubeClient.CoreV1().Nodes()
+	originalNode, err := nodeClient.Get(context.TODO(), ls.GetNode(), metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	node := originalNode.DeepCopy()
+	if storageutil.IsNodeIDInNode(node) {
+		return nil
+	}
+
+	node = storageutil.UpdateNodeIDInNode(node, ls.GetNode())
+	_, err = nodeClient.Update(context.TODO(), node, metav1.UpdateOptions{})
+
+	// TODO: optimised by patch
+	//patchBytes := []byte("ddd")
+	//updatedNode, err := nodeClient.Patch(context.TODO(), ls.GetNode(), types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
+	return err
 }

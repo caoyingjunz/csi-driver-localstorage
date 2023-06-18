@@ -17,7 +17,6 @@ limitations under the License.
 package localstorage
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -28,11 +27,11 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 type Operation string
@@ -57,7 +56,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	localstorage, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := storageutil.GetLocalStorageByNode(ls.lsLister, ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	localstorage, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := storageutil.GetLocalStorageByNode(ls.lsLister, ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -152,27 +151,6 @@ func (ls *localStorage) calculateAllocatedSize(allocatableSize *resource.Quantit
 	}
 
 	return allocatableSize
-}
-
-// get localstorage object by nodeName, error when not found
-func (ls *localStorage) getLocalStorageByNode(nodeName string) (*localstoragev1.LocalStorage, error) {
-	lsNodes, err := ls.lsLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var lsNode *localstoragev1.LocalStorage
-	for _, l := range lsNodes {
-		if l.Spec.Node == nodeName {
-			lsNode = l
-		}
-	}
-	if lsNode == nil {
-		return nil, fmt.Errorf("failed to found localstorage with node %s", nodeName)
-
-	}
-
-	return lsNode, nil
 }
 
 // parseVolumePath returns the canonical path for volume
