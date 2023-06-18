@@ -22,3 +22,7 @@ const (
 
 	AnnotationKeyMaintenance = "localstorage.caoyingjunz.io/maintenance"
 )
+
+const (
+	LabelStorageNode = "localstorage.caoyingjunz.io/node"
+)
