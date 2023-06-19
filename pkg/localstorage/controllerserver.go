@@ -228,12 +228,13 @@ func (ls *localStorage) ControllerExpandVolume(ctx context.Context, req *csi.Con
 func (ls *localStorage) getControllerServiceCapabilities() []*csi.ControllerServiceCapability {
 	cl := []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-		csi.ControllerServiceCapability_RPC_GET_VOLUME,
-		csi.ControllerServiceCapability_RPC_GET_CAPACITY,
-		csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
-		csi.ControllerServiceCapability_RPC_VOLUME_CONDITION,
-		csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
-		csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		// TODO do not support now
+		//csi.ControllerServiceCapability_RPC_GET_VOLUME,
+		//csi.ControllerServiceCapability_RPC_GET_CAPACITY,
+		//csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
+		//csi.ControllerServiceCapability_RPC_VOLUME_CONDITION,
+		//csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
+		//csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
 	}
 
 	var csc []*csi.ControllerServiceCapability

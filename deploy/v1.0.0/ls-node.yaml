@@ -26,7 +26,7 @@ spec:
         - operator: "Exists"
       containers:
         - name: liveness-probe
-          image: pixiuio/livenessprobe:v2.8.0
+          image: registry.aliyuncs.com/google_containers/livenessprobe:v2.8.0
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
@@ -42,41 +42,51 @@ spec:
               cpu: 10m
               memory: 20Mi
 
-#        - name: node-driver-registrar
-#          image: pixiuio/csi-node-driver-registrar:v2.6.2
-#          args:
-#            - --v=2
-#            - --csi-address=/csi/csi.sock
-#            - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-#          livenessProbe:
-#            exec:
-#              command:
-#                - /csi-node-driver-registrar
-#                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
-#                - --mode=kubelet-registration-probe
-#            initialDelaySeconds: 30
-#            timeoutSeconds: 15
-#          env:
-#            - name: DRIVER_REG_SOCK_PATH
-#              value: /var/lib/kubelet/plugins_registry/localstorage.csi.caoyingjunz.io-reg.sock
-#            - name: KUBE_NODE_NAME
-#              valueFrom:
-#                fieldRef:
-#                  fieldPath: spec.nodeName
-#          volumeMounts:
-#            - name: socket-dir
-#              mountPath: /csi
-#            - name: registration-dir
-#              mountPath: /registration
-#          resources:
-#            limits:
-#              memory: 100Mi
-#            requests:
-#              cpu: 10m
-#              memory: 20Mi
+        - name: csi-attacher
+          image: registry.aliyuncs.com/google_containers/csi-attacher:v4.2.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - -v=5
+            - --csi-address=/csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+
+        - name: node-driver-registrar
+          image: registry.aliyuncs.com/google_containers/csi-node-driver-registrar:v2.7.0
+          args:
+            - --v=2
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+          livenessProbe:
+            exec:
+              command:
+                - /csi-node-driver-registrar
+                - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+                - --mode=kubelet-registration-probe
+            initialDelaySeconds: 30
+            timeoutSeconds: 15
+          env:
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/csi-lsplugin/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+          resources:
+            limits:
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
 
         - name: csi-provisioner
-          image: jacky06/csi-provisioner:v0.1
+          image: registry.aliyuncs.com/google_containers/csi-provisioner:v3.3.0
           args:
             - -v=5
             - --csi-address=/csi/csi.sock
@@ -100,11 +110,11 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: pixiuio/lsplugin:v1.0.0
+          image: pixiuio/localstorageplugin:v1.0.0
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--nodeid=$(KUBE_NODE_NAME)"
+            - "--nodeid=$(NODE_ID)"
             - "--volume-dir=/data"
           env:
             - name: NODE_ID
