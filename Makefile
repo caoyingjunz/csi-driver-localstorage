@@ -1,6 +1,6 @@
 .PHONY: run image push vendor client-gen clean
 
-dockerhubUser = pixiuio
+dockerhubUser = harbor.powerlaw.club/pixiuio
 tag = latest
 apps ?= $(shell ls cmd)
 appName ?= $(app)

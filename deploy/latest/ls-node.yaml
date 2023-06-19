@@ -105,7 +105,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: pixiuio/localstorageplugin:latest
+          image: harbor.powerlaw.club/pixiuio/localstorageplugin:latest
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
