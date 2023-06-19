@@ -3,9 +3,6 @@ name: Build localstorage image
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches:
-      - master
 
 env:
   # Use docker.io for Docker Hub if empty
