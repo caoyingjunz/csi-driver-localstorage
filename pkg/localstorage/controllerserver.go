@@ -17,7 +17,6 @@ limitations under the License.
 package localstorage
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -28,12 +27,11 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 type Operation string
@@ -58,7 +56,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := storageutil.GetLocalStorageByNode(ls.lsLister, ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
@@ -71,22 +69,21 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 		return nil, err
 	}
 
+	// Deep-copy otherwise we are mutating our cache.
+	// TODO: Deep-copy only when needed.
+	s := localstorage.DeepCopy()
+
 	volSize := req.GetCapacityRange().GetRequiredBytes()
-	vol := cache.Volume{
+	util.AddVolume(s, localstoragev1.Volume{
 		VolID:   volumeID,
-		VolName: req.GetName(),
+		VolName: name,
 		VolPath: path,
 		VolSize: volSize,
-	}
+	})
+	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, volSize, SubOperation)
 
-	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, volSize, SubOperation)
-	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
-		return nil, err
-	}
-
-	klog.V(2).Infof("adding cache localstorage volume: %s = %v", volumeID, vol)
-	if err := ls.cache.SetVolume(vol); err != nil {
+	// Update the changes immediately
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
 
@@ -117,24 +114,21 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	lsObj, err := ls.getLocalStorageByNode(ls.GetNode())
+	localstorage, err := storageutil.GetLocalStorageByNode(ls.lsLister, ls.GetNode())
 	if err != nil {
 		return nil, err
 	}
 	volId := req.GetVolumeId()
 
-	toDel, err := ls.cache.GetVolumeByID(volId)
-	if err != nil {
-		return nil, err
-	}
-	newObj := lsObj.DeepCopy()
-	newObj.Status.Allocatable = ls.calculateAllocatedSize(newObj.Status.Allocatable, toDel.VolSize, AddOperation)
-	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, newObj, metav1.UpdateOptions{}); err != nil {
-		return nil, err
-	}
+	// Deep-copy otherwise we are mutating our cache.
+	// TODO: Deep-copy only when needed.
+	s := localstorage.DeepCopy()
 
-	klog.Infof("deleting cache localstorage volume: %s", volId)
-	if err := ls.cache.DeleteVolume(volId); err != nil {
+	vol := util.RemoveVolume(s, volId)
+	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, vol.VolSize, AddOperation)
+
+	// Update the changes immediately
+	if _, err = ls.client.StorageV1().LocalStorages().Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return nil, err
 	}
 
@@ -147,7 +141,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
-func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity, volSize int64, op Operation) resource.Quantity {
+func (ls *localStorage) calculateAllocatedSize(allocatableSize *resource.Quantity, volSize int64, op Operation) *resource.Quantity {
 	volSizeCap := util.BytesToQuantity(volSize)
 	switch op {
 	case AddOperation:
@@ -157,27 +151,6 @@ func (ls *localStorage) calculateAllocatedSize(allocatableSize resource.Quantity
 	}
 
 	return allocatableSize
-}
-
-// get localstorage object by nodeName, error when not found
-func (ls *localStorage) getLocalStorageByNode(nodeName string) (*localstoragev1.LocalStorage, error) {
-	lsNodes, err := ls.lsLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var lsNode *localstoragev1.LocalStorage
-	for _, l := range lsNodes {
-		if l.Spec.Node == nodeName {
-			lsNode = l
-		}
-	}
-	if lsNode == nil {
-		return nil, fmt.Errorf("failed to found localstorage with node %s", nodeName)
-
-	}
-
-	return lsNode, nil
 }
 
 // parseVolumePath returns the canonical path for volume

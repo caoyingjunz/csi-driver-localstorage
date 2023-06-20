@@ -25,11 +25,10 @@ import (
 // +genclient:nonNamespaced
 // +kubebuilder:resource:scope=Cluster,shortName={pls, ls}
 // +kubebuilder:printcolumn:JSONPath=".status.phase",name=Status,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.node",name=kubeNode,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.allocatable",name=Allocatable,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
-// +kubebuilder:printcolumn:JSONPath=".status.usage",name=Usage,type=string,priority=1
-// +kubebuilder:printcolumn:JSONPath=".spec.node",name=Node,type=string,priority=1
 // +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -45,9 +44,13 @@ type LocalStorage struct {
 type LocalStoragePhase string
 
 const (
-	LocalStoragePending LocalStoragePhase = "Pending"
-	LocalStorageReady   LocalStoragePhase = "Ready"
-	LocalStorageUnknown LocalStoragePhase = "Unknown"
+	LocalStoragePending     LocalStoragePhase = "Pending"
+	LocalStorageInitiating  LocalStoragePhase = "Initiating"
+	LocalStorageTerminating LocalStoragePhase = "Terminating"
+	LocalStorageExtending   LocalStoragePhase = "Extending"
+	LocalStorageMaintaining LocalStoragePhase = "Maintaining"
+	LocalStorageReady       LocalStoragePhase = "Ready"
+	LocalStorageUnknown     LocalStoragePhase = "Unknown"
 )
 
 type LocalStorageSpec struct {
@@ -67,19 +70,15 @@ type DiskSpec struct {
 type LocalStorageCondition string
 
 type LocalStorageStatus struct {
-	Phase       LocalStoragePhase `json:"phase,omitempty"`
-	Allocatable resource.Quantity `json:"allocatable,omitempty"`
-	Capacity    resource.Quantity `json:"capacity,omitempty"`
+	Phase       LocalStoragePhase  `json:"phase,omitempty"`
+	Allocatable *resource.Quantity `json:"allocatable,omitempty"`
+	Capacity    *resource.Quantity `json:"capacity,omitempty"`
 
 	// List of mount volumes on this node
 	// +optional
 	Volumes []Volume `json:"volumes,omitempty"`
 
 	Conditions LocalStorageCondition `json:"conditions,omitempty"`
-}
-
-type Volume struct {
-	Name string `json:"name"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -89,4 +88,13 @@ type LocalStorageList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []LocalStorage `json:"items"`
+}
+
+type Volume struct {
+	VolName  string `json:"volName,omitempty"`
+	VolID    string `json:"volId,omitempty"`
+	VolPath  string `json:"volPath,omitempty"`
+	VolSize  int64  `json:"volSize,omitempty"`
+	NodeID   string `json:"nodeId,omitempty"`
+	Attached bool   `json:"attached,omitempty"`
 }

@@ -59,9 +59,13 @@ type StorageController struct {
 	syncHandler         func(ctx context.Context, dKey string) error
 	enqueueLocalstorage func(ls *localstoragev1.LocalStorage)
 
-	lsLister       localstorage.LocalStorageLister
+	// lsLister can list/get localstorage from the shared informer's store
+	lsLister localstorage.LocalStorageLister
+
+	// lsListerSynced returns true if the localstorage store has been synced at least once.
 	lsListerSynced cache.InformerSynced
 
+	// localstorage that need to be synced
 	queue workqueue.RateLimitingInterface
 }
 
@@ -100,7 +104,11 @@ func NewStorageController(ctx context.Context, lsInformer v1.LocalStorageInforme
 }
 
 func (s *StorageController) addStorage(obj interface{}) {
-	ls := obj.(*localstoragev1.LocalStorage)
+	ls, ok := obj.(*localstoragev1.LocalStorage)
+	if !ok {
+		utilruntime.HandleError(fmt.Errorf("expected localstorage in addStorage, but got %#v", obj))
+		return
+	}
 	klog.V(2).Info("Adding localstorage", "localstorage", klog.KObj(ls))
 	s.enqueueLocalstorage(ls)
 }
@@ -161,11 +169,25 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
-		// TODO: ignore localstorage deleted 删除外部资源
+		// TODO: to delete some external localstorage object
+		if ls.Status.Phase != localstoragev1.LocalStorageTerminating {
+			ls.Status.Phase = localstoragev1.LocalStorageTerminating
+			if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
-	s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
+	// TODO: handler somethings
+	if util.IsPendingStatus(ls) {
+		ls.Status.Phase = localstoragev1.LocalStorageInitiating
+		if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
+	}
+
 	return nil
 }
 

@@ -19,10 +19,11 @@ package webhook
 import (
 	"context"
 	"fmt"
-
 	"net/http"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -50,7 +51,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 
 	var err error
 	if err = v.ValidateName(ctx, ls); err != nil {
-		admission.Errored(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch req.Operation {
@@ -128,21 +129,12 @@ func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls
 	if len(ls.Spec.Node) == 0 {
 		return fmt.Errorf("localstraoge (%s) binding node may not be empty", ls.Name)
 	}
-
-	nodes := &v1.NodeList{}
-	if err := v.Client.List(ctx, nodes); err != nil {
-		return fmt.Errorf("failed to list kube node objects: %v", err)
-	}
-	klog.V(2).Infof("found kube nodes %+v", nodes.Items)
-	var found bool
-	for _, node := range nodes.Items {
-		if node.Name == ls.Spec.Node {
-			found = true
-			break
+	node := &v1.Node{}
+	if err := v.Client.Get(ctx, types.NamespacedName{Name: ls.Spec.Node}, node); err != nil {
+		if errors.IsNotFound(err) {
+			return fmt.Errorf("localstorage (%s) binding node (%s) not found in kubernetes", ls.Name, ls.Spec.Node)
 		}
-	}
-	if !found {
-		return fmt.Errorf("localstorage node (%s) not found in kubernetes", ls.Spec.Node)
+		return fmt.Errorf("failed to find binding node (%s) object: %v", ls.Spec.Node, err)
 	}
 
 	obj := &localstoragev1.LocalStorageList{}
