@@ -62,7 +62,7 @@ var (
 	kubeAPIQPS   = flag.Int("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5")
 	kubeAPIBurst = flag.Int("kube-api-burst", 10, "Burst to use while communicating with the kubernetes apiserver. Defaults to 10.")
 
-	createLocalstorage = flag.Bool("create-localstorage", true, "Create localstorage object if not present")
+	createLocalstorage = flag.Bool("create-localstorage", false, "Create localstorage object if not present")
 
 	// webhook flags
 	host     = flag.String("host", "", "host is the ip address that the webhook server binds to")
