@@ -1,0 +1,68 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: pixiu-ls-mutating-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5akNDQXJLZ0F3SUJBZ0lVT3NCMUkxU2RvZExDZlhxcC9SaW9VbnBTQ2Fvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tERW1NQ1FHQTFVRUF3d2RjR2w0YVhVdGJHOWpZV3h6ZEc5eVlXZGxMWE5sY25acFkyVWdRMEV3SUJjTgpNak13TmpBM01EQXhOakkxV2hnUE1qRXlNekExTVRRd01ERTJNalZhTURVeE16QXhCZ05WQkFNTUtuQnBlR2wxCkxXeHZZMkZzYzNSdmNtRm5aUzF6WlhKMmFXTmxMbXQxWW1VdGMzbHpkR1Z0TG5OMll6Q0NBU0l3RFFZSktvWkkKaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFNbXVsVElkSGZndlgrUndJOFUwbE1ZbHYyeDFGeXhoeW4wUgpvODhpZ20zTmdMV2xwWE84TlVpczh3U09FYU1sRDgxa3JCcWZWR2lBc2w1SkhWT0NsZTJNU1E4YW5SSXV3d0R2ClFnWlgwcjl4N3dBaVU4LzROMkJCWFRwSnp5VnJBSHFERE14eUg5Kzh1cG5SN09SVFdEeXUrUXMvUjBsa1hvVjUKZ0tJUTN5aXFDdEJaRUVkbnlhYklZYXUwUW5ZL1YzWS9vaWJsQXRuU3hYUUR5TCthUTVZS015a1c4cE95OW1FQwo0d29IZUZlNjNaY3NRV01RQTVtanBZZ3hRMGVOdUFFZ2IzVmZGcXJrTVFFSytaaFFHWVAwWGlkS1hNZlBJellDCk1wdHExMDBQYWlXTWxkZk8xaWt6aUhDcFJERTVna0hoak53T01hRUhCNFJ0Y1N4LytSRUNBd0VBQWFPQjNEQ0IKMlRBSkJnTlZIUk1FQWpBQU1Bc0dBMVVkRHdRRUF3SUY0REIvQmdOVkhSRUVlREIyZ2hwd2FYaHBkUzFzYjJOaApiSE4wYjNKaFoyVXRjMlZ5ZG1salpZSW1jR2w0YVhVdGJHOWpZV3h6ZEc5eVlXZGxMWE5sY25acFkyVXVhM1ZpClpTMXplWE4wWlcyQ0tuQnBlR2wxTFd4dlkyRnNjM1J2Y21GblpTMXpaWEoyYVdObExtdDFZbVV0YzNsemRHVnQKTG5OMlk0Y0Vmd0FBQVRBZEJnTlZIUTRFRmdRVWVCc1FLK3IwUmRnOHBpVktTOU5RM21TRDE3VXdId1lEVlIwagpCQmd3Rm9BVVh3QjlmMjFyV21XVDY3MzgvL25VZ3BDM0lxQXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSGRWCkdhTnJRaDVkNGFUVE5uWUNxQ3ExS3VDdEFaVFJPSDFVUnVzd0VtREhtYi8xMHdDQ21PWUg3MDJqaUVaUW9RelAKdndVY2ZLUFhOWE5MdTlkaThBbXlEZnIzUkNtalAwRWpVMWR0STFYOTBFTENkYTdOSkJMamJ6QjFWem1HdEJuVApHMERuZ0twTzlraGViaFl3Ykt4dS9zM0JJVUtmTExDL3BBTkh5RnYxcU5aWlJJQUNSdW5nb2pBRzlpVEFjOExHCllmNWwyVFBxaUg5WHZmdDZReUNGZ0t5NnU2YmZobXR4REVxNFM3Qm12OEdYWWxLUnBpcVhXWCtZb1FEcFY5MGEKc1BMQU8rcXBRNlh3L1B5eU1Nd2JRSklKRVVjVjdPeXJmT3pta3RjNGRvSklIN2tVcnREYkxZc29MSkRpVGVZUApwU09uMnJDSHlOa1hiQUUvQW9VPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      service:
+        name: pixiu-localstorage-service
+        namespace: kube-system
+        path: /mutate-v1-localstorage
+        port: 443
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: webhook.pixiu.io
+    namespaceSelector: {}
+    objectSelector: {}
+    reinvocationPolicy: Never
+    rules:
+      - apiGroups:
+          - storage.caoyingjunz.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - localstorages
+        scope: '*'
+    sideEffects: None
+    timeoutSeconds: 10
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: pixiu-ls-validating-configuration
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR5akNDQXJLZ0F3SUJBZ0lVT3NCMUkxU2RvZExDZlhxcC9SaW9VbnBTQ2Fvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tERW1NQ1FHQTFVRUF3d2RjR2w0YVhVdGJHOWpZV3h6ZEc5eVlXZGxMWE5sY25acFkyVWdRMEV3SUJjTgpNak13TmpBM01EQXhOakkxV2hnUE1qRXlNekExTVRRd01ERTJNalZhTURVeE16QXhCZ05WQkFNTUtuQnBlR2wxCkxXeHZZMkZzYzNSdmNtRm5aUzF6WlhKMmFXTmxMbXQxWW1VdGMzbHpkR1Z0TG5OMll6Q0NBU0l3RFFZSktvWkkKaHZjTkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFNbXVsVElkSGZndlgrUndJOFUwbE1ZbHYyeDFGeXhoeW4wUgpvODhpZ20zTmdMV2xwWE84TlVpczh3U09FYU1sRDgxa3JCcWZWR2lBc2w1SkhWT0NsZTJNU1E4YW5SSXV3d0R2ClFnWlgwcjl4N3dBaVU4LzROMkJCWFRwSnp5VnJBSHFERE14eUg5Kzh1cG5SN09SVFdEeXUrUXMvUjBsa1hvVjUKZ0tJUTN5aXFDdEJaRUVkbnlhYklZYXUwUW5ZL1YzWS9vaWJsQXRuU3hYUUR5TCthUTVZS015a1c4cE95OW1FQwo0d29IZUZlNjNaY3NRV01RQTVtanBZZ3hRMGVOdUFFZ2IzVmZGcXJrTVFFSytaaFFHWVAwWGlkS1hNZlBJellDCk1wdHExMDBQYWlXTWxkZk8xaWt6aUhDcFJERTVna0hoak53T01hRUhCNFJ0Y1N4LytSRUNBd0VBQWFPQjNEQ0IKMlRBSkJnTlZIUk1FQWpBQU1Bc0dBMVVkRHdRRUF3SUY0REIvQmdOVkhSRUVlREIyZ2hwd2FYaHBkUzFzYjJOaApiSE4wYjNKaFoyVXRjMlZ5ZG1salpZSW1jR2w0YVhVdGJHOWpZV3h6ZEc5eVlXZGxMWE5sY25acFkyVXVhM1ZpClpTMXplWE4wWlcyQ0tuQnBlR2wxTFd4dlkyRnNjM1J2Y21GblpTMXpaWEoyYVdObExtdDFZbVV0YzNsemRHVnQKTG5OMlk0Y0Vmd0FBQVRBZEJnTlZIUTRFRmdRVWVCc1FLK3IwUmRnOHBpVktTOU5RM21TRDE3VXdId1lEVlIwagpCQmd3Rm9BVVh3QjlmMjFyV21XVDY3MzgvL25VZ3BDM0lxQXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSGRWCkdhTnJRaDVkNGFUVE5uWUNxQ3ExS3VDdEFaVFJPSDFVUnVzd0VtREhtYi8xMHdDQ21PWUg3MDJqaUVaUW9RelAKdndVY2ZLUFhOWE5MdTlkaThBbXlEZnIzUkNtalAwRWpVMWR0STFYOTBFTENkYTdOSkJMamJ6QjFWem1HdEJuVApHMERuZ0twTzlraGViaFl3Ykt4dS9zM0JJVUtmTExDL3BBTkh5RnYxcU5aWlJJQUNSdW5nb2pBRzlpVEFjOExHCllmNWwyVFBxaUg5WHZmdDZReUNGZ0t5NnU2YmZobXR4REVxNFM3Qm12OEdYWWxLUnBpcVhXWCtZb1FEcFY5MGEKc1BMQU8rcXBRNlh3L1B5eU1Nd2JRSklKRVVjVjdPeXJmT3pta3RjNGRvSklIN2tVcnREYkxZc29MSkRpVGVZUApwU09uMnJDSHlOa1hiQUUvQW9VPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      service:
+        name: pixiu-localstorage-service
+        namespace: kube-system
+        path: /validate-v1-localstorage
+        port: 443
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: webhook.pixiu.io
+    namespaceSelector: {}
+    objectSelector: {}
+    rules:
+      - apiGroups:
+          - storage.caoyingjunz.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - localstorages
+        scope: '*'
+    sideEffects: None
+    timeoutSeconds: 10
