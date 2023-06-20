@@ -6,6 +6,7 @@ require (
 	github.com/container-storage-interface/spec v1.6.0
 	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
+	github.com/houwenchen/libs v0.0.0-20230620024529-180015257b01
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/stretchr/testify v1.8.3 // indirect
 	golang.org/x/net v0.10.0
