@@ -16,10 +16,25 @@ limitations under the License.
 
 package router
 
-import "github.com/julienschmidt/httprouter"
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
+
+const (
+	version     = "v1.0.1"
+	versionPath = "/version"
+
+	apiPrefix       = "/localstorage-scheduler"
+	predicatePrefix = apiPrefix + "/filter"
+)
+
+func VersionHandler(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	fmt.Fprint(resp, fmt.Sprint(version))
+}
 
 func InstallRouters(route *httprouter.Router) {
-	route.
-
-
+	route.GET(versionPath, VersionHandler)
 }
