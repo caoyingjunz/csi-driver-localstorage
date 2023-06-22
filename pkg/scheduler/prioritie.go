@@ -17,9 +17,27 @@ limitations under the License.
 package scheduler
 
 import (
-	extender "k8s.io/kube-scheduler/extender/v1"
+	"k8s.io/klog/v2"
+	"math/rand"
+
+	schedulerextender "k8s.io/kube-scheduler/extender/v1"
 )
 
-func prioritize(args extender.ExtenderArgs) *extender.HostPriorityList {
-	return nil
+type Prioritize struct {
+}
+
+func (p *Prioritize) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.HostPriorityList {
+	nodes := args.Nodes.Items
+
+	hostPriorityList := make(schedulerextender.HostPriorityList, len(nodes))
+	for i, node := range nodes {
+		score := rand.Int63n(schedulerextender.MaxExtenderPriority + 1)
+		hostPriorityList[i] = schedulerextender.HostPriority{
+			Host:  node.Name,
+			Score: score,
+		}
+	}
+
+	klog.Infof("TODO: hostPriorityList: %+v", hostPriorityList)
+	return &hostPriorityList
 }

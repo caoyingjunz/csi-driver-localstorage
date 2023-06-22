@@ -17,9 +17,26 @@ limitations under the License.
 package scheduler
 
 import (
-	extender "k8s.io/kube-scheduler/extender/v1"
+	"fmt"
+
+	"k8s.io/klog/v2"
+
+	schedulerextender "k8s.io/kube-scheduler/extender/v1"
 )
 
-func filter(args extender.ExtenderArgs) *extender.ExtenderFilterResult {
-	return nil
+type Predicate struct{}
+
+func (p *Predicate) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.ExtenderFilterResult {
+	pod := args.Pod
+	if pod == nil {
+		return &schedulerextender.ExtenderFilterResult{Error: fmt.Sprintf("localstorage pod is nil")}
+	}
+
+	klog.Infof("TODO: ExtenderFilterResult: %+v", pod)
+	return &schedulerextender.ExtenderFilterResult{
+		NodeNames:   args.NodeNames,
+		Nodes:       args.Nodes,
+		FailedNodes: make(map[string]string),
+		Error:       "",
+	}
 }

@@ -27,14 +27,24 @@ const (
 	version     = "v1.0.1"
 	versionPath = "/version"
 
-	apiPrefix       = "/localstorage-scheduler"
-	predicatePrefix = apiPrefix + "/filter"
+	apiPrefix        = "/localstorage-scheduler"
+	predicatePrefix  = apiPrefix + "/filter"
+	prioritizePrefix = apiPrefix + "/prioritize"
 )
 
-func VersionHandler(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func InstallRouters(route *httprouter.Router) {
+	route.GET(versionPath, handleVersion)
+	route.POST(predicatePrefix, handlePredicate)
+	route.POST(prioritizePrefix, handlerPrioritize)
+}
+
+func handleVersion(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fmt.Fprint(resp, fmt.Sprint(version))
 }
 
-func InstallRouters(route *httprouter.Router) {
-	route.GET(versionPath, VersionHandler)
+func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+
+}
+
+func handlerPrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 }
