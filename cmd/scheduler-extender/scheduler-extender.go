@@ -16,8 +16,34 @@ limitations under the License.
 
 package main
 
-import "fmt"
+import (
+	"flag"
+	"fmt"
+
+	"k8s.io/klog/v2"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+)
+
+var (
+	kubeconfig = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
+)
+
+func init() {
+	_ = flag.Set("logtostderr", "true")
+}
 
 func main() {
-	fmt.Println("TODO scheduler extender")
+	klog.InitFlags(nil)
+	flag.Parse()
+
+	ctx := signals.SetupSignalHandler()
+
+	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube config: %v", err)
+	}
+
+	fmt.Println("TODO scheduler extender", ctx, kubeConfig)
 }
