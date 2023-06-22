@@ -19,15 +19,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	"strconv"
 
+	"github.com/julienschmidt/httprouter"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/router"
 )
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
+
+	port = flag.Int("port", 8090, "port is the port that the scheduler server serves at")
 )
 
 func init() {
@@ -44,6 +50,15 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-
 	fmt.Println("TODO scheduler extender", ctx, kubeConfig)
+
+	scheduleRoute := httprouter.New()
+
+	// Install scheduler extender http router
+	router.InstallRouters(scheduleRoute)
+
+	klog.Infof("starting localstorage scheduler extender server")
+	if err := http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {
+		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
+	}
 }
