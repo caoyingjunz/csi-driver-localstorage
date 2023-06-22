@@ -26,6 +26,10 @@ import (
 type Prioritize struct {
 }
 
+func NewPrioritize() *Prioritize {
+	return &Prioritize{}
+}
+
 func (p *Prioritize) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.HostPriorityList {
 	nodes := args.Nodes.Items
 

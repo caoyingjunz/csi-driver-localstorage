@@ -26,6 +26,10 @@ import (
 
 type Predicate struct{}
 
+func NewPredicate() *Predicate {
+	return &Predicate{}
+}
+
 func (p *Predicate) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.ExtenderFilterResult {
 	pod := args.Pod
 	if pod == nil {

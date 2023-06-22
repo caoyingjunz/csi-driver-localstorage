@@ -17,10 +17,17 @@ limitations under the License.
 package router
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"k8s.io/klog/v2"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	schedulerextender "k8s.io/kube-scheduler/extender/v1"
+
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
 )
 
 const (
@@ -35,7 +42,7 @@ const (
 func InstallRouters(route *httprouter.Router) {
 	route.GET(versionPath, handleVersion)
 	route.POST(predicatePrefix, handlePredicate)
-	route.POST(prioritizePrefix, handlerPrioritize)
+	route.POST(prioritizePrefix, handlePrioritize)
 }
 
 func handleVersion(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -43,8 +50,55 @@ func handleVersion(resp http.ResponseWriter, req *http.Request, params httproute
 }
 
 func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	klog.Infof("Starting handle localstorage scheduler predicate")
+	var (
+		buf                  bytes.Buffer
+		extenderArgs         schedulerextender.ExtenderArgs
+		extenderFilterResult *schedulerextender.ExtenderFilterResult
+	)
 
+	body := io.TeeReader(req.Body, &buf)
+	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
+		extenderFilterResult = &schedulerextender.ExtenderFilterResult{Error: err.Error()}
+	} else {
+		predicate := scheduler.NewPredicate()
+		extenderFilterResult = predicate.Handler(extenderArgs)
+	}
+
+	resp.Header().Set("Content-Type", "application/json")
+	result, err := json.Marshal(extenderFilterResult)
+	if err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte(fmt.Sprintf("{'error':'%s'}", err.Error())))
+	} else {
+		resp.WriteHeader(http.StatusOK)
+		resp.Write(result)
+	}
 }
 
-func handlerPrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func handlePrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	klog.Infof("Starting handle localstorage scheduler prioritize")
+	var (
+		buf              bytes.Buffer
+		extenderArgs     schedulerextender.ExtenderArgs
+		hostPriorityList *schedulerextender.HostPriorityList
+	)
+
+	body := io.TeeReader(req.Body, &buf)
+	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
+		hostPriorityList = &schedulerextender.HostPriorityList{}
+	} else {
+		prioritize := scheduler.NewPrioritize()
+		hostPriorityList = prioritize.Handler(extenderArgs)
+	}
+
+	resp.Header().Set("Content-Type", "application/json")
+	result, err := json.Marshal(hostPriorityList)
+	if err != nil {
+		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte(fmt.Sprintf("{'error':'%s'}", err.Error())))
+	} else {
+		resp.WriteHeader(http.StatusOK)
+		resp.Write(result)
+	}
 }

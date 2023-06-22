@@ -23,9 +23,9 @@ import (
 	"strconv"
 
 	"github.com/julienschmidt/httprouter"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/router"
 )
@@ -44,13 +44,15 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	ctx := signals.SetupSignalHandler()
-
 	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	fmt.Println("TODO scheduler extender", ctx, kubeConfig)
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube clientSet: %v", err)
+	}
+	fmt.Println("TODO", kubeClient)
 
 	scheduleRoute := httprouter.New()
 
