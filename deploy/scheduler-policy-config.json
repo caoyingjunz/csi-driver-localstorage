@@ -1,0 +1,13 @@
+{
+  "kind" : "Policy",
+  "apiVersion" : "v1",
+  "extenders" : [{
+    "urlPrefix": "http://ls-scheduler-extender.kube-system:8090/localstorage-scheduler",
+    "filterVerb": "filter",
+    "prioritizeVerb": "prioritize",
+    "enableHttps": false,
+    "nodeCacheCapable": true,
+    "ignorable": false
+  }],
+  "hardPodAffinitySymmetricWeight" : 10
+}
