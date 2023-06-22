@@ -12,3 +12,18 @@ spec:
   selector:
     app: pixiu-ls-controller
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ls-scheduler-extender
+  namespace: kube-system
+spec:
+  ports:
+    - name: tcp-8090
+      port: 8090
+      protocol: TCP
+      targetPort: 8090
+  selector:
+    app: ls-scheduler-extender
+  type: ClusterIP
