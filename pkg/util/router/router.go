@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	schedulerextender "k8s.io/kube-scheduler/extender/v1"
+	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
 )
@@ -53,13 +53,13 @@ func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprou
 	klog.Infof("Starting handle localstorage scheduler predicate")
 	var (
 		buf                  bytes.Buffer
-		extenderArgs         schedulerextender.ExtenderArgs
-		extenderFilterResult *schedulerextender.ExtenderFilterResult
+		extenderArgs         extenderv1.ExtenderArgs
+		extenderFilterResult *extenderv1.ExtenderFilterResult
 	)
 
 	body := io.TeeReader(req.Body, &buf)
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
-		extenderFilterResult = &schedulerextender.ExtenderFilterResult{Error: err.Error()}
+		extenderFilterResult = &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	} else {
 		predicate := scheduler.NewPredicate()
 		extenderFilterResult = predicate.Handler(extenderArgs)
@@ -80,13 +80,13 @@ func handlePrioritize(resp http.ResponseWriter, req *http.Request, params httpro
 	klog.Infof("Starting handle localstorage scheduler prioritize")
 	var (
 		buf              bytes.Buffer
-		extenderArgs     schedulerextender.ExtenderArgs
-		hostPriorityList *schedulerextender.HostPriorityList
+		extenderArgs     extenderv1.ExtenderArgs
+		hostPriorityList *extenderv1.HostPriorityList
 	)
 
 	body := io.TeeReader(req.Body, &buf)
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
-		hostPriorityList = &schedulerextender.HostPriorityList{}
+		hostPriorityList = &extenderv1.HostPriorityList{}
 	} else {
 		prioritize := scheduler.NewPrioritize()
 		hostPriorityList = prioritize.Handler(extenderArgs)

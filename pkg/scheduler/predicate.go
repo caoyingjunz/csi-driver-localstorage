@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	schedulerextender "k8s.io/kube-scheduler/extender/v1"
+	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 )
 
 type Predicate struct{}
@@ -30,14 +30,14 @@ func NewPredicate() *Predicate {
 	return &Predicate{}
 }
 
-func (p *Predicate) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.ExtenderFilterResult {
+func (p *Predicate) Handler(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFilterResult {
 	pod := args.Pod
 	if pod == nil {
-		return &schedulerextender.ExtenderFilterResult{Error: fmt.Sprintf("localstorage pod is nil")}
+		return &extenderv1.ExtenderFilterResult{Error: fmt.Sprintf("localstorage pod is nil")}
 	}
 
 	klog.Infof("TODO: ExtenderFilterResult: %+v", pod)
-	return &schedulerextender.ExtenderFilterResult{
+	return &extenderv1.ExtenderFilterResult{
 		NodeNames:   args.NodeNames,
 		Nodes:       args.Nodes,
 		FailedNodes: make(map[string]string),

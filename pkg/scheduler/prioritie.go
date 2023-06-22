@@ -20,7 +20,7 @@ import (
 	"k8s.io/klog/v2"
 	"math/rand"
 
-	schedulerextender "k8s.io/kube-scheduler/extender/v1"
+	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 )
 
 type Prioritize struct {
@@ -30,13 +30,13 @@ func NewPrioritize() *Prioritize {
 	return &Prioritize{}
 }
 
-func (p *Prioritize) Handler(args schedulerextender.ExtenderArgs) *schedulerextender.HostPriorityList {
+func (p *Prioritize) Handler(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
 	nodes := args.Nodes.Items
 
-	hostPriorityList := make(schedulerextender.HostPriorityList, len(nodes))
+	hostPriorityList := make(extenderv1.HostPriorityList, len(nodes))
 	for i, node := range nodes {
-		score := rand.Int63n(schedulerextender.MaxExtenderPriority + 1)
-		hostPriorityList[i] = schedulerextender.HostPriority{
+		score := rand.Int63n(extenderv1.MaxExtenderPriority + 1)
+		hostPriorityList[i] = extenderv1.HostPriority{
 			Host:  node.Name,
 			Score: score,
 		}
