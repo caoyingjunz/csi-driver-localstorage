@@ -1,0 +1,13 @@
+# Used since Kubernetes v1.23
+apiVersion: kubescheduler.config.k8s.io/v1beta3
+kind: KubeSchedulerConfiguration
+clientConnection:
+  kubeconfig: /etc/kubernetes/scheduler.conf
+extenders:
+  - urlPrefix: http://ls-scheduler-extender.kube-system:8090/localstorage-scheduler
+    filterVerb: filter
+    prioritizeVerb: prioritize
+    enableHTTPS: false
+    weight: 5
+    nodeCacheCapable: true
+    ignorable: false

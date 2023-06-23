@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ls-scheduler-extender
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ls-scheduler-extender
+  template:
+    metadata:
+      labels:
+        app: ls-scheduler-extender
+    spec:
+      serviceAccountName: csi-ls-node-sa
+      containers:
+        - args:
+            - -v=2
+            - --port=8090
+          image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
+          imagePullPolicy: Always
+          name: ls-scheduler-extender
+      dnsPolicy: Default
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
