@@ -63,7 +63,7 @@ func main() {
 	lsInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 
 	// Install scheduler extender http router
-	router.InstallHttpRouteWithInformer(scheduleRoute, lsInformer.Storage().V1().LocalStorages())
+	router.InstallHttpRouteWithInformer(ctx, scheduleRoute, lsInformer.Storage().V1().LocalStorages())
 
 	// Start ls informers.
 	lsInformer.Start(ctx.Done())
