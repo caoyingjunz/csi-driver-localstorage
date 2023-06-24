@@ -18,14 +18,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/router"
 )
@@ -48,16 +49,26 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	_, lsClientSet, err := util.NewClientSets(kubeConfig)
 	if err != nil {
-		klog.Fatalf("Failed to build kube clientSet: %v", err)
+		klog.Fatal("failed to build clientSets: %v", err)
 	}
-	fmt.Println("TODO", kubeClient)
 
+	// set up signals so we handle the shutdown signal gracefully
+	ctx := signals.SetupSignalHandler()
+
+	// new http router
 	scheduleRoute := httprouter.New()
 
+	lsInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+
 	// Install scheduler extender http router
-	router.InstallRouters(scheduleRoute)
+	router.InstallHttpRouteWithInformer(scheduleRoute, lsInformer.Storage().V1().LocalStorages())
+
+	// Start ls informers.
+	lsInformer.Start(ctx.Done())
+	// Wait for ls caches to sync.
+	lsInformer.WaitForCacheSync(ctx.Done())
 
 	klog.Infof("starting localstorage scheduler extender server")
 	if err := http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {

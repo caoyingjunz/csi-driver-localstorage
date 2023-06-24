@@ -21,13 +21,18 @@ import (
 
 	"k8s.io/klog/v2"
 
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 )
 
-type Predicate struct{}
+type Predicate struct {
+	lsLister localstorage.LocalStorageLister
+}
 
-func NewPredicate() *Predicate {
-	return &Predicate{}
+func NewPredicate(lsLister localstorage.LocalStorageLister) *Predicate {
+	return &Predicate{
+		lsLister: lsLister,
+	}
 }
 
 func (p *Predicate) Handler(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFilterResult {

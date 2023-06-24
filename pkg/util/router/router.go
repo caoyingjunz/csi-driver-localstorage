@@ -18,15 +18,19 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+
+	kubecache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
+	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
 )
 
@@ -39,7 +43,20 @@ const (
 	prioritizePrefix = apiPrefix + "/prioritize"
 )
 
-func InstallRouters(route *httprouter.Router) {
+var (
+	predicate  *scheduler.Predicate
+	prioritize *scheduler.Prioritize
+)
+
+func InstallHttpRouteWithInformer(ctx context.Context, route *httprouter.Router, lsInformer v1.LocalStorageInformer) {
+	lsLister := lsInformer.Lister()
+	if !kubecache.WaitForNamedCacheSync("ls-scheduler-extender", ctx.Done(), lsInformer.Informer().HasSynced) {
+		panic(fmt.Errorf("failed to WaitForNamedCacheSync"))
+	}
+
+	predicate = scheduler.NewPredicate(lsLister)
+	prioritize = scheduler.NewPrioritize(lsLister)
+
 	route.GET(versionPath, handleVersion)
 	route.POST(predicatePrefix, handlePredicate)
 	route.POST(prioritizePrefix, handlePrioritize)
@@ -61,7 +78,6 @@ func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprou
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		extenderFilterResult = &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	} else {
-		predicate := scheduler.NewPredicate()
 		extenderFilterResult = predicate.Handler(extenderArgs)
 	}
 
@@ -88,7 +104,6 @@ func handlePrioritize(resp http.ResponseWriter, req *http.Request, params httpro
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		hostPriorityList = &extenderv1.HostPriorityList{}
 	} else {
-		prioritize := scheduler.NewPrioritize()
 		hostPriorityList = prioritize.Handler(extenderArgs)
 	}
 
