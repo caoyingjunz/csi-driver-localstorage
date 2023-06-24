@@ -109,14 +109,14 @@ func (s *StorageController) addStorage(obj interface{}) {
 		utilruntime.HandleError(fmt.Errorf("expected localstorage in addStorage, but got %#v", obj))
 		return
 	}
-	klog.V(2).Info("Adding localstorage", "localstorage", klog.KObj(ls))
+	klog.V(2).Info("Adding localstorage", klog.KObj(ls))
 	s.enqueueLocalstorage(ls)
 }
 
 func (s *StorageController) updateStorage(old, cur interface{}) {
 	oldLs := old.(*localstoragev1.LocalStorage)
 	curLs := cur.(*localstoragev1.LocalStorage)
-	klog.V(2).Info("Updating localstorage", "localstorage", klog.KObj(oldLs))
+	klog.V(2).Info("Updating localstorage", klog.KObj(oldLs))
 
 	s.enqueueLocalstorage(curLs)
 }
@@ -151,9 +151,9 @@ func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.L
 
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
 	startTime := time.Now()
-	klog.V(2).InfoS("Started syncing localstorage manager", "localstorage", "startTime", startTime)
+	klog.V(2).InfoS("Started syncing localstorage manager", "startTime", startTime)
 	defer func() {
-		klog.V(2).InfoS("Finished syncing localstorage manager", "localstorage", "duration", time.Since(startTime))
+		klog.V(2).InfoS("Finished syncing localstorage manager", "duration", time.Since(startTime))
 	}()
 
 	localstorage, err := s.lsLister.Get(dKey)
