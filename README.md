@@ -1,5 +1,4 @@
 # LocalStorage
-t
 
 ![Build Status][build-url]
 [![Release][release-image]][release-url]
