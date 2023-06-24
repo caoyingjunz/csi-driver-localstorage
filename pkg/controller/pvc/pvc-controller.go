@@ -207,16 +207,27 @@ func (pc *PVCController) syncPVC(ctx context.Context, dKey string) error {
 	}
 
 	// 获取 使用此 pvc 的 pods
-	pods, err := pc.kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("spec.volumes.persistentVolumeClaim.claimName=%s", name),
-	})
+	pods, err := pc.kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-	if len(pods.Items) == 0 {
+
+	podList := make([]v1core.Pod, 0)
+	for _, pod := range pods.Items {
+		if len(pod.Spec.Volumes) != 0 {
+			for _, volume := range pod.Spec.Volumes {
+				if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == name {
+					podList = append(podList, pod)
+					continue
+				}
+			}
+		}
+	}
+
+	if len(podList) == 0 {
 		return fmt.Errorf("pvc isn't used by pod, needn't set iolimit")
 	}
-	klog.Infof("succeed to get pvc: %s, and it's ref pods: %#v", name, pods)
+	klog.Infof("succeed to get pvc: %s, and it's ref pods: %#v", name, podList)
 
 	// 获取 annotations
 	deviceName, existDeviceName := pvc.Annotations["lvm/devicename"]
@@ -234,7 +245,7 @@ func (pc *PVCController) syncPVC(ctx context.Context, dKey string) error {
 	}
 
 	// 遍历 pod，设置 iolimit
-	for _, pod := range pods.Items {
+	for _, pod := range podList {
 		puid := pod.GetUID()
 
 		ioInfo := &iolimit.IOInfo{
@@ -275,10 +286,15 @@ func (pc *PVCController) syncPVC(ctx context.Context, dKey string) error {
 }
 
 func parseUint(para string) uint64 {
+	if para == "" {
+		return 0
+	}
+
 	uint64Data, err := strconv.ParseUint(para, 10, 64)
 	if err != nil {
 		klog.Infof("parse iolimit data to uint format failed, %s", para)
 		return 0
 	}
+
 	return uint64Data
 }
