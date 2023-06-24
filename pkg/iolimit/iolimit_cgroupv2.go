@@ -71,16 +71,28 @@ func (i *IOLimitV2) getIOLImitStr() string {
 	writeInfo := fmt.Sprintf("%d:%d", i.DeviceInfo.Major, i.DeviceInfo.Minor)
 	if i.IOInfo.Rbps != 0 {
 		writeInfo += " rbps=" + fmt.Sprint(i.IOInfo.Rbps)
+	} else {
+		writeInfo += " rbps=max"
 	}
+
 	if i.IOInfo.Riops != 0 {
 		writeInfo += " riops=" + fmt.Sprint(i.IOInfo.Riops)
+	} else {
+		writeInfo += " riops=max"
 	}
+
 	if i.IOInfo.Wbps != 0 {
 		writeInfo += " wbps=" + fmt.Sprint(i.IOInfo.Wbps)
+	} else {
+		writeInfo += " wbps=max"
 	}
+
 	if i.IOInfo.Wiops != 0 {
 		writeInfo += " wiops=" + fmt.Sprint(i.IOInfo.Wiops)
+	} else {
+		writeInfo += " wiops=max"
 	}
+
 	return writeInfo
 }
 

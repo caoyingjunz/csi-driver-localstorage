@@ -7,6 +7,9 @@ const (
 	CGroupV2 CGroupVersion = "cgroup2"
 
 	baseCgroupPath = "/sys/fs/cgroup"
+	kubePodsPath   = "/kubepods.slice"
+	besteffortPath = "/kubepods-besteffort.slice"
+	burstablePath  = "/kubepods-burstable.slice"
 
 	// CGroupV1 使用
 	blkioPath = "/blkio"
@@ -17,9 +20,6 @@ const (
 
 	// CGroupV2 使用
 	mainSubTreeFile = "cgroup.subtree_control"
-	kubePodsPath    = "/kubepods.slice"
-	besteffortPath  = "/kubepods-besteffort.slice"
-	burstablePath   = "/kubepods-burstable.slice"
 	ioMaxFile       = "io.max"
 )
 
