@@ -50,8 +50,9 @@ var (
 
 func InstallHttpRouteWithInformer(ctx context.Context, route *httprouter.Router, lsInformer v1.LocalStorageInformer) {
 	lsLister := lsInformer.Lister()
-	if !kubecache.WaitForNamedCacheSync("ls-scheduler-extender", ctx.Done(), lsInformer.Informer().HasSynced) {
-		panic(fmt.Errorf("failed to WaitForNamedCacheSync"))
+	lsListerSynced := lsInformer.Informer().HasSynced
+	if !kubecache.WaitForNamedCacheSync("scheduler-extender", ctx.Done(), lsListerSynced) {
+		klog.Fatalf("failed to WaitForNamedCacheSync")
 	}
 
 	predicate = scheduler.NewPredicate(lsLister)

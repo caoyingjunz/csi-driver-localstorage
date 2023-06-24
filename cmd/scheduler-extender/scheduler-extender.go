@@ -57,21 +57,24 @@ func main() {
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
 
-	// new http router
-	scheduleRoute := httprouter.New()
-
 	lsInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+	go func() {
+		// new http router
+		scheduleRoute := httprouter.New()
 
-	// Install scheduler extender http router
-	router.InstallHttpRouteWithInformer(ctx, scheduleRoute, lsInformer.Storage().V1().LocalStorages())
+		// Install scheduler extender http router
+		router.InstallHttpRouteWithInformer(ctx, scheduleRoute, lsInformer.Storage().V1().LocalStorages())
+
+		klog.Infof("starting localstorage scheduler extender server")
+		if err = http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {
+			klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
+		}
+	}()
 
 	// Start ls informers.
 	lsInformer.Start(ctx.Done())
 	// Wait for ls caches to sync.
 	lsInformer.WaitForCacheSync(ctx.Done())
 
-	klog.Infof("starting localstorage scheduler extender server")
-	if err := http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {
-		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
-	}
+	<-ctx.Done()
 }
