@@ -90,14 +90,16 @@ func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versione
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ls-" + node.Name,
 					Annotations: map[string]string{
-						"volume.caoyingjunz.io/node-size": "360Gi",
+						"volume.caoyingjunz.io/node-size": "500Gi",
 					},
 				},
 				Spec: localstoragev1.LocalStorageSpec{
 					VolumeGroup: "k8s",
 					Node:        node.Name,
 					Disks: []localstoragev1.DiskSpec{
-						{Name: "test-disk", Identifier: "test-identifier"},
+						{
+							Name: "test-disk",
+						},
 					},
 				},
 			}, metav1.CreateOptions{}); err != nil {
