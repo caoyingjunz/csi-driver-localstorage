@@ -25,6 +25,10 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	coreinformers "k8s.io/client-go/informers/core/v1"
+	storageinformers "k8s.io/client-go/informers/storage/v1"
+	corelisters "k8s.io/client-go/listers/core/v1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
@@ -50,11 +54,20 @@ type ScheduleExtender struct {
 
 	// lsLister can list/get localstorage from the shared informer's store
 	lsLister localstorage.LocalStorageLister
+	// pvcLister can list/get pvc from the shared informer's store
+	pvcLister corelisters.PersistentVolumeClaimLister
+	// scLister can list/get pvc from the shared informer's store
+	scLister storagelisters.StorageClassLister
+
 	// lsListerSynced returns true if the localstorage store has been synced at least once.
 	lsListerSynced cache.InformerSynced
+	// pvcListerSynced returns true if the pvc store has been synced at least once.
+	pvcListerSynced cache.InformerSynced
+	// scListerSynced returns true if the sc store has been synced at least once.
+	scListerSynced cache.InformerSynced
 }
 
-func NewScheduleExtender(ctx context.Context, lsInformer v1.LocalStorageInformer) (*ScheduleExtender, error) {
+func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinformers.PersistentVolumeClaimInformer, scInformer storageinformers.StorageClassInformer) (*ScheduleExtender, error) {
 	s := &ScheduleExtender{
 		http: httprouter.New(),
 	}
@@ -68,12 +81,16 @@ func NewScheduleExtender(ctx context.Context, lsInformer v1.LocalStorageInformer
 	s.http.POST(prioritizePrefix, s.doPrioritize)
 
 	s.lsLister = lsInformer.Lister()
+	s.pvcLister = pvcInformer.Lister()
+	s.scLister = scInformer.Lister()
 	s.lsListerSynced = lsInformer.Informer().HasSynced
+	s.pvcListerSynced = pvcInformer.Informer().HasSynced
+	s.scListerSynced = scInformer.Informer().HasSynced
 	return s, nil
 }
 
 func (s *ScheduleExtender) Run(ctx context.Context, addr string) error {
-	if !cache.WaitForNamedCacheSync("scheduler-extender", ctx.Done(), s.lsListerSynced) {
+	if !cache.WaitForNamedCacheSync("scheduler-extender", ctx.Done(), s.lsListerSynced, s.pvcListerSynced, s.scListerSynced) {
 		klog.Fatalf("failed to WaitForNamedCacheSync")
 	}
 

@@ -18,10 +18,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 	"time"
 
+	"k8s.io/client-go/informers"
 	"k8s.io/klog/v2"
 
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
@@ -51,21 +51,29 @@ func main() {
 	if err != nil {
 		klog.Fatal("failed to build clientSets: %v", err)
 	}
-	fmt.Println("TODO", kubeClient)
 
-	// set up signals so we handle the shutdown signal gracefully
-	ctx := signals.SetupSignalHandler()
-
+	kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
 	shareInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
-	sched, err := scheduler.NewScheduleExtender(ctx, shareInformer.Storage().V1().LocalStorages())
+
+	sched, err := scheduler.NewScheduleExtender(
+		shareInformer.Storage().V1().LocalStorages(),
+		kubeInformer.Core().V1().PersistentVolumeClaims(),
+		kubeInformer.Storage().V1().StorageClasses(),
+	)
 	if err != nil {
 		klog.Fatalf("Failed to new schedule extender controller: %s", err)
 	}
 
+	// set up signals so we handle the shutdown signal gracefully
+	ctx := signals.SetupSignalHandler()
+
 	// Start ls informers.
+	kubeInformer.Start(ctx.Done())
 	shareInformer.Start(ctx.Done())
+
 	//// Wait for ls caches to sync.
 	shareInformer.WaitForCacheSync(ctx.Done())
+	kubeInformer.WaitForCacheSync(ctx.Done())
 
 	if err = sched.Run(ctx, ":"+strconv.Itoa(*port)); err != nil {
 		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
