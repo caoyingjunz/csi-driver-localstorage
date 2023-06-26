@@ -18,23 +18,21 @@ package main
 
 import (
 	"flag"
-	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/router"
 )
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
-
-	port = flag.Int("port", 8090, "port is the port that the scheduler server serves at")
+	port       = flag.Int("port", 8090, "port is the port that the scheduler server serves at")
 )
 
 func init() {
@@ -49,7 +47,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	_, lsClientSet, err := util.NewClientSets(kubeConfig)
+	lsClientSet, err := versioned.NewForConfig(kubeConfig)
 	if err != nil {
 		klog.Fatal("failed to build clientSets: %v", err)
 	}
@@ -57,24 +55,18 @@ func main() {
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
 
-	lsInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
-	go func() {
-		// new http router
-		scheduleRoute := httprouter.New()
-
-		// Install scheduler extender http router
-		router.InstallHttpRouteWithInformer(ctx, scheduleRoute, lsInformer.Storage().V1().LocalStorages())
-
-		klog.Infof("starting localstorage scheduler extender server")
-		if err = http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {
-			klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
-		}
-	}()
+	shareInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
+	sched, err := scheduler.NewScheduleExtender(ctx, shareInformer.Storage().V1().LocalStorages())
+	if err != nil {
+		klog.Fatalf("Failed to new schedule extender controller: %s", err)
+	}
 
 	// Start ls informers.
-	lsInformer.Start(ctx.Done())
-	// Wait for ls caches to sync.
-	lsInformer.WaitForCacheSync(ctx.Done())
+	shareInformer.Start(ctx.Done())
+	//// Wait for ls caches to sync.
+	shareInformer.WaitForCacheSync(ctx.Done())
 
-	<-ctx.Done()
+	if err = sched.Run(ctx, ":"+strconv.Itoa(*port)); err != nil {
+		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
+	}
 }

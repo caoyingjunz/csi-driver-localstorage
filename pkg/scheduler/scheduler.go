@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package router
+package scheduler
 
 import (
 	"bytes"
@@ -22,16 +22,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	kubecache "k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 )
 
 const (
@@ -43,31 +42,50 @@ const (
 	prioritizePrefix = apiPrefix + "/prioritize"
 )
 
-var (
-	predicate  *scheduler.Predicate
-	prioritize *scheduler.Prioritize
-)
+type ScheduleExtender struct {
+	http *httprouter.Router
 
-func InstallHttpRouteWithInformer(ctx context.Context, route *httprouter.Router, lsInformer v1.LocalStorageInformer) {
-	lsLister := lsInformer.Lister()
-	lsListerSynced := lsInformer.Informer().HasSynced
-	if !kubecache.WaitForNamedCacheSync("scheduler-extender", ctx.Done(), lsListerSynced) {
+	predicate  *Predicate
+	prioritize *Prioritize
+
+	// lsLister can list/get localstorage from the shared informer's store
+	lsLister localstorage.LocalStorageLister
+	// lsListerSynced returns true if the localstorage store has been synced at least once.
+	lsListerSynced cache.InformerSynced
+}
+
+func NewScheduleExtender(ctx context.Context, lsInformer v1.LocalStorageInformer) (*ScheduleExtender, error) {
+	s := &ScheduleExtender{
+		http: httprouter.New(),
+	}
+
+	s.predicate = NewPredicate(s.lsLister)
+	s.prioritize = NewPrioritize(s.lsLister)
+
+	// register scheduler extender http router
+	s.http.GET(versionPath, s.version)
+	s.http.POST(predicatePrefix, s.doPredicate)
+	s.http.POST(prioritizePrefix, s.doPrioritize)
+
+	s.lsLister = lsInformer.Lister()
+	s.lsListerSynced = lsInformer.Informer().HasSynced
+	return s, nil
+}
+
+func (s *ScheduleExtender) Run(ctx context.Context, addr string) error {
+	if !cache.WaitForNamedCacheSync("scheduler-extender", ctx.Done(), s.lsListerSynced) {
 		klog.Fatalf("failed to WaitForNamedCacheSync")
 	}
 
-	predicate = scheduler.NewPredicate(lsLister)
-	prioritize = scheduler.NewPrioritize(lsLister)
-
-	route.GET(versionPath, handleVersion)
-	route.POST(predicatePrefix, handlePredicate)
-	route.POST(prioritizePrefix, handlePrioritize)
+	klog.Infof("starting localstorage scheduler extender server on %s", addr)
+	return http.ListenAndServe(addr, s.http)
 }
 
-func handleVersion(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *ScheduleExtender) version(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fmt.Fprint(resp, fmt.Sprint(version))
 }
 
-func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *ScheduleExtender) doPredicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	klog.Infof("Starting handle localstorage scheduler predicate")
 	var (
 		buf                  bytes.Buffer
@@ -79,7 +97,7 @@ func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprou
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		extenderFilterResult = &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	} else {
-		extenderFilterResult = predicate.Handler(extenderArgs)
+		extenderFilterResult = s.predicate.Handler(extenderArgs)
 	}
 
 	resp.Header().Set("Content-Type", "application/json")
@@ -93,7 +111,7 @@ func handlePredicate(resp http.ResponseWriter, req *http.Request, params httprou
 	}
 }
 
-func handlePrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *ScheduleExtender) doPrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	klog.Infof("Starting handle localstorage scheduler prioritize")
 	var (
 		buf              bytes.Buffer
@@ -105,7 +123,7 @@ func handlePrioritize(resp http.ResponseWriter, req *http.Request, params httpro
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		hostPriorityList = &extenderv1.HostPriorityList{}
 	} else {
-		hostPriorityList = prioritize.Handler(extenderArgs)
+		hostPriorityList = s.prioritize.Handler(extenderArgs)
 	}
 
 	resp.Header().Set("Content-Type", "application/json")
