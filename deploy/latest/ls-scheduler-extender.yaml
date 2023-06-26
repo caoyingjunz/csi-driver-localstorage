@@ -21,6 +21,12 @@ spec:
           image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
           imagePullPolicy: Always
           name: ls-scheduler-extender
+          livenessProbe:
+            httpGet:
+              path: /version
+              port: 80
+            initialDelaySeconds: 5
+            timeoutSeconds: 30
       dnsPolicy: Default
       nodeSelector:
         kubernetes.io/os: linux
