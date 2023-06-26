@@ -18,12 +18,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"strconv"
 	"time"
 
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
@@ -47,10 +47,11 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	lsClientSet, err := versioned.NewForConfig(kubeConfig)
+	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
 	if err != nil {
 		klog.Fatal("failed to build clientSets: %v", err)
 	}
+	fmt.Println("TODO", kubeClient)
 
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
