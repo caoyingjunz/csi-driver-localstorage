@@ -72,9 +72,6 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 		http: httprouter.New(),
 	}
 
-	s.predicate = NewPredicate(s.lsLister)
-	s.prioritize = NewPrioritize(s.lsLister)
-
 	// register scheduler extender http router
 	s.http.GET(versionPath, s.version)
 	s.http.POST(predicatePrefix, s.doPredicate)
@@ -86,6 +83,9 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 	s.lsListerSynced = lsInformer.Informer().HasSynced
 	s.pvcListerSynced = pvcInformer.Informer().HasSynced
 	s.scListerSynced = scInformer.Informer().HasSynced
+
+	s.predicate = NewPredicate(s.lsLister, s.pvcLister, s.scLister)
+	s.prioritize = NewPrioritize(s.lsLister)
 	return s, nil
 }
 

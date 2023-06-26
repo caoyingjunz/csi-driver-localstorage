@@ -19,6 +19,8 @@ package scheduler
 import (
 	"fmt"
 
+	corelisters "k8s.io/client-go/listers/core/v1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/klog/v2"
 
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
@@ -26,12 +28,19 @@ import (
 )
 
 type Predicate struct {
-	lsLister localstorage.LocalStorageLister
+	lsLister  localstorage.LocalStorageLister
+	pvcLister corelisters.PersistentVolumeClaimLister
+	scLister  storagelisters.StorageClassLister
 }
 
-func NewPredicate(lsLister localstorage.LocalStorageLister) *Predicate {
+func NewPredicate(
+	lsLister localstorage.LocalStorageLister,
+	pvcLister corelisters.PersistentVolumeClaimLister,
+	scLister storagelisters.StorageClassLister) *Predicate {
 	return &Predicate{
-		lsLister: lsLister,
+		lsLister:  lsLister,
+		pvcLister: pvcLister,
+		scLister:  scLister,
 	}
 }
 
