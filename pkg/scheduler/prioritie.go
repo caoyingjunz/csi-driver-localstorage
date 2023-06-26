@@ -21,13 +21,16 @@ import (
 	"math/rand"
 
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
+
+	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 )
 
 type Prioritize struct {
+	lsLister localstorage.LocalStorageLister
 }
 
-func NewPrioritize() *Prioritize {
-	return &Prioritize{}
+func NewPrioritize(lsLister localstorage.LocalStorageLister) *Prioritize {
+	return &Prioritize{lsLister: lsLister}
 }
 
 func (p *Prioritize) Handler(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {

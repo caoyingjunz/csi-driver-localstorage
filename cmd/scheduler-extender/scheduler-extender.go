@@ -18,22 +18,21 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/julienschmidt/httprouter"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/informers"
 	"k8s.io/klog/v2"
 
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/router"
 )
 
 var (
 	kubeconfig = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
-
-	port = flag.Int("port", 8090, "port is the port that the scheduler server serves at")
+	port       = flag.Int("port", 8090, "port is the port that the scheduler server serves at")
 )
 
 func init() {
@@ -48,19 +47,35 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube config: %v", err)
 	}
-	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
 	if err != nil {
-		klog.Fatalf("Failed to build kube clientSet: %v", err)
+		klog.Fatal("failed to build clientSets: %v", err)
 	}
-	fmt.Println("TODO", kubeClient)
 
-	scheduleRoute := httprouter.New()
+	kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
+	shareInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 
-	// Install scheduler extender http router
-	router.InstallRouters(scheduleRoute)
+	sched, err := scheduler.NewScheduleExtender(
+		shareInformer.Storage().V1().LocalStorages(),
+		kubeInformer.Core().V1().PersistentVolumeClaims(),
+		kubeInformer.Storage().V1().StorageClasses(),
+	)
+	if err != nil {
+		klog.Fatalf("Failed to new schedule extender controller: %s", err)
+	}
 
-	klog.Infof("starting localstorage scheduler extender server")
-	if err := http.ListenAndServe(":"+strconv.Itoa(*port), scheduleRoute); err != nil {
+	// set up signals so we handle the shutdown signal gracefully
+	ctx := signals.SetupSignalHandler()
+
+	// Start ls informers.
+	kubeInformer.Start(ctx.Done())
+	shareInformer.Start(ctx.Done())
+
+	//// Wait for ls caches to sync.
+	shareInformer.WaitForCacheSync(ctx.Done())
+	kubeInformer.WaitForCacheSync(ctx.Done())
+
+	if err = sched.Run(ctx, ":"+strconv.Itoa(*port)); err != nil {
 		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
 	}
 }
