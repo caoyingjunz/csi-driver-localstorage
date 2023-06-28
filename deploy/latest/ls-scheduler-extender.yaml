@@ -24,7 +24,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /version
-              port: 80
+              port: 8090
             initialDelaySeconds: 5
             timeoutSeconds: 30
       dnsPolicy: Default
