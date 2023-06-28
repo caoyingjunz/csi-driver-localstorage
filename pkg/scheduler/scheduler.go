@@ -24,6 +24,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler/extender"
+
 	"github.com/julienschmidt/httprouter"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	storageinformers "k8s.io/client-go/informers/storage/v1"
@@ -49,8 +51,8 @@ const (
 type ScheduleExtender struct {
 	http *httprouter.Router
 
-	predicate  *Predicate
-	prioritize *Prioritize
+	predicate  *extender.Predicate
+	prioritize *extender.Prioritize
 
 	// lsLister can list/get localstorage from the shared informer's store
 	lsLister localstorage.LocalStorageLister
@@ -84,8 +86,8 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 	s.pvcListerSynced = pvcInformer.Informer().HasSynced
 	s.scListerSynced = scInformer.Informer().HasSynced
 
-	s.predicate = NewPredicate(s.lsLister, s.pvcLister, s.scLister)
-	s.prioritize = NewPrioritize(s.lsLister)
+	s.predicate = extender.NewPredicate(s.lsLister, s.pvcLister, s.scLister)
+	s.prioritize = extender.NewPrioritize(s.lsLister)
 	return s, nil
 }
 
