@@ -33,6 +33,7 @@ import (
 	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
+        "github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler/extender"
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 )
@@ -49,8 +50,8 @@ const (
 type ScheduleExtender struct {
 	http *httprouter.Router
 
-	predicate  *Predicate
-	prioritize *Prioritize
+	predicate  *extender.Predicate
+	prioritize *extender.Prioritize
 
 	// lsLister can list/get localstorage from the shared informer's store
 	lsLister localstorage.LocalStorageLister
@@ -84,8 +85,8 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 	s.pvcListerSynced = pvcInformer.Informer().HasSynced
 	s.scListerSynced = scInformer.Informer().HasSynced
 
-	s.predicate = NewPredicate(s.lsLister, s.pvcLister, s.scLister)
-	s.prioritize = NewPrioritize(s.lsLister)
+	s.predicate = extender.NewPredicate(s.lsLister, s.pvcLister, s.scLister)
+	s.prioritize = extender.NewPrioritize(s.lsLister)
 	return s, nil
 }
 
