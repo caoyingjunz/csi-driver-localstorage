@@ -24,8 +24,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler/extender"
-
 	"github.com/julienschmidt/httprouter"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	storageinformers "k8s.io/client-go/informers/storage/v1"
@@ -35,6 +33,7 @@ import (
 	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
+        "github.com/caoyingjunz/csi-driver-localstorage/pkg/scheduler/extender"
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 )
