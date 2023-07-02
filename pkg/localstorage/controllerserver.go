@@ -65,7 +65,11 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 
 	// TODO: 临时实现，后续修改
 	path := ls.parseVolumePath(volumeID)
-	if err := os.MkdirAll(path, 0750); err != nil {
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return nil, err
+	}
+	// 给目录赋权限（目录在创建时由于umask原因，即使是给满权限，也有可能会把你的权限给降低，所以采用后置赋权）
+	if err = os.Chmod(path, os.ModePerm); err != nil {
 		return nil, err
 	}
 
