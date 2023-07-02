@@ -56,9 +56,6 @@ func makeVolumeDir(volDir string) error {
 		if err = os.MkdirAll(volDir, os.ModePerm); err != nil {
 			return err
 		}
-		if err = os.Chmod(volDir, os.ModePerm); err != nil {
-			return err
-		}
 	}
 
 	return nil
