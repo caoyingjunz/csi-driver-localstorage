@@ -90,7 +90,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 			continue
 		}
 		allocSize := ls.Status.Allocatable
-		if reqStorage.Cmp(*allocSize) <= 0 {
+		if reqStorage.Cmp(*allocSize) > 0 {
 			failedNodes[nodeName] = fmt.Sprintf("pod(%s) can not scheduled on node(%s) because it localstorage Allocatable size too small", pod.Name, nodeName)
 			continue
 		}
