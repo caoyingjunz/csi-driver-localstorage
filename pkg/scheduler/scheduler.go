@@ -75,8 +75,8 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 
 	// register scheduler extender http router
 	s.http.GET(versionPath, s.version)
-	s.http.POST(predicatePrefix, s.doPredicate)
-	s.http.POST(prioritizePrefix, s.doPrioritize)
+	s.http.POST(predicatePrefix, s.Predicate)
+	s.http.POST(prioritizePrefix, s.Prioritize)
 
 	s.lsLister = lsInformer.Lister()
 	s.pvcLister = pvcInformer.Lister()
@@ -103,7 +103,7 @@ func (s *ScheduleExtender) version(resp http.ResponseWriter, req *http.Request, 
 	fmt.Fprint(resp, fmt.Sprint(version))
 }
 
-func (s *ScheduleExtender) doPredicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *ScheduleExtender) Predicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	klog.Infof("Starting handle localstorage scheduler predicate")
 	var (
 		buf                  bytes.Buffer
@@ -115,7 +115,7 @@ func (s *ScheduleExtender) doPredicate(resp http.ResponseWriter, req *http.Reque
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		extenderFilterResult = &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	} else {
-		extenderFilterResult = s.predicate.Handler(extenderArgs)
+		extenderFilterResult = s.predicate.Filter(extenderArgs)
 	}
 
 	resp.Header().Set("Content-Type", "application/json")
@@ -129,7 +129,7 @@ func (s *ScheduleExtender) doPredicate(resp http.ResponseWriter, req *http.Reque
 	}
 }
 
-func (s *ScheduleExtender) doPrioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (s *ScheduleExtender) Prioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	klog.Infof("Starting handle localstorage scheduler prioritize")
 	var (
 		buf              bytes.Buffer
@@ -141,7 +141,7 @@ func (s *ScheduleExtender) doPrioritize(resp http.ResponseWriter, req *http.Requ
 	if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 		hostPriorityList = &extenderv1.HostPriorityList{}
 	} else {
-		hostPriorityList = s.prioritize.Handler(extenderArgs)
+		hostPriorityList = s.prioritize.Score(extenderArgs)
 	}
 
 	resp.Header().Set("Content-Type", "application/json")

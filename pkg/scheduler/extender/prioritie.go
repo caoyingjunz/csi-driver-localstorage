@@ -33,7 +33,7 @@ func NewPrioritize(lsLister localstorage.LocalStorageLister) *Prioritize {
 	return &Prioritize{lsLister: lsLister}
 }
 
-func (p *Prioritize) Handler(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
+func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
 	nodes := args.Nodes.Items
 
 	hostPriorityList := make(extenderv1.HostPriorityList, len(nodes))
