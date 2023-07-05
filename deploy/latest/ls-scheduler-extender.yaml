@@ -6,7 +6,6 @@ metadata:
   labels:
     app: ls-scheduler-extender
 spec:
-  serviceAccountName: csi-ls-node-sa
   containers:
     - args:
         - -v=2
@@ -14,13 +13,14 @@ spec:
       image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
       imagePullPolicy: Always
       name: ls-scheduler-extender
-      livenessProbe:
-        httpGet:
-          path: /version
-          port: 8090
-        initialDelaySeconds: 5
-        timeoutSeconds: 30
-  dnsPolicy: Default
-  nodeSelector:
-    kubernetes.io/os: linux
-  restartPolicy: Always
+      volumeMounts:
+        - name: kube-data
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount/token
+          subPath: token
+        - name: kube-data
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          subPath: ca.crt
+  volumes:
+    - name: kube-data
+      hostPath:
+        path: /data
