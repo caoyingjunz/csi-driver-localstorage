@@ -8,7 +8,7 @@
 cp deploy/scheduler-extender-config.yaml /etc/kubernetes/scheduler-extender-config.yaml
 ```
 
-2、找到静态POD存放目录，通常在`/etc/kubernetes/manifests`这个目录中，kubernetes官方的
+2、找到静态POD存放目录，通常在`/etc/kubernetes/manifests`这个目录中kubernetes官方的kube-apiserver.yaml、kube-controller-manager.yaml、kube-scheduler.yaml、etcd.yaml 都在这个目录下，也就是他们都是以静态pod的形式运行的。
 
 ```bash
 cd /etc/kubernetes/manifests
