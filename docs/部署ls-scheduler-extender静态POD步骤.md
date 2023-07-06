@@ -59,7 +59,7 @@ containers:
 ```shell
 kubectl get pods -A
 
-NAMESPACE      NAME                                             READY   STATUS      RESTARTS  
+NAMESPACE      NAME                                             READY   STATUS      RESTARTS
 kube-system    ls-scheduler-extender-5d678b877b-crcqz           1/1     Running     0             1m
 ```
 

@@ -11,7 +11,7 @@
 # 查看是否部署csi-ls-node-sa这个ServiceAccount
 kubectl get sa -n kube-system
 
-NAME                                 SECRETS   AGE 
+NAME                                 SECRETS   AGE
 csi-ls-node-sa                       1         1m
 
 # 没有的话创建(其中的v1.0.1为每个版本的版本号，根据最新版本进行调整)
