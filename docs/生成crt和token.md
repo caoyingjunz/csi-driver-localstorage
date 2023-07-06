@@ -15,7 +15,7 @@ NAME                                 SECRETS   AGE
 csi-ls-node-sa                       1         1m
 
 # 没有的话创建(其中的v1.0.1为每个版本的版本号，根据最新版本进行调整)
-kubectl apply -f deploy/v1.0.1/ls-rbac.yaml 
+kubectl apply -f deploy/v1.0.1/ls-rbac.yaml
 ```
 
 2、查看kubernetes 版本，判断版本号是否大于1.24，具体操作如下：
@@ -26,7 +26,7 @@ kubectl version
 ```
 
 3、如果kubernetes版本小于1.24，直接复制以下shell命令执行，会自动创建`get_token.sh`
-这个文件，在创建文件完成之后，会自动执行`sh get_token.sh `生成对应的`ca.crt`和`token`并将文件自动移动至`/data`目录下。
+这个文件，在创建文件完成之后，会自动执行`sh get_token.sh`生成对应的`ca.crt`和`token`并将文件自动移动至`/data`目录下。
 
 ```shell
 cat << EOF > get_token.sh
@@ -152,4 +152,5 @@ spec:
         path: /data
 
 ```
+
 [回去继续看-> 部署调度拓展为静态POD第五点](部署ls-scheduler-extender静态POD步骤.md)
