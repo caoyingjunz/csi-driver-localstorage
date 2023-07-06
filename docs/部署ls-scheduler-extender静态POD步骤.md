@@ -1,17 +1,23 @@
-# 1、部署ls-scheduler-extender静态POD步骤
-部署ls-scheduler-extender静态POD步骤：
+# 1、部署静态pod调度拓展ls-scheduler-extender
 
-1、找到静态POD存放目录，通常在/etc/kubernetes/manifests 这个目录中
+步骤如下：
 
-2、把deploy/scheduler-extender-config.yaml 复制到/etc/kubernetes/scheduler-extender-config.yaml
+1、先把`deploy/scheduler-extender-config.yaml` 复制到`/etc/kubernetes/`目录下
 
-3、修改Static Scheduler POD（静态POD） /etc/kubernetes/manifests/kube-scheduler.yaml，修改完保存，系统会自动重启POD ，具体操作如下（修改三处）：
+```bash
+cp deploy/scheduler-extender-config.yaml /etc/kubernetes/scheduler-extender-config.yaml
+```
+
+2、找到静态POD存放目录，通常在`/etc/kubernetes/manifests`这个目录中，kubernetes官方的
+    
+```bash
+cd /etc/kubernetes/manifests
+vim kube-scheduler.yaml
+```
+
+3、修改系统调度器的yaml，也就是`kube-scheduler.yaml`修改完保存，系统会自动重启POD ，具体操作如下（修改三处）：
 
 ```yaml
-cd /etc/kubernetes/manifests/
-vim kube-scheduler.yaml
-
-
 # 映射部分
 volumeMounts:
   - mountPath: /etc/kubernetes/scheduler.conf
@@ -43,17 +49,15 @@ containers:
     - --leader-elect=true
     - --config=/etc/kubernetes/scheduler-extender-config.yaml # 这儿是新增的
     image: registry.aliyuncs.com/google_containers/kube-scheduler:v1.26.0
-
-
 ```
-4、获取证书和Token为后续的自定义调度静态POD提供权限，并将crt和token的位置修改为指定位置，具体查看:
-    [生成crt和token](生成crt和token.md)
+4、获取证书和`Token`为后续的自定义调度静态POD提供权限，并将`ca.crt`和`token`的位置修改为指定位置，具体查看：[生成crt和token](生成crt和token.md)
 
-5、最后将ls-scheduler-extender.yaml复制到/etc/kubernetes/manifests/目录，POD会自动运行；
+5、最后将自定义调度拓展的yaml`deploy/ls-scheduler-extender.yaml`复制到`/etc/kubernetes/manifests/`目录，POD会自动运行；
 
-```yaml
+```shell
 kubectl get pods -A
-NAMESPACE      NAME                                             READY   STATUS      RESTARTS  
 
+NAMESPACE      NAME                                             READY   STATUS      RESTARTS  
 kube-system    ls-scheduler-extender-5d678b877b-crcqz           1/1     Running     0             1m
 ```
+6、部署完毕
