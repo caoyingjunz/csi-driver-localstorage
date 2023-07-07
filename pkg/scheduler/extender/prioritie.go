@@ -62,5 +62,10 @@ func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorit
 }
 
 func (p *Prioritize) score(ls *localstoragev1.LocalStorage) int64 {
-	return 0
+	localstorage := ls.DeepCopy()
+
+	allocatable := localstorage.Status.Allocatable
+	capacity := localstorage.Status.Capacity
+
+	return allocatable.Value() * allocatable.Value() / capacity.Value()
 }
