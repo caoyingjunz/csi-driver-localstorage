@@ -52,6 +52,19 @@ func GetLocalStorageByNode(lsLister localstorage.LocalStorageLister, nodeName st
 	return target, nil
 }
 
+func GetLocalStorageMap(lsLister localstorage.LocalStorageLister) (map[string]*localstoragev1.LocalStorage, error) {
+	ret, err := lsLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	lsMap := make(map[string]*localstoragev1.LocalStorage)
+	for _, ls := range ret {
+		lsMap[ls.Spec.Node] = ls
+	}
+
+	return lsMap, nil
+}
+
 // CreateLocalStorage create localstorage if not present
 func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versioned.Interface) error {
 	// TODO: need to optimise
