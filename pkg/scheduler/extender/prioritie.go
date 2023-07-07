@@ -49,6 +49,7 @@ func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorit
 		ls, found := lsMap[nodeName]
 		if err == nil && found {
 			score = p.score(ls)
+			klog.Infof("scoring node(%s) with score(%d)", nodeName, score)
 		}
 
 		hostPriorityList[i] = extenderv1.HostPriority{
