@@ -70,12 +70,11 @@ func main() {
 	// Start all informers.
 	kubeInformer.Start(ctx.Done())
 	shareInformer.Start(ctx.Done())
-
 	// Wait for all caches to sync.
 	shareInformer.WaitForCacheSync(ctx.Done())
 	kubeInformer.WaitForCacheSync(ctx.Done())
 
-	// Start scheduler extender server
+	// Start localstorage scheduler extender server
 	if err = sched.Run(ctx, ":"+strconv.Itoa(*port)); err != nil {
 		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
 	}
