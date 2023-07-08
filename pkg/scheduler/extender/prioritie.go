@@ -22,7 +22,9 @@ import (
 	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
+	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 type Prioritize struct {
@@ -35,16 +37,36 @@ func NewPrioritize(lsLister localstorage.LocalStorageLister) *Prioritize {
 
 func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
 	nodes := args.Nodes.Items
+	klog.Infof("scoring nodes %v", nodes)
 
 	hostPriorityList := make(extenderv1.HostPriorityList, len(nodes))
+
+	lsMap, err := storageutil.GetLocalStorageMap(p.lsLister)
 	for i, node := range nodes {
+		nodeName := node.Name
+		// rand score
 		score := rand.Int63n(extenderv1.MaxExtenderPriority + 1)
+		ls, found := lsMap[nodeName]
+		if err == nil && found {
+			score = p.score(ls)
+			klog.Infof("scoring node(%s) with score(%d)", nodeName, score)
+		}
+
 		hostPriorityList[i] = extenderv1.HostPriority{
-			Host:  node.Name,
+			Host:  nodeName,
 			Score: score,
 		}
 	}
 
-	klog.Infof("TODO: hostPriorityList: %+v", hostPriorityList)
+	klog.Infof("score localstorage pods on nodes: %v", hostPriorityList)
 	return &hostPriorityList
+}
+
+func (p *Prioritize) score(ls *localstoragev1.LocalStorage) int64 {
+	localstorage := ls.DeepCopy()
+
+	allocatable := localstorage.Status.Allocatable
+	capacity := localstorage.Status.Capacity
+
+	return allocatable.Value() * allocatable.Value() / capacity.Value()
 }

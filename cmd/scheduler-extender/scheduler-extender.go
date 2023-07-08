@@ -67,14 +67,14 @@ func main() {
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
 
-	// Start ls informers.
+	// Start all informers.
 	kubeInformer.Start(ctx.Done())
 	shareInformer.Start(ctx.Done())
-
-	//// Wait for ls caches to sync.
+	// Wait for all caches to sync.
 	shareInformer.WaitForCacheSync(ctx.Done())
 	kubeInformer.WaitForCacheSync(ctx.Done())
 
+	// Start localstorage scheduler extender server
 	if err = sched.Run(ctx, ":"+strconv.Itoa(*port)); err != nil {
 		klog.Fatalf("failed to start localstorage scheduler extender server: %v", err)
 	}

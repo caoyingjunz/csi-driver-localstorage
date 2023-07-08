@@ -104,7 +104,7 @@ func (s *ScheduleExtender) version(resp http.ResponseWriter, req *http.Request, 
 }
 
 func (s *ScheduleExtender) Predicate(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	klog.Infof("Starting handle localstorage scheduler predicate")
+	klog.Infof("filtering for localstorage pod")
 	var (
 		buf                  bytes.Buffer
 		extenderArgs         extenderv1.ExtenderArgs
@@ -130,7 +130,7 @@ func (s *ScheduleExtender) Predicate(resp http.ResponseWriter, req *http.Request
 }
 
 func (s *ScheduleExtender) Prioritize(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	klog.Infof("Starting handle localstorage scheduler prioritize")
+	klog.Infof("Scoring for localstorage pod")
 	var (
 		buf              bytes.Buffer
 		extenderArgs     extenderv1.ExtenderArgs

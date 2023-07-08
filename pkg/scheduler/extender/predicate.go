@@ -60,7 +60,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	}
 	if !used {
-		klog.Infof("namespace %s pod %s don't use localstorage, ignore localstorage schedule extender", pod.Namespace, pod.Name)
+		klog.Infof("namespace(%s) pod(%s) don't use localstorage, ignore", pod.Namespace, pod.Name)
 		return &extenderv1.ExtenderFilterResult{
 			NodeNames: args.NodeNames,
 			Nodes:     args.Nodes,
