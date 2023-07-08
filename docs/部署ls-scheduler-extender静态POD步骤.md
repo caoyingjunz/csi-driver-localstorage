@@ -54,7 +54,8 @@ containers:
 4、创建自定义kubeconfig，为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)，最后将创建的自定义`kubeconfig`迁移到`/data`目录下，具体操作如下：
 
 ```bash
-cp youname.kubeconfig /data
+cd /etc/kubernetes/pki/client/youName #youName为上个步骤脚本中定义的名称
+cp kubeconfig /data # 迁移到/data目录
 ```
 
 5、最后将自定义调度拓展的yaml`deploy/ls-scheduler-extender.yaml`复制到`/etc/kubernetes/manifests/`目录，POD会自动运行；
