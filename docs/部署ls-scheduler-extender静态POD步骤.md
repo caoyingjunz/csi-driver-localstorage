@@ -51,8 +51,11 @@ containers:
     image: registry.aliyuncs.com/google_containers/kube-scheduler:v1.26.0
 ```
 
-4、获取证书和`Token`为后续的自定义调度静态POD提供权限，并将`ca.crt`和`token`
-的位置修改为指定位置，具体查看：[生成crt和token](生成crt和token.md)
+4、创建自定义kubeconfig，为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)，最后将创建的自定义`kubeconfig`迁移到`/data`目录下，具体操作如下：
+
+```bash
+cp youname.kubeconfig /data
+```
 
 5、最后将自定义调度拓展的yaml`deploy/ls-scheduler-extender.yaml`复制到`/etc/kubernetes/manifests/`目录，POD会自动运行；
 
