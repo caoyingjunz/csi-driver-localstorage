@@ -21,9 +21,10 @@ metadata:
 spec:
   ports:
     - name: tcp-8090
+      nodePort: 30666
       port: 8090
       protocol: TCP
       targetPort: 8090
   selector:
     app: pixiu-ls-scheduler
-  type: ClusterIP
+  type: NodePort
