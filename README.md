@@ -26,7 +26,7 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
   pixiu-localstorage-node-nkhvk                    4/4     Running   24 (6m9s ago)    24h
   ```
 
-- 安装 [调度扩展](./docs/scheduler-extender.md)
+- 安装 [LocalStorage 调度扩展](./docs/scheduler-extender.md)
 
 - 创建 `localstorage` 资源
   ```shell
