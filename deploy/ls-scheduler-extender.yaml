@@ -9,16 +9,16 @@ spec:
   containers:
     - args:
         - -v=2
-        - --kubeconfig=/data/kubeconfig
+        - --kubeconfig=/etc/kubernetes/kubeconfig
         - --port=8090
       image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
       imagePullPolicy: Always
       name: ls-scheduler-extender
       volumeMounts:
         - name: kube-data
-          mountPath: /data/kubeconfig
+          mountPath: /etc/kubernetes/kubeconfig
           subPath: kubeconfig
   volumes:
     - name: kube-data
       hostPath:
-        path: /data
+        path: /etc/kubernetes
