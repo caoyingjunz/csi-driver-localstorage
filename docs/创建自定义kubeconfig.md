@@ -115,7 +115,7 @@ type: kubernetes.io/service-account-token
 kubectl apply -f ls-account-secret.yaml
 ```
 
-3、 查看Secret是否创建成功
+3、 查看 `Secret` 是否创建成功
 
 ```shell
 kubectl get secret ls-account-secret -n kube-system
@@ -124,7 +124,7 @@ NAME                TYPE                                  DATA   AGE
 ls-account-secret   kubernetes.io/service-account-token   3      55m
 ```
 
-4、 查看`ServiceAccount` 的信息，看看 `Token` 中有没有关联上上面创建的 `Secret`
+4、 查看 `ServiceAccount` 的信息，看看 `Token` 中有没有关联上上面创建的 `Secret`
 
 ```shell
 kubectl describe sa  csi-ls-node-sa -n kube-system
@@ -139,7 +139,7 @@ Tokens:              ls-account-secret
 Events:              <none>
 ```
 
-5、 跳转到用户目录`~`，创建 `gen_kubeconfig.sh`，文件内容如下：
+5、 跳转到用户目录`~`，创建 `gen_kubeconfig.sh` 文件内容如下：
 
 ```shell
 cd ~ # 跳转到用户目录或者拥有.kube的目录

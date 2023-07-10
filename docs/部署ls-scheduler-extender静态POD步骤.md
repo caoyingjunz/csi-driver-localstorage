@@ -51,7 +51,7 @@ containers:
     image: registry.aliyuncs.com/google_containers/kube-scheduler:v1.26.0
 ```
 
-4、创建自定义kubeconfig，为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)
+4、创建自定义 `kubeconfig` 为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)
 ，最后将创建的自定义 `kubeconfig` 迁移到 `/etc/kubernetes` 目录下
 
 ```bash
