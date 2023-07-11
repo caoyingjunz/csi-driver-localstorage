@@ -12,9 +12,9 @@
 - 验证
   ```shell
   # kubectl  get pod -n kube-system pixiu-ls-scheduler-pixiu01
-  NAME                         READY   STATUS    RESTARTS       AGE 
+  NAME                         READY   STATUS    RESTARTS       AGE
   pixiu-ls-scheduler-pixiu01   1/1     Running   15 (81s ago)   2d1h
-  
+
   root@pixiu01:~# kubectl get svc -n kube-system  pixiu-ls-scheduler
   NAME                 TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
   pixiu-ls-scheduler   NodePort   10.254.245.253   <none>        8090:30666/TCP   2d1h
