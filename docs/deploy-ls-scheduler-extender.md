@@ -1,6 +1,4 @@
-# 1、部署静态pod调度拓展ls-scheduler-extender
-
-步骤如下：
+# 1、以静态pod的方式部署ls-scheduler-extender
 
 1、先把 `deploy/scheduler-extender-config.yaml` 复制到 `/etc/kubernetes/` 目录下
 
@@ -15,7 +13,7 @@ cd /etc/kubernetes/manifests
 vim kube-scheduler.yaml
 ```
 
-3、标注add部分为修改部分，修改完保存，系统会自动重启POD
+3、标注 `add` 部分为需要新增内容，修改完保存,系统会自动重启POD
 
 ```yaml
 # 映射部分
@@ -51,20 +49,32 @@ containers:
     image: registry.aliyuncs.com/google_containers/kube-scheduler:v1.26.0
 ```
 
-4、创建自定义 `kubeconfig` 为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)
+4、执行 `hack/gen_kubeconfig.sh` 生成自定义 `kubeconfig` 文件
 
-5、将自定义调度拓展yaml文件 `deploy/ls-scheduler-extender.yaml` 拷贝到 `/etc/kubernetes/manifests/` 目录，POD会自动创建
+```bash
+sh hack/gen_kubeconfig.sh
+```
 
-```shell
+5、查看 `/etc/kubernetes` 是否存在 `kubeconfig` 文件
+
+```bash
+cd /etc/kubernetes && ls
+
+admin.conf  controller-manager.conf  kubeconfig  kubelet.conf  ls-scheduler-extender.yaml  manifests  pki  scheduler.conf
+```
+
+6、将自定义调度拓展yaml文件 `deploy/ls-scheduler-extender.yaml` 拷贝到 `/etc/kubernetes/manifests/` 目录，POD会自动创建
+
+```bash
 kubectl get pods -A
 
 NAMESPACE      NAME                                             READY   STATUS      RESTARTS
 kube-system    ls-scheduler-extender-5d678b877b-crcqz           1/1     Running     0             1m
 ```
 
-6、验证调度拓展是否生效，访问拓展对应的 `service` 的 `version` 接口，如果返回版本数据，则说明调度拓展生效
+7、验证调度拓展是否生效，访问拓展对应的 `service` 的 `version` 接口，如果返回版本数据，则说明调度拓展生效
 
-```shell
+```bash
 kubect get svc -n kube-system # 获取service
 
 NAME                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                  AGE
