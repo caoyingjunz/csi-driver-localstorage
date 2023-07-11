@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: pixiu-ls-scheduler
+  name: pixiu-ls-scheduler
+  namespace: kube-system
+spec:
+  containers:
+    - args:
+        - -v=2
+        - --port=8090
+        - --kubeconfig=/etc/kubernetes/admin.conf
+      image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
+      imagePullPolicy: Always
+      name: pixiu-ls-scheduler
+      livenessProbe:
+        httpGet:
+          path: /version
+          port: 8090
+        initialDelaySeconds: 5
+        timeoutSeconds: 30
+      volumeMounts:
+        - mountPath: /etc/kubernetes/admin.conf
+          name: kubeconfig
+  volumes:
+    - hostPath:
+        path: /etc/kubernetes/admin.conf
+        type: FileOrCreate
+      name: kubeconfig
