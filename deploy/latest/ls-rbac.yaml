@@ -4,8 +4,8 @@ kind: ServiceAccount
 metadata:
   name: csi-ls-node-sa
   namespace: kube-system
-
 ---
+
 apiVersion: v1
 kind: Secret
 metadata:
@@ -14,8 +14,8 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: "csi-ls-node-sa"
 type: kubernetes.io/service-account-token
-
 ---
+
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
