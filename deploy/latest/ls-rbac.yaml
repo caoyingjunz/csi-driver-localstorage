@@ -58,3 +58,13 @@ roleRef:
   kind: ClusterRole
   name: ls-external-provisioner-role
   apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ls-sa-secret
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: "csi-ls-node-sa"
+type: kubernetes.io/service-account-token
