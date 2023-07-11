@@ -10,7 +10,7 @@ spec:
     - args:
         - -v=2
         - --port=8090
-        - --kubeconfig=/etc/kubernetes/admin.conf
+        - --kubeconfig=/etc/kubernetes/pixiu-ls-scheduler.conf
       image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
       imagePullPolicy: Always
       name: pixiu-ls-scheduler
@@ -21,10 +21,10 @@ spec:
         initialDelaySeconds: 5
         timeoutSeconds: 30
       volumeMounts:
-        - mountPath: /etc/kubernetes/admin.conf
-          name: kubeconfig
+        - mountPath: /etc/kubernetes/pixiu-ls-scheduler.conf
+          name: ls-scheduler
   volumes:
     - hostPath:
-        path: /etc/kubernetes/admin.conf
+        path: /etc/kubernetes/pixiu-ls-scheduler.conf
         type: FileOrCreate
-      name: kubeconfig
+      name: ls-scheduler
