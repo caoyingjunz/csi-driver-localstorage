@@ -18,15 +18,19 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# TODO: 通过变量指定
 API_SERVER="https://192.168.16.200:6443"
 
 NAMESPACE="kube-system"
 SECRET="pixiu-ls-token"
+KUBECONFIG="pixiu-ls-scheduler.conf"
 
 kubectl get secret $SECRET -n $NAMESPACE -o jsonpath='{.data.ca\.crt}' | base64 --decode > ca.crt
 TOKEN=$(kubectl get secret $SECRET -n $NAMESPACE -o jsonpath='{.data.token}' | base64 --decode)
 
-kubectl config set-cluster ls-cluster --server=$API_SERVER --certificate-authority=ca.crt --embed-certs=true --kubeconfig=ls-scheduler.conf
-kubectl config set-credentials csi-ls-node-sa --token=$TOKEN --kubeconfig=ls-scheduler.conf
-kubectl config set-context ls-context --cluster=ls-cluster --user=csi-ls-node-sa --namespace=$NAMESPACE --kubeconfig=ls-scheduler.conf
-kubectl config use-context ls-context --kubeconfig=ls-scheduler.conf
+kubectl config set-cluster ls-cluster --server=$API_SERVER --certificate-authority=ca.crt --embed-certs=true --kubeconfig=$KUBECONFIG
+kubectl config set-credentials csi-ls-node-sa --token=$TOKEN --kubeconfig=$KUBECONFIG
+kubectl config set-context ls-context --cluster=ls-cluster --user=csi-ls-node-sa --namespace=$NAMESPACE --kubeconfig=$KUBECONFIG
+kubectl config use-context ls-context --kubeconfig=$KUBECONFIG
+
+echo "completed build" $KUBECONFIG
