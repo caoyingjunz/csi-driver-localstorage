@@ -52,13 +52,8 @@ containers:
 ```
 
 4、创建自定义 `kubeconfig` 为后续的自定义调度静态POD提供权限，具体查看：[创建自定义kubeconfig](创建自定义kubeconfig.md)
-，最后将创建的自定义 `kubeconfig` 迁移到 `/etc/kubernetes` 目录下
 
-```bash
-cp kubeconfig /etc/kubernetes
-```
-
-5、将自定义调度拓展的yaml`deploy/ls-scheduler-extender.yaml` 复制到 `/etc/kubernetes/manifests/` 目录，POD会自动创建
+5、将自定义调度拓展yaml文件 `deploy/ls-scheduler-extender.yaml` 拷贝到 `/etc/kubernetes/manifests/` 目录，POD会自动创建
 
 ```shell
 kubectl get pods -A
