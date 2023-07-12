@@ -9,7 +9,7 @@
   ./hack/build-lsconfig.sh
   ```
 
-  - 拷贝 `deploy/ls-scheduler.yaml` 到 `/etc/kubernetes/manifests` 目录
+- 拷贝 `deploy/ls-scheduler.yaml` 到 `/etc/kubernetes/manifests` 目录
 
 - 验证
   ```shell
