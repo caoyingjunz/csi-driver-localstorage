@@ -4,7 +4,7 @@ kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 extenders:
-  - urlPrefix: http://ls-scheduler-extender.kube-system:8090/localstorage-scheduler
+  - urlPrefix: http://pixiu-ls-scheduler.kube-system:8090/localstorage-scheduler
     filterVerb: filter
     prioritizeVerb: prioritize
     enableHTTPS: false
