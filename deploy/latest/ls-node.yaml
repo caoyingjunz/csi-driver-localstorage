@@ -2,7 +2,7 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: pixiu-localstorage-node
+  name: pixiu-ls-node
   namespace: kube-system
 spec:
   updateStrategy:
@@ -11,11 +11,11 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: csi-ls-node
+      app: pixiu-ls-node
   template:
     metadata:
       labels:
-        app: csi-ls-node
+        app: pixiu-ls-node
     spec:
 #      hostNetwork: true
       dnsPolicy: Default  # available values: Default, ClusterFirstWithHostNet, ClusterFirst

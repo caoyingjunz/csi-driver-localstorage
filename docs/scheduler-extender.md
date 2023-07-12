@@ -4,6 +4,8 @@
 - 生成 `ls-scheduler.conf`, 并拷贝到 `/etc/kubernetes` 目录
   ```shell
   # 生成 pixiu-ls-scheduler.conf
+
+  # 修改 hack/build-lsconfig.sh 的 API_SERVER 为实际地址，然后执行
   ./hack/build-lsconfig.sh
   ```
 
@@ -12,9 +14,9 @@
 - 验证
   ```shell
   # kubectl  get pod -n kube-system pixiu-ls-scheduler-pixiu01
-  NAME                         READY   STATUS    RESTARTS       AGE 
+  NAME                         READY   STATUS    RESTARTS       AGE
   pixiu-ls-scheduler-pixiu01   1/1     Running   15 (81s ago)   2d1h
-  
+
   root@pixiu01:~# kubectl get svc -n kube-system  pixiu-ls-scheduler
   NAME                 TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
   pixiu-ls-scheduler   NodePort   10.254.245.253   <none>        8090:30666/TCP   2d1h
@@ -32,14 +34,14 @@
   - command:
       - kube-scheduler
       ...
-      - --config=/etc/kubernetes/scheduler-extender-config.yaml
+      - --config=/etc/kubernetes/ls-scheduler-config.yaml
     ...
     volumeMounts:
       - mountPath: /etc/kubernetes/scheduler.conf
         name: kubeconfig
         readOnly: true
-      - mountPath: /etc/kubernetes/scheduler-extender-config.yaml
-        name: scheduler-extender-config
+      - mountPath: /etc/kubernetes/ls-scheduler-config.yaml
+        name: ls-scheduler-config
         readOnly: true
   ...
   volumes:
@@ -48,7 +50,7 @@
         type: FileOrCreate
       name: kubeconfig
     - hostPath:
-        path: /etc/kubernetes/scheduler-extender-config.yaml
+        path: /etc/kubernetes/ls-scheduler-config.yaml
         type: FileOrCreate
-      name: scheduler-extender-config
+      name: ls-scheduler-config
 ```

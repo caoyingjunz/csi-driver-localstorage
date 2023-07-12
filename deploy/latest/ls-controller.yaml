@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pixiu-localstorage-controller
+  name: pixiu-ls-controller
   namespace: kube-system
 spec:
   replicas: 1
