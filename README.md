@@ -15,15 +15,9 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
   kubectl  label node <node-name> storage.caoyingjunz.io/node=
   ```
 
-- 安装 `localstorage` 组件 
-方式一 kubectl
+- 安装 `localstorage` 组件
   ```shell
   kubectl apply -f deploy/v1.0.1
-- 安装 `localstorage` 组件 
-方式二 helm
-  ```shell
-    helm install pixiu deploy/charts  #helm必须3.0版本以上
-  
 
   # 验证
   root@pixiu01:~# kubectl get pod -n kube-system | grep pixiu-localstorage
