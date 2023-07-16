@@ -1,2 +1,0 @@
-kubernetesClusterDomain: cluster.local
-type: ClusterIP
