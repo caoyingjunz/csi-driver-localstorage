@@ -11,8 +11,8 @@ spec:
         - -v=2
         - --port=8090
         - --kubeconfig=/etc/kubernetes/pixiu-ls-scheduler.conf
-      image: harbor.powerlaw.club/pixiuio/scheduler-extender:latest
-      imagePullPolicy: Always
+      image: harbor.powerlaw.club/pixiuio/scheduler-extender:v1.0.2
+      imagePullPolicy: IfNotPresent
       name: pixiu-ls-scheduler
       livenessProbe:
         httpGet:
