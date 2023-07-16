@@ -67,7 +67,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		}
 	}
 
-	klog.Infof("namespace(%s) pod(%s) use localstorage, try to schedule it", pod.Namespace, pod.Name)
+	klog.Infof("namespace(%s) pod(%s) use localstorage, try to schedule", pod.Namespace, pod.Name)
 	lsNodes, err := p.lsLister.List(labels.Everything())
 	if err != nil {
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
