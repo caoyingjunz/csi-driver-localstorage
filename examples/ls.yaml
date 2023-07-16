@@ -4,10 +4,10 @@ metadata:
   annotations:
     # 自定义可分配的存储容量
     volume.caoyingjunz.io/node-size: 360Gi
-  name: ls-pixiu02
+  name: test-ls
 spec:
   volumeGroup: test-vg
-  node: pixiu02
+  node: test-node
   disks:
     - name: test-disk
       identifier: test-identifier

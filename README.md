@@ -17,13 +17,13 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
 - 安装 `localstorage` 组件
   ```shell
-  kubectl apply -f deploy/v1.0.1
+  kubectl apply -f deploy/v1.0.2
 
   # 验证
-  root@pixiu01:~# kubectl get pod -n kube-system | grep pixiu-localstorage
-  pixiu-localstorage-controller-6d4d7f4684-h5ds9   1/1     Running   14 (3m32s ago)   24h
-  pixiu-localstorage-node-8k94w                    4/4     Running   11 (48s ago)     24h
-  pixiu-localstorage-node-nkhvk                    4/4     Running   24 (6m9s ago)    24h
+  root@pixiu01:~# kubectl get pod -n kube-system | grep pixiu
+  pixiu-ls-controller-7997b8c446-8hndc        1/1     Running            0                87s
+  pixiu-ls-node-gfd78                         4/4     Running            0                87s
+  pixiu-ls-node-mb4x6                         4/4     Running            0                87s
   ```
 
 - 安装 [LocalStorage 调度扩展](./docs/scheduler-extender.md)
