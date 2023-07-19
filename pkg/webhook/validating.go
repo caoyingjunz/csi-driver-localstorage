@@ -85,7 +85,7 @@ func (v *LocalstorageValidator) ValidateName(ctx context.Context, ls *localstora
 }
 
 func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	klog.V(2).Infof("validate create", "name: %s", ls.Name)
+	klog.V(2).Infof("validate create %s %s", "name:", ls.Name)
 
 	if err := v.validateLocalStorageNode(ctx, ls); err != nil {
 		return err
@@ -98,7 +98,7 @@ func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localsto
 }
 
 func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *localstoragev1.LocalStorage) error {
-	klog.V(2).Infof("validate update", "name: %s", cur.Name)
+	klog.V(2).Infof("validate update %s %s", "name:", cur.Name)
 
 	// validate common object
 	if old.Name != cur.Name || old.APIVersion != cur.APIVersion || old.Kind != cur.Kind {
@@ -117,7 +117,7 @@ func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *lo
 }
 
 func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	klog.V(2).Infof("validate delete", "name", ls.Name)
+	klog.V(2).Infof("validate delete %s %s", "name:", ls.Name)
 	return nil
 }
 
