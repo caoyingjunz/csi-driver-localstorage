@@ -86,7 +86,7 @@ func BytesToQuantity(bytes int64) resource.Quantity {
 	return *quantity
 }
 
-func WaitUntilPersistentVolumeClaimIsCreated(pvcLister corelisters.PersistentVolumeClaimLister, name, namespace string, timeout time.Duration) (*v1.PersistentVolumeClaim, error) {
+func WaitUntilPersistentVolumeClaimIsCreated(pvcLister corelisters.PersistentVolumeClaimLister, namespace, name string, timeout time.Duration) (*v1.PersistentVolumeClaim, error) {
 	// Wait until pvc is created
 	pvc, err := pvcLister.PersistentVolumeClaims(namespace).Get(name)
 	if err == nil {
