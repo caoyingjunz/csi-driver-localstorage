@@ -31,9 +31,12 @@ import (
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
-	ls "github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/types"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+)
+
+const (
+	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 )
 
 // GetLocalStorageByNode Get localstorage object by nodeName, error when not found
@@ -183,7 +186,7 @@ func GetLocalStoragePersistentVolumeClaimFromPod(pod *v1.Pod, pvcLister corelist
 		if err != nil {
 			return nil, fmt.Errorf("failed to get sc %s from indexer: %v", *storageClassName, err)
 		}
-		if sc.Provisioner == ls.DefaultDriverName {
+		if sc.Provisioner == DefaultDriverName {
 			return pvc, nil
 		}
 	}
