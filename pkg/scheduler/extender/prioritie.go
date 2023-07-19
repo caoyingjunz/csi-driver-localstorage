@@ -17,8 +17,8 @@ limitations under the License.
 package extender
 
 import (
-	"math/rand"
-
+	corelisters "k8s.io/client-go/listers/core/v1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/klog/v2"
 	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
@@ -28,26 +28,41 @@ import (
 )
 
 type Prioritize struct {
-	lsLister localstorage.LocalStorageLister
+	lsLister  localstorage.LocalStorageLister
+	pvcLister corelisters.PersistentVolumeClaimLister
+	scLister  storagelisters.StorageClassLister
 }
 
-func NewPrioritize(lsLister localstorage.LocalStorageLister) *Prioritize {
-	return &Prioritize{lsLister: lsLister}
+func NewPrioritize(lsLister localstorage.LocalStorageLister, pvcLister corelisters.PersistentVolumeClaimLister, scLister storagelisters.StorageClassLister) *Prioritize {
+	return &Prioritize{lsLister: lsLister, pvcLister: pvcLister, scLister: scLister}
 }
 
 func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
-	nodes := args.Nodes.Items
-	klog.Infof("scoring nodes %v", nodes)
+	pod := args.Pod
+	if pod == nil {
+		klog.Errorf("pod is nil")
+		return nil
+	}
+	used, err := storageutil.PodIsUseLocalStorage(pod, p.pvcLister, p.scLister)
+	if err != nil || !used {
+		klog.Errorf("pod not use localstorage or err")
+		return nil
+	}
 
-	hostPriorityList := make(extenderv1.HostPriorityList, len(nodes))
+	nodeNames := *args.NodeNames
+	klog.Infof("scoring nodes %v", nodeNames)
 
+	hostPriorityList := make(extenderv1.HostPriorityList, len(nodeNames))
 	lsMap, err := storageutil.GetLocalStorageMap(p.lsLister)
-	for i, node := range nodes {
-		nodeName := node.Name
-		// rand score
-		score := rand.Int63n(extenderv1.MaxExtenderPriority + 1)
+	if err != nil {
+		klog.Errorf("failed to get localstorage node map: $v", err)
+		return nil
+	}
+
+	for i, nodeName := range nodeNames {
+		var score int64
 		ls, found := lsMap[nodeName]
-		if err == nil && found {
+		if found {
 			score = p.score(ls)
 			klog.Infof("scoring node(%s) with score(%d)", nodeName, score)
 		}

@@ -19,16 +19,24 @@ package storage
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/types"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+)
+
+const (
+	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 )
 
 // GetLocalStorageByNode Get localstorage object by nodeName, error when not found
@@ -151,4 +159,46 @@ func GetNameFromNode(node *v1.Node) string {
 	}
 
 	return node.ObjectMeta.Annotations[types.AnnotationKeyNodeID]
+}
+
+func GetLocalStoragePersistentVolumeClaimFromPod(pod *v1.Pod, pvcLister corelisters.PersistentVolumeClaimLister, scLister storagelisters.StorageClassLister) (*v1.PersistentVolumeClaim, error) {
+	volumes := pod.Spec.Volumes
+	if volumes == nil || len(volumes) == 0 {
+		return nil, nil
+	}
+
+	for _, volume := range volumes {
+		if volume.PersistentVolumeClaim == nil {
+			continue
+		}
+
+		claimName := volume.PersistentVolumeClaim.ClaimName
+		pvc, err := util.WaitUntilPersistentVolumeClaimIsCreated(pvcLister, pod.Namespace, claimName, 2*time.Second)
+		if err != nil {
+			return nil, err
+		}
+
+		storageClassName := pvc.Spec.StorageClassName
+		if storageClassName == nil || len(*storageClassName) == 0 {
+			continue
+		}
+		sc, err := scLister.Get(*storageClassName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get sc %s from indexer: %v", *storageClassName, err)
+		}
+		if sc.Provisioner == DefaultDriverName {
+			return pvc, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func PodIsUseLocalStorage(pod *v1.Pod, pvcLister corelisters.PersistentVolumeClaimLister, scLister storagelisters.StorageClassLister) (bool, error) {
+	pvc, err := GetLocalStoragePersistentVolumeClaimFromPod(pod, pvcLister, scLister)
+	if err != nil {
+		return false, err
+	}
+
+	return pvc == nil, nil
 }
