@@ -86,7 +86,7 @@ func NewScheduleExtender(lsInformer v1.LocalStorageInformer, pvcInformer coreinf
 	s.scListerSynced = scInformer.Informer().HasSynced
 
 	s.predicate = extender.NewPredicate(s.lsLister, s.pvcLister, s.scLister)
-	s.prioritize = extender.NewPrioritize(s.lsLister)
+	s.prioritize = extender.NewPrioritize(s.lsLister, s.pvcLister, s.scLister)
 	return s, nil
 }
 

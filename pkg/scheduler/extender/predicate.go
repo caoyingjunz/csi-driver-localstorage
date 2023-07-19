@@ -18,18 +18,15 @@ package extender
 
 import (
 	"fmt"
-
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/labels"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/klog/v2"
+	extenderv1 "k8s.io/kube-scheduler/extender/v1"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
-	ls "github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
-	extenderv1 "k8s.io/kube-scheduler/extender/v1"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 type Predicate struct {
@@ -38,15 +35,8 @@ type Predicate struct {
 	scLister  storagelisters.StorageClassLister
 }
 
-func NewPredicate(
-	lsLister localstorage.LocalStorageLister,
-	pvcLister corelisters.PersistentVolumeClaimLister,
-	scLister storagelisters.StorageClassLister) *Predicate {
-	return &Predicate{
-		lsLister:  lsLister,
-		pvcLister: pvcLister,
-		scLister:  scLister,
-	}
+func NewPredicate(lsLister localstorage.LocalStorageLister, pvcLister corelisters.PersistentVolumeClaimLister, scLister storagelisters.StorageClassLister) *Predicate {
+	return &Predicate{lsLister: lsLister, pvcLister: pvcLister, scLister: scLister}
 }
 
 func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFilterResult {
@@ -55,26 +45,26 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		return &extenderv1.ExtenderFilterResult{Error: fmt.Sprintf("pod is nil")}
 	}
 
-	used, reqStorage, err := p.getUsedLocalstorage(pod)
+	pvc, err := storageutil.GetLocalStoragePersistentVolumeClaimFromPod(pod, p.pvcLister, p.scLister)
 	if err != nil {
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	}
-	if !used {
-		klog.Infof("namespace(%s) pod(%s) don't use localstorage, ignore", pod.Namespace, pod.Name)
+	if pvc == nil {
+		klog.Infof("ignore schedule namespace(%s) name(%s)", pod.Namespace, pod.Name)
 		return &extenderv1.ExtenderFilterResult{
 			NodeNames: args.NodeNames,
 			Nodes:     args.Nodes,
 		}
 	}
+	request, exists := pvc.Spec.Resources.Requests[v1.ResourceStorage]
+	if !exists {
+		return &extenderv1.ExtenderFilterResult{Error: fmt.Sprintf("failed to find pvc %s request quantity", pvc.Name)}
+	}
 
-	klog.Infof("namespace(%s) pod(%s) use localstorage, try to schedule", pod.Namespace, pod.Name)
-	lsNodes, err := p.lsLister.List(labels.Everything())
+	klog.Infof("starting schedule namespace(%s) name(%s)", pod.Namespace, pod.Name)
+	localstorageMap, err := storageutil.GetLocalStorageMap(p.lsLister)
 	if err != nil {
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
-	}
-	localstorageMap := make(map[string]localstoragev1.LocalStorage)
-	for _, lsNode := range lsNodes {
-		localstorageMap[lsNode.Spec.Node] = *lsNode
 	}
 
 	scheduleNodes := make([]string, 0)
@@ -82,16 +72,16 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 	for _, nodeName := range *args.NodeNames {
 		ls, found := localstorageMap[nodeName]
 		if !found {
-			failedNodes[nodeName] = fmt.Sprintf("pod(%s) can not scheduled on node(%s) because it has no localstorage", pod.Name, nodeName)
+			failedNodes[nodeName] = fmt.Sprintf("node(%s) has no localstorage", nodeName)
 			continue
 		}
 		if ls.Status.Phase != localstoragev1.LocalStorageReady {
-			failedNodes[nodeName] = fmt.Sprintf("pod(%s) can not scheduled on node(%s) because it localstorage not ready", pod.Name, nodeName)
+			failedNodes[nodeName] = fmt.Sprintf("node(%s) localstorage not ready", nodeName)
 			continue
 		}
 		allocSize := ls.Status.Allocatable
-		if reqStorage.Cmp(*allocSize) > 0 {
-			failedNodes[nodeName] = fmt.Sprintf("pod(%s) can not scheduled on node(%s) because it localstorage Allocatable size too small", pod.Name, nodeName)
+		if request.Cmp(*allocSize) > 0 {
+			failedNodes[nodeName] = fmt.Sprintf("node(%s) localstorage allocatable size too small", nodeName)
 			continue
 		}
 
@@ -104,44 +94,4 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		Nodes:       args.Nodes,
 		FailedNodes: failedNodes,
 	}
-}
-
-func (p *Predicate) getUsedLocalstorage(pod *v1.Pod) (bool, *resource.Quantity, error) {
-	volumes := pod.Spec.Volumes
-	if volumes == nil || len(volumes) == 0 {
-		return false, nil, nil
-	}
-
-	for _, volume := range volumes {
-		if volume.PersistentVolumeClaim == nil {
-			continue
-		}
-
-		claimName := volume.PersistentVolumeClaim.ClaimName
-		// get pvc from indexer
-		pvc, err := p.pvcLister.PersistentVolumeClaims(pod.Namespace).Get(claimName)
-		if err != nil {
-			return false, nil, fmt.Errorf("failed to get pvc %s from indexer: %v", claimName, err)
-		}
-
-		storageClassName := pvc.Spec.StorageClassName
-		if storageClassName == nil || len(*storageClassName) == 0 {
-			continue
-		}
-		sc, err := p.scLister.Get(*storageClassName)
-		if err != nil {
-			return false, nil, fmt.Errorf("failed to get sc %s from indexer: %v", *storageClassName, err)
-		}
-
-		if sc.Provisioner == ls.DefaultDriverName {
-			request, found := pvc.Spec.Resources.Requests[v1.ResourceStorage]
-			if !found {
-				return false, nil, fmt.Errorf("failed to get pvc %s request size from indexer: %v", claimName, err)
-			}
-
-			return true, &request, nil
-		}
-	}
-
-	return false, nil, nil
 }
