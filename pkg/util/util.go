@@ -90,6 +90,7 @@ func WaitUntilPersistentVolumeClaimIsCreated(pvcLister corelisters.PersistentVol
 	// Wait until pvc is created
 	pvc, err := pvcLister.PersistentVolumeClaims(namespace).Get(name)
 	if err == nil {
+		klog.V(2).Infof("waited for pvc %s/%s to be created", namespace, name)
 		return pvc, nil
 	}
 
@@ -99,6 +100,7 @@ func WaitUntilPersistentVolumeClaimIsCreated(pvcLister corelisters.PersistentVol
 		time.Sleep(pollingPeriod)
 		pvc, err := pvcLister.PersistentVolumeClaims(namespace).Get(name)
 		if err == nil {
+			klog.V(2).Infof("waited for pvc %s/%s to be created when retry", namespace, name)
 			return pvc, nil
 		}
 	}
