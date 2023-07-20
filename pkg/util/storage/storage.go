@@ -200,5 +200,5 @@ func PodIsUseLocalStorage(pod *v1.Pod, pvcLister corelisters.PersistentVolumeCla
 		return false, err
 	}
 
-	return pvc == nil, nil
+	return pvc != nil, nil
 }
