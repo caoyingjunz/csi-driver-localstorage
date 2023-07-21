@@ -23,7 +23,6 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -139,16 +138,6 @@ func (s *StorageController) deleteStorage(obj interface{}) {
 	s.enqueueLocalstorage(ls)
 }
 
-func (s *StorageController) onlyUpdate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	_, err := s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{})
-	if err != nil {
-		klog.Errorf("Failed to update localstorage %s: %v", ls, err)
-		return err
-	}
-
-	return nil
-}
-
 func (s *StorageController) syncStorage(ctx context.Context, dKey string) error {
 	startTime := time.Now()
 	klog.V(2).InfoS("Started syncing localstorage manager", "startTime", startTime)
@@ -170,19 +159,17 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
 		// TODO: to delete some external localstorage object
-		if ls.Status.Phase != localstoragev1.LocalStorageTerminating {
-			ls.Status.Phase = localstoragev1.LocalStorageTerminating
-			if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
-				return err
-			}
+		if !util.LocalStorageIsTerminating(ls) {
+			util.SetLocalStoragePhase(ls, localstoragev1.LocalStorageTerminating)
+			return util.TryUpdateLocalStorage(s.client, ls)
 		}
 		return nil
 	}
 
-	// TODO: handler somethings
-	if util.IsPendingStatus(ls) {
-		ls.Status.Phase = localstoragev1.LocalStorageInitiating
-		if _, err = s.client.StorageV1().LocalStorages().Update(ctx, ls, metav1.UpdateOptions{}); err != nil {
+	// Handler initialize Phase
+	if util.LocalStorageIsPending(ls) {
+		util.SetLocalStoragePhase(ls, localstoragev1.LocalStorageInitiating)
+		if err = util.TryUpdateLocalStorage(s.client, ls); err != nil {
 			return err
 		}
 		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))
