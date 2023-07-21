@@ -186,18 +186,19 @@ func (ls *localStorage) ListVolumes(ctx context.Context, req *csi.ListVolumesReq
 	ls.lock.Lock()
 	defer ls.lock.Unlock()
 
-	for _, vol := range ls.cache.GetVolumes() {
-		volumes.Entries = append(volumes.Entries, &csi.ListVolumesResponse_Entry{
-			Volume: &csi.Volume{
-				VolumeId:      vol.VolID,
-				CapacityBytes: vol.VolSize,
-			},
-			Status: &csi.ListVolumesResponse_VolumeStatus{
-				PublishedNodeIds: []string{vol.NodeID},
-				VolumeCondition:  &csi.VolumeCondition{},
-			},
-		})
-	}
+	// TODO: 后续实现
+	// for _, vol := range ls.cache.GetVolumes() {
+	// 	volumes.Entries = append(volumes.Entries, &csi.ListVolumesResponse_Entry{
+	// 		Volume: &csi.Volume{
+	// 			VolumeId:      vol.VolID,
+	// 			CapacityBytes: vol.VolSize,
+	// 		},
+	// 		Status: &csi.ListVolumesResponse_VolumeStatus{
+	// 			PublishedNodeIds: []string{vol.NodeID},
+	// 			VolumeCondition:  &csi.VolumeCondition{},
+	// 		},
+	// 	})
+	// }
 
 	klog.Infof("Localstorage volumes are: %+v", volumes)
 	return volumes, nil
