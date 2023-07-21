@@ -231,6 +231,6 @@ func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 	ls.queue.Add(key)
 }
 
-func (ls *localStorage) GetNodeId() string {
+func (ls *localStorage) GetNode() string {
 	return ls.config.NodeId
 }
