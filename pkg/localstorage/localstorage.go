@@ -19,14 +19,12 @@ package localstorage
 import (
 	"context"
 	"fmt"
-	"path"
 	"sync"
 	"time"
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -35,17 +33,14 @@ import (
 	"k8s.io/klog/v2"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/cache"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
-	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
-	StoreFile         = "localstorage.json"
 
 	annNodeSize = "volume.caoyingjunz.io/node-size"
 	maxRetries  = 15
@@ -53,7 +48,6 @@ const (
 
 type localStorage struct {
 	config Config
-	cache  cache.Cache
 
 	lock sync.Mutex
 
@@ -83,23 +77,11 @@ func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorage
 	}
 	klog.V(2).Infof("Driver: %v version: %v, nodeId: %v", cfg.DriverName, cfg.VendorVersion, cfg.NodeId)
 
-	storeFile := path.Join(cfg.VolumeDir, StoreFile)
-	klog.V(2).Infof("localstorage will be store in %s", storeFile)
-
-	s, err := cache.New(storeFile)
-	if err != nil {
-		return nil, err
-	}
-
-	ls, err := &localStorage{
+	ls := &localStorage{
 		config:     cfg,
-		cache:      s,
 		kubeClient: kubeClientSet,
 		client:     lsClientSet,
 		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plugin"),
-	}, nil
-	if err != nil {
-		return nil, err
 	}
 
 	lsInformer.Informer().AddEventHandler(kubecache.FilteringResourceEventHandler{
@@ -165,6 +147,8 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
+
+	// TODO: Optimise later
 	nodeSize, ok := l.Annotations[annNodeSize]
 	if !ok {
 		return fmt.Errorf("failed to found node localstorage size")
@@ -181,9 +165,9 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	l.Status.Capacity = &quantity
 	l.Status.Allocatable = &quantity
-	l.Status.Phase = localstoragev1.LocalStorageReady
-	_, err = ls.client.StorageV1().LocalStorages().Update(ctx, l, metav1.UpdateOptions{})
-	return err
+	util.SetLocalStoragePhase(l, localstoragev1.LocalStorageReady)
+
+	return util.TryUpdateLocalStorage(ls.client, l)
 }
 
 func (ls *localStorage) updateStorage(old, cur interface{}) {
@@ -247,27 +231,6 @@ func (ls *localStorage) enqueue(s *localstoragev1.LocalStorage) {
 	ls.queue.Add(key)
 }
 
-func (ls *localStorage) GetNode() string {
+func (ls *localStorage) GetNodeId() string {
 	return ls.config.NodeId
-}
-
-func (ls *localStorage) TryUpdateNode() error {
-	nodeClient := ls.kubeClient.CoreV1().Nodes()
-	originalNode, err := nodeClient.Get(context.TODO(), ls.GetNode(), metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	node := originalNode.DeepCopy()
-	if storageutil.IsNodeIDInNode(node) {
-		return nil
-	}
-
-	node = storageutil.UpdateNodeIDInNode(node, ls.GetNode())
-	_, err = nodeClient.Update(context.TODO(), node, metav1.UpdateOptions{})
-
-	// TODO: optimised by patch
-	//patchBytes := []byte("ddd")
-	//updatedNode, err := nodeClient.Patch(context.TODO(), ls.GetNode(), types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
-	return err
 }
