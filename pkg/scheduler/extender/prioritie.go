@@ -38,9 +38,6 @@ func NewPrioritize(lsLister localstorage.LocalStorageLister, pvcLister coreliste
 }
 
 func (p *Prioritize) Score(args extenderv1.ExtenderArgs) *extenderv1.HostPriorityList {
-	klog.Infof("score args args.Nodes", args.Nodes)
-	klog.Infof("score args args names", *args.NodeNames)
-
 	pod := args.Pod
 	if pod == nil {
 		klog.Errorf("pod is nil")
