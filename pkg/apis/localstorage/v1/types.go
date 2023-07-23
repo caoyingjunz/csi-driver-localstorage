@@ -53,6 +53,13 @@ const (
 	LocalStorageUnknown     LocalStoragePhase = "Unknown"
 )
 
+type LocalStorageMode string
+
+const (
+	LocalStoragePath LocalStorageMode = "path"
+	LocalStorageLvm  LocalStorageMode = "lvm"
+)
+
 type LocalStorageSpec struct {
 	// Node kubernetes node name
 	// +kubebuilder:validation:MinLength=1
@@ -93,6 +100,7 @@ type LocalStorageStatus struct {
 	// +optional
 	Volumes []Volume `json:"volumes,omitempty"`
 
+	Mode       LocalStorageMode      `json:"mode,omitempty"`
 	Conditions LocalStorageCondition `json:"conditions,omitempty"`
 }
 
