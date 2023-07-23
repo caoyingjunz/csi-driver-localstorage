@@ -89,8 +89,10 @@ type DiskSpec struct {
 type LocalStorageCondition string
 
 type LocalStorageStatus struct {
+	// Localstorage phase
 	Phase LocalStoragePhase `json:"phase,omitempty"`
 
+	// Allocatable and Capacity is the Quantity on this node
 	Allocatable *resource.Quantity `json:"allocatable,omitempty"`
 	Capacity    *resource.Quantity `json:"capacity,omitempty"`
 

@@ -89,6 +89,7 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
+                description: Allocatable and Capacity is the Quantity on this node
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               capacity:
@@ -100,6 +101,7 @@ spec:
               conditions:
                 type: string
               phase:
+                description: Localstorage phase
                 type: string
               volumes:
                 description: List of mount volumes on this node
