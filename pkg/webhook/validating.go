@@ -119,11 +119,8 @@ func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *lo
 	}
 
 	// validate spec volume
-	if old.Spec.Path != cur.Spec.Path {
-		return fmt.Errorf("spec.path: Invalid value: %v: field is immutable", cur.Spec.Path)
-	}
-	if old.Spec.Lvm != cur.Spec.Lvm {
-		return fmt.Errorf("spec.lvm: Invalid value: %v: field is immutable", cur.Spec.Lvm)
+	if old.Spec.Path != cur.Spec.Path || old.Spec.Lvm != cur.Spec.Lvm {
+		return fmt.Errorf("spec.path and spec.lvm field is immutable")
 	}
 	if old.Spec.Path != nil {
 		return v.validatePath(ctx, old, cur, admissionv1.Update)
