@@ -115,13 +115,7 @@ func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versione
 					},
 				},
 				Spec: localstoragev1.LocalStorageSpec{
-					VolumeGroup: "k8s",
-					Node:        node.Name,
-					Disks: []localstoragev1.DiskSpec{
-						{
-							Name: "test-disk",
-						},
-					},
+					Node: node.Name,
 				},
 			}, metav1.CreateOptions{}); err != nil {
 				return err

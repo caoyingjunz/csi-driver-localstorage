@@ -65,7 +65,7 @@ type LocalStorageSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	Node string `json:"node,omitempty"`
 
-	// Path localstorage hostPath localstorage spec
+	// Path localstorage hostPath volume spec
 	Path *PathSpec `json:"path,omitempty"`
 	// Lvm localstorage Logical Volume Manage spec
 	Lvm *LvmSpec `json:"lvm,omitempty"`
