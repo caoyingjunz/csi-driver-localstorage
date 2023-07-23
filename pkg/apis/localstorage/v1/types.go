@@ -29,7 +29,7 @@ import (
 // +kubebuilder:printcolumn:JSONPath=".status.allocatable",name=Allocatable,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.capacity",name=Capacity,type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=AGE,type=date
-// +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
+//// +kubebuilder:printcolumn:JSONPath=".spec.volumeGroup",name=VolumeGroup,type=string,priority=1
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -51,13 +51,6 @@ const (
 	LocalStorageMaintaining LocalStoragePhase = "Maintaining"
 	LocalStorageReady       LocalStoragePhase = "Ready"
 	LocalStorageUnknown     LocalStoragePhase = "Unknown"
-)
-
-type LocalStorageMode string
-
-const (
-	LocalStoragePath LocalStorageMode = "path"
-	LocalStorageLvm  LocalStorageMode = "lvm"
 )
 
 type LocalStorageSpec struct {
