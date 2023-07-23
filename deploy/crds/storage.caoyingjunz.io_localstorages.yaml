@@ -56,22 +56,32 @@ spec:
             type: object
           spec:
             properties:
-              disks:
-                items:
-                  properties:
-                    identifier:
-                      description: disk identifier, plugin will fill it
-                      type: string
-                    name:
-                      type: string
-                  type: object
-                type: array
+              lvm:
+                description: Lvm localstorage Logical Volume Manage spec
+                properties:
+                  disks:
+                    items:
+                      properties:
+                        identifier:
+                          description: disk identifier, plugin will fill it
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    type: array
+                  volumeGroup:
+                    type: string
+                type: object
               node:
                 description: Node kubernetes node name
                 minLength: 1
                 type: string
-              volumeGroup:
-                type: string
+              path:
+                description: Path localstorage hostPath localstorage spec
+                properties:
+                  path:
+                    type: string
+                type: object
             type: object
           status:
             properties:
