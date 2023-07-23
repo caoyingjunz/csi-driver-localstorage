@@ -96,10 +96,10 @@ func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localsto
 		return fmt.Errorf("path and lvm can only be used at most one")
 	}
 	if ls.Spec.Path != nil {
-		return v.validatePath(ctx, ls)
+		return v.validatePath(ctx, nil, ls, admissionv1.Create)
 	}
 	if ls.Spec.Lvm != nil {
-		return v.validateLvm(ctx, ls)
+		return v.validateLvm(ctx, nil, ls, admissionv1.Create)
 	}
 
 	return nil
@@ -126,33 +126,10 @@ func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *lo
 		return fmt.Errorf("spec.lvm: Invalid value: %v: field is immutable", cur.Spec.Lvm)
 	}
 	if old.Spec.Path != nil {
-		if old.Spec.Path.Path != cur.Spec.Path.Path {
-			return fmt.Errorf("spec.path.path: Invalid value: %v: field is immutable", cur.Spec.Path.Path)
-		}
+		return v.validatePath(ctx, old, cur, admissionv1.Update)
 	}
 	if old.Spec.Lvm != nil {
-		if old.Spec.Lvm.VolumeGroup != cur.Spec.Lvm.VolumeGroup {
-			return fmt.Errorf("spec.lvm.volumeGroup: Invalid value: %v: field is immutable", cur.Spec.Lvm.VolumeGroup)
-		}
-
-		curDiskMap := make(map[string]localstoragev1.DiskSpec)
-		for _, curDisk := range cur.Spec.Lvm.Disks {
-			curDiskMap[curDisk.Name] = curDisk
-		}
-		for _, oldDisk := range old.Spec.Lvm.Disks {
-			disk, found := curDiskMap[oldDisk.Name]
-			if !found {
-				return fmt.Errorf("spec.lvm.disks: volumeGroup old disk %s is immutable", oldDisk.Name)
-			}
-
-			// TODO: 还需要更详细的校验，后续再实现
-			if len(oldDisk.Identifier) == 0 {
-				continue
-			}
-			if oldDisk.Identifier != disk.Identifier {
-				return fmt.Errorf("spec.lvm.disks: volumeGroup disk identifier %s is immutable", oldDisk.Name)
-			}
-		}
+		return v.validateLvm(ctx, old, cur, admissionv1.Update)
 	}
 
 	return nil
@@ -192,30 +169,61 @@ func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls
 	return nil
 }
 
-func (v *LocalstorageValidator) validatePath(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	pathSpec := ls.Spec.Path
-	if pathSpec == nil {
-		return nil
-	}
-
-	if len(pathSpec.Path) == 0 {
-		return fmt.Errorf("spec.path.path may not be empty when use path")
+func (v *LocalstorageValidator) validatePath(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
+	switch op {
+	case admissionv1.Create:
+		pathSpec := cur.Spec.Path
+		if pathSpec == nil {
+			return nil
+		}
+		if len(pathSpec.Path) == 0 {
+			return fmt.Errorf("spec.path.path may not be empty when use path")
+		}
+	case admissionv1.Update:
+		if old.Spec.Path.Path != cur.Spec.Path.Path {
+			return fmt.Errorf("spec.path.path: Invalid value: %v: field is immutable", cur.Spec.Path.Path)
+		}
 	}
 
 	return nil
 }
 
-func (v *LocalstorageValidator) validateLvm(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	lvmSpec := ls.Spec.Lvm
-	if lvmSpec == nil {
-		return nil
-	}
+func (v *LocalstorageValidator) validateLvm(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
+	switch op {
+	case admissionv1.Create:
+		lvmSpec := cur.Spec.Lvm
+		if lvmSpec == nil {
+			return nil
+		}
+		if len(lvmSpec.VolumeGroup) == 0 {
+			return fmt.Errorf("spec.lvm.volumeGroup may not be empty when use lvm")
+		}
+		if len(lvmSpec.Disks) == 0 {
+			return fmt.Errorf("spec.lvm.disks may not be empty when use lvm")
+		}
+	case admissionv1.Update:
+		if old.Spec.Lvm.VolumeGroup != cur.Spec.Lvm.VolumeGroup {
+			return fmt.Errorf("spec.lvm.volumeGroup: Invalid value: %v: field is immutable", cur.Spec.Lvm.VolumeGroup)
+		}
 
-	if len(lvmSpec.VolumeGroup) == 0 {
-		return fmt.Errorf("spec.lvm.volumeGroup may not be empty when use lvm")
-	}
-	if len(lvmSpec.Disks) == 0 {
-		return fmt.Errorf("spec.lvm.disks may not be empty when use lvm")
+		curDiskMap := make(map[string]localstoragev1.DiskSpec)
+		for _, curDisk := range cur.Spec.Lvm.Disks {
+			curDiskMap[curDisk.Name] = curDisk
+		}
+		for _, oldDisk := range old.Spec.Lvm.Disks {
+			disk, found := curDiskMap[oldDisk.Name]
+			if !found {
+				return fmt.Errorf("spec.lvm.disks: volumeGroup old disk %s is immutable", oldDisk.Name)
+			}
+
+			// TODO: 还需要更详细的校验，后续再实现
+			if len(oldDisk.Identifier) == 0 {
+				continue
+			}
+			if oldDisk.Identifier != disk.Identifier {
+				return fmt.Errorf("spec.lvm.disks: volumeGroup disk identifier %s is immutable", oldDisk.Name)
+			}
+		}
 	}
 
 	return nil
