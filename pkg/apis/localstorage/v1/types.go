@@ -53,12 +53,35 @@ const (
 	LocalStorageUnknown     LocalStoragePhase = "Unknown"
 )
 
+type LocalStorageMode string
+
+const (
+	LocalStoragePath LocalStorageMode = "path"
+	LocalStorageLvm  LocalStorageMode = "lvm"
+)
+
 type LocalStorageSpec struct {
-	VolumeGroup string `json:"volumeGroup,omitempty"`
 	// Node kubernetes node name
 	// +kubebuilder:validation:MinLength=1
-	Node  string     `json:"node,omitempty"`
-	Disks []DiskSpec `json:"disks,omitempty"`
+	Node string `json:"node,omitempty"`
+
+	// Mode localstorage type
+	Mode string `json:"mode,omitempty"`
+
+	// Path localstorage hostPath localstorage spec
+	Path *PathSpec `json:"path,omitempty"`
+
+	// Lvm localstorage Logical Volume Manage spec
+	Lvm *LvmSpec `json:"lvm,omitempty"`
+}
+
+type PathSpec struct {
+	Path string `json:"path,omitempty"`
+}
+
+type LvmSpec struct {
+	VolumeGroup string     `json:"volumeGroup,omitempty"`
+	Disks       []DiskSpec `json:"disks,omitempty"`
 }
 
 type DiskSpec struct {
@@ -70,7 +93,8 @@ type DiskSpec struct {
 type LocalStorageCondition string
 
 type LocalStorageStatus struct {
-	Phase       LocalStoragePhase  `json:"phase,omitempty"`
+	Phase LocalStoragePhase `json:"phase,omitempty"`
+
 	Allocatable *resource.Quantity `json:"allocatable,omitempty"`
 	Capacity    *resource.Quantity `json:"capacity,omitempty"`
 
@@ -81,15 +105,6 @@ type LocalStorageStatus struct {
 	Conditions LocalStorageCondition `json:"conditions,omitempty"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type LocalStorageList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []LocalStorage `json:"items"`
-}
-
 type Volume struct {
 	VolName  string `json:"volName,omitempty"`
 	VolID    string `json:"volId,omitempty"`
@@ -97,4 +112,13 @@ type Volume struct {
 	VolSize  int64  `json:"volSize,omitempty"`
 	NodeID   string `json:"nodeId,omitempty"`
 	Attached bool   `json:"attached,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type LocalStorageList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []LocalStorage `json:"items"`
 }
