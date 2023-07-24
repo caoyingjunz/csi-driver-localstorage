@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -50,7 +51,7 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	klog.Infof("Validating localstorage %s for: %s", ls.Name, req.Operation)
 
 	var err error
-	if err = v.ValidateName(ctx, ls); err != nil {
+	if err = v.validateName(ctx, ls); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -73,33 +74,24 @@ func (v *LocalstorageValidator) Handle(ctx context.Context, req admission.Reques
 	return admission.Allowed("")
 }
 
-func (v *LocalstorageValidator) ValidateName(ctx context.Context, ls *localstoragev1.LocalStorage) error {
-	if len(ls.Name) == 0 {
-		return fmt.Errorf("localstorage (%s) name must be than 0 characters", ls.Name)
-	}
-	if len(ls.Name) > validationutils.DNS1035LabelMaxLength-11 {
-		return fmt.Errorf("localstorage (%s) name must be no more than 52 characters", ls.Name)
-	}
-
+// InjectDecoder implements admission.DecoderInjector interface.
+// A decoder will be automatically injected by InjectDecoderInto.
+func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
+	v.decoder = d
 	return nil
 }
 
 func (v *LocalstorageValidator) ValidateCreate(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	klog.V(2).Infof("validate create %s %s", "name:", ls.Name)
 
-	if err := v.validateLocalStorageNode(ctx, ls); err != nil {
+	// validate kubernetes binding node
+	if err := v.validateKubeNode(ctx, ls); err != nil {
 		return err
 	}
 
-	// Validate storage spec
-	if ls.Spec.Path != nil && ls.Spec.Lvm != nil {
-		return fmt.Errorf("path and lvm can only be used at most one")
-	}
-	if ls.Spec.Path != nil {
-		return v.validatePath(ctx, nil, ls, admissionv1.Create)
-	}
-	if ls.Spec.Lvm != nil {
-		return v.validateLvm(ctx, nil, ls, admissionv1.Create)
+	// validate local storage backend
+	if err := v.validateStorageBackend(ctx, nil, ls, admissionv1.Create); err != nil {
+		return err
 	}
 
 	return nil
@@ -118,15 +110,9 @@ func (v *LocalstorageValidator) ValidateUpdate(ctx context.Context, old, cur *lo
 		return fmt.Errorf("spec.node: Invalid value: %v: field is immutable", cur.Spec.Node)
 	}
 
-	// validate spec volume
-	if old.Spec.Path != cur.Spec.Path || old.Spec.Lvm != cur.Spec.Lvm {
-		return fmt.Errorf("spec.path and spec.lvm field is immutable")
-	}
-	if old.Spec.Path != nil {
-		return v.validatePath(ctx, old, cur, admissionv1.Update)
-	}
-	if old.Spec.Lvm != nil {
-		return v.validateLvm(ctx, old, cur, admissionv1.Update)
+	// validate local storage backend spec
+	if err := v.validateStorageBackend(ctx, old, cur, admissionv1.Update); err != nil {
+		return err
 	}
 
 	return nil
@@ -137,11 +123,22 @@ func (v *LocalstorageValidator) ValidateDelete(ctx context.Context, ls *localsto
 	return nil
 }
 
-// validate localstorage node
+func (v *LocalstorageValidator) validateName(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+	if len(ls.Name) == 0 {
+		return fmt.Errorf("localstorage (%s) name must be than 0 characters", ls.Name)
+	}
+	if len(ls.Name) > validationutils.DNS1035LabelMaxLength-11 {
+		return fmt.Errorf("localstorage (%s) name must be no more than 52 characters", ls.Name)
+	}
+
+	return nil
+}
+
+// validate kube node
 // 1. localstorage node can't be empty
 // 2. localstorage node must be in kubernetes
 // 3. only the one node to binding to
-func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
+func (v *LocalstorageValidator) validateKubeNode(ctx context.Context, ls *localstoragev1.LocalStorage) error {
 	if len(ls.Spec.Node) == 0 {
 		return fmt.Errorf("localstraoge (%s) binding node may not be empty", ls.Name)
 	}
@@ -166,19 +163,51 @@ func (v *LocalstorageValidator) validateLocalStorageNode(ctx context.Context, ls
 	return nil
 }
 
+// validate local storage backend
+func (v *LocalstorageValidator) validateStorageBackend(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
+	if cur.Spec.Path != nil && cur.Spec.Lvm != nil {
+		return fmt.Errorf("path and lvm can only be used at most one")
+	}
+
+	// valid hostPath backend spec
+	if err := v.validatePath(ctx, old, cur, op); err != nil {
+		return err
+	}
+	// valid vlm backend spec
+	if err := v.validateLvm(ctx, old, cur, op); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (v *LocalstorageValidator) validatePath(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
+	pathSpec := cur.Spec.Path
+	pathValidator := func(p *localstoragev1.PathSpec) error {
+		if len(p.Path) == 0 {
+			return fmt.Errorf("spec.path.path may not be empty when use path")
+		}
+		return nil
+	}
+
 	switch op {
 	case admissionv1.Create:
-		pathSpec := cur.Spec.Path
 		if pathSpec == nil {
 			return nil
 		}
-		if len(pathSpec.Path) == 0 {
-			return fmt.Errorf("spec.path.path may not be empty when use path")
+		if err := pathValidator(pathSpec); err != nil {
+			return err
 		}
 	case admissionv1.Update:
-		if old.Spec.Path.Path != cur.Spec.Path.Path {
-			return fmt.Errorf("spec.path.path: Invalid value: %v: field is immutable", cur.Spec.Path.Path)
+		oldPathSpec := old.Spec.Path
+		if oldPathSpec == nil && pathSpec != nil {
+			if err := pathValidator(pathSpec); err != nil {
+				return err
+			}
+		} else {
+			if !reflect.DeepEqual(oldPathSpec, pathSpec) {
+				return fmt.Errorf("spec.path: Invalid value: %v: field is immutable", oldPathSpec)
+			}
 		}
 	}
 
@@ -186,49 +215,37 @@ func (v *LocalstorageValidator) validatePath(ctx context.Context, old, cur *loca
 }
 
 func (v *LocalstorageValidator) validateLvm(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
+	lvmSpec := cur.Spec.Lvm
+	lvmValidator := func(l *localstoragev1.LvmSpec) error {
+		if len(l.VolumeGroup) == 0 {
+			return fmt.Errorf("spec.lvm.volumeGroup may not be empty when use lvm")
+		}
+		if len(l.Disks) == 0 {
+			return fmt.Errorf("spec.lvm.disks may not be empty when use lvm")
+		}
+		return nil
+	}
+
 	switch op {
 	case admissionv1.Create:
-		lvmSpec := cur.Spec.Lvm
 		if lvmSpec == nil {
 			return nil
 		}
-		if len(lvmSpec.VolumeGroup) == 0 {
-			return fmt.Errorf("spec.lvm.volumeGroup may not be empty when use lvm")
-		}
-		if len(lvmSpec.Disks) == 0 {
-			return fmt.Errorf("spec.lvm.disks may not be empty when use lvm")
+		if err := lvmValidator(lvmSpec); err != nil {
+			return err
 		}
 	case admissionv1.Update:
-		if old.Spec.Lvm.VolumeGroup != cur.Spec.Lvm.VolumeGroup {
-			return fmt.Errorf("spec.lvm.volumeGroup: Invalid value: %v: field is immutable", cur.Spec.Lvm.VolumeGroup)
-		}
-
-		curDiskMap := make(map[string]localstoragev1.DiskSpec)
-		for _, curDisk := range cur.Spec.Lvm.Disks {
-			curDiskMap[curDisk.Name] = curDisk
-		}
-		for _, oldDisk := range old.Spec.Lvm.Disks {
-			disk, found := curDiskMap[oldDisk.Name]
-			if !found {
-				return fmt.Errorf("spec.lvm.disks: volumeGroup old disk %s is immutable", oldDisk.Name)
+		oldLvmSpec := old.Spec.Lvm
+		if oldLvmSpec == nil && lvmSpec != nil {
+			if err := lvmValidator(lvmSpec); err != nil {
+				return err
 			}
-
-			// TODO: 还需要更详细的校验，后续再实现
-			if len(oldDisk.Identifier) == 0 {
-				continue
-			}
-			if oldDisk.Identifier != disk.Identifier {
-				return fmt.Errorf("spec.lvm.disks: volumeGroup disk identifier %s is immutable", oldDisk.Name)
+		} else {
+			if !reflect.DeepEqual(oldLvmSpec, lvmSpec) {
+				return fmt.Errorf("spec.lvm: Invalid value: %v: field is immutable", oldLvmSpec)
 			}
 		}
 	}
 
-	return nil
-}
-
-// InjectDecoder implements admission.DecoderInjector interface.
-// A decoder will be automatically injected by InjectDecoderInto.
-func (v *LocalstorageValidator) InjectDecoder(d *admission.Decoder) error {
-	v.decoder = d
 	return nil
 }
