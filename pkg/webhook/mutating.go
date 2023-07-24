@@ -82,22 +82,7 @@ func (s *LocalstorageMutate) SetStatus(ls *localstoragev1.LocalStorage, op admis
 
 // SetDisks set the identifier to empty if provider when Created
 func (s *LocalstorageMutate) SetDisks(ls *localstoragev1.LocalStorage, op admissionv1.Operation) {
-	if op == admissionv1.Create {
-		disks := ls.Spec.Disks
-		if disks == nil {
-			return
-		}
-
-		var newDisk []localstoragev1.DiskSpec
-		for _, disk := range disks {
-			if len(disk.Name) == 0 {
-				continue
-			}
-			newDisk = append(newDisk, localstoragev1.DiskSpec{Name: disk.Name})
-		}
-
-		ls.Spec.Disks = newDisk
-	}
+	// TODO:
 }
 
 func (s *LocalstorageMutate) SetVolumes(ls *localstoragev1.LocalStorage, op admissionv1.Operation) {
