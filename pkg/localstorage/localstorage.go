@@ -65,7 +65,6 @@ type Config struct {
 	Endpoint      string
 	VendorVersion string
 	NodeId        string
-	VolumeDir     string
 }
 
 func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*localStorage, error) {
@@ -147,20 +146,32 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
-
-	// TODO: Optimise later
-	nodeSize, ok := l.Annotations[annNodeSize]
-	if !ok {
-		return fmt.Errorf("failed to found node localstorage size")
-	}
-	klog.Infof("get node size %s from annotations", nodeSize)
-	quantity, err := resource.ParseQuantity(nodeSize)
-	if err != nil {
-		return fmt.Errorf("failed to parse node quantity: %v", err)
+	if l.Spec.Path == nil && l.Spec.Lvm == nil {
+		klog.Infof("Waiting for setup localstorage backend")
+		return nil
 	}
 
-	if err = makeVolumeDir(ls.config.VolumeDir); err != nil {
-		return err
+	var quantity resource.Quantity
+
+	if l.Spec.Path != nil {
+		nodeSize, ok := l.Annotations[annNodeSize]
+		if !ok {
+			// TODO: optimise
+			nodeSize = "500Gi"
+		}
+		klog.Infof("get node size %s from annotations", nodeSize)
+		quantity, err = resource.ParseQuantity(nodeSize)
+		if err != nil {
+			return fmt.Errorf("failed to parse node quantity: %v", err)
+		}
+
+		if err = makeVolumeDir(l.Spec.Path.Path); err != nil {
+			return err
+		}
+	}
+
+	if l.Spec.Lvm != nil {
+		klog.Warningf("unsupported localstorage backend: lvm")
 	}
 
 	l.Status.Capacity = &quantity
