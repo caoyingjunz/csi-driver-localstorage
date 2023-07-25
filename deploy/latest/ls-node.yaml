@@ -109,7 +109,6 @@ spec:
           args:
             - "-v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--volume-dir=/data"
           env:
             - name: NODE_NAME
               valueFrom:
