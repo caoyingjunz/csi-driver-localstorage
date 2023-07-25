@@ -37,13 +37,15 @@ import (
 	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 const (
 	DefaultDriverName = "localstorage.csi.caoyingjunz.io"
 
-	annNodeSize = "volume.caoyingjunz.io/node-size"
-	maxRetries  = 15
+	annNodeSize     = "volume.caoyingjunz.io/node-size"
+	defaultPathSize = "500Gi"
+	maxRetries      = 15
 )
 
 type localStorage struct {
@@ -146,39 +148,46 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
+
 	if l.Spec.Path == nil && l.Spec.Lvm == nil {
-		klog.Infof("Waiting for setup localstorage backend")
+		klog.Infof("Waiting for localstorage backend setup")
 		return nil
+	}
+	if l.Spec.Path != nil && l.Spec.Lvm != nil {
+		// never happen
+		return fmt.Errorf("spec.path and spec.lvm can only be used at most one")
 	}
 
 	var quantity resource.Quantity
-
+	// handle hostPath backend
 	if l.Spec.Path != nil {
 		nodeSize, ok := l.Annotations[annNodeSize]
 		if !ok {
-			// TODO: optimise
-			nodeSize = "500Gi"
+			nodeSize = defaultPathSize
 		}
-		klog.Infof("get node size %s from annotations", nodeSize)
+		klog.Infof("get node size %s from annotations or default", nodeSize)
 		quantity, err = resource.ParseQuantity(nodeSize)
 		if err != nil {
 			return fmt.Errorf("failed to parse node quantity: %v", err)
 		}
 
+		// setup volume base dir
 		if err = makeVolumeDir(l.Spec.Path.Path); err != nil {
 			return err
 		}
 	}
-
+	// handle lvm backend
 	if l.Spec.Lvm != nil {
+		// TODO
 		klog.Warningf("unsupported localstorage backend: lvm")
+		return nil
 	}
 
 	l.Status.Capacity = &quantity
 	l.Status.Allocatable = &quantity
 	util.SetLocalStoragePhase(l, localstoragev1.LocalStorageReady)
 
-	return util.TryUpdateLocalStorage(ls.client, l)
+	return storageutil.TryUpdateLocalStorage(ls.client, l)
 }
 
 func (ls *localStorage) updateStorage(old, cur interface{}) {

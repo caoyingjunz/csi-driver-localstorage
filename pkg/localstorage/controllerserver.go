@@ -17,9 +17,6 @@ limitations under the License.
 package localstorage
 
 import (
-	"os"
-	"path/filepath"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
@@ -60,28 +57,26 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	if err != nil {
 		return nil, err
 	}
-
-	volumeID := uuid.New().String()
-
-	// TODO: 临时实现，后续修改
-	path := ls.parseVolumePath(volumeID)
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
-		return nil, err
-	}
-	// 给目录赋权限（目录在创建时由于umask原因，即使是给满权限，也有可能会把你的权限给降低，所以采用后置赋权）
-	if err = os.Chmod(path, os.ModePerm); err != nil {
-		return nil, err
-	}
-
 	// Deep-copy otherwise we are mutating our cache.
 	// TODO: Deep-copy only when needed.
 	s := localstorage.DeepCopy()
+
+	baseDir, err := storageutil.GetPathDirFromLocalStorage(s)
+	if err != nil {
+		return nil, err
+	}
+	volumeID := uuid.New().String()
+
+	volPath := parseVolumePath(baseDir, volumeID)
+	if err = storageutil.CreateVolumeDir(volPath); err != nil {
+		return nil, err
+	}
 
 	volSize := req.GetCapacityRange().GetRequiredBytes()
 	util.AddVolume(s, localstoragev1.Volume{
 		VolID:   volumeID,
 		VolName: name,
-		VolPath: path,
+		VolPath: volPath,
 		VolSize: volSize,
 	})
 	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, volSize, SubOperation)
@@ -95,7 +90,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	if volumeContext == nil {
 		volumeContext = make(map[string]string)
 	}
-	volumeContext["localPath.caoyingjunz.io"] = path
+	volumeContext["localPath.caoyingjunz.io"] = volPath
 
 	klog.Infof("pvc %v volume %v successfully deleted", name, volumeID)
 	return &csi.CreateVolumeResponse{
@@ -122,11 +117,15 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	if err != nil {
 		return nil, err
 	}
-	volId := req.GetVolumeId()
-
 	// Deep-copy otherwise we are mutating our cache.
 	// TODO: Deep-copy only when needed.
 	s := localstorage.DeepCopy()
+
+	baseDir, err := storageutil.GetPathDirFromLocalStorage(s)
+	if err != nil {
+		return nil, err
+	}
+	volId := req.GetVolumeId()
 
 	vol := util.RemoveVolume(s, volId)
 	s.Status.Allocatable = ls.calculateAllocatedSize(s.Status.Allocatable, vol.VolSize, AddOperation)
@@ -136,8 +135,8 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 		return nil, err
 	}
 
-	// TODO: 临时处理
-	if err := os.RemoveAll(ls.parseVolumePath(volId)); err != nil && !os.IsNotExist(err) {
+	volPath := parseVolumePath(baseDir, volId)
+	if err = storageutil.DeleteVolumeDir(volPath); err != nil {
 		return nil, err
 	}
 	klog.Infof("volume %v successfully deleted", volId)
@@ -155,11 +154,6 @@ func (ls *localStorage) calculateAllocatedSize(allocatableSize *resource.Quantit
 	}
 
 	return allocatableSize
-}
-
-// parseVolumePath returns the canonical path for volume
-func (ls *localStorage) parseVolumePath(volID string) string {
-	return filepath.Join(ls.config.VolumeDir, volID)
 }
 
 func (ls *localStorage) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {

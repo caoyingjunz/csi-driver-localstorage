@@ -158,7 +158,6 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
-		// TODO: to delete some external localstorage object
 		if !util.LocalStorageIsTerminating(ls) {
 			util.SetLocalStoragePhase(ls, localstoragev1.LocalStorageTerminating)
 			return util.TryUpdateLocalStorage(s.client, ls)
