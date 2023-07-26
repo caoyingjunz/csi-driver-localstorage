@@ -29,17 +29,6 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
 - 安装 [LocalStorage 调度扩展](./docs/scheduler-extender.md)
 
-- 创建 `localstorage` 资源
-  ```shell
-  # 修改 examples/ls.yaml, 多个 node 节点需要多次创建
-  kubectl apply -f examples/ls.yaml
-
-  # 验证
-  kubectl get ls
-  NAME         STATUS   KUBENODE   ALLOCATABLE   CAPACITY   AGE
-  ls-pixiu01   Ready    pixiu01    360Gi         360Gi      16d
-  ```
-
 - 安装 `storageclass`
   ```shell
   kubectl apply -f deploy/ls-storageclass.yaml
