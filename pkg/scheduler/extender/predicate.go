@@ -51,7 +51,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
 	}
 	if pvc == nil {
-		klog.Infof("ignore schedule namespace(%s) name(%s)", pod.Namespace, pod.Name)
+		klog.Infof("ignore filter namespace(%s) name(%s)", pod.Namespace, pod.Name)
 		return &extenderv1.ExtenderFilterResult{
 			NodeNames: args.NodeNames,
 			Nodes:     args.Nodes,
@@ -62,7 +62,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		return &extenderv1.ExtenderFilterResult{Error: fmt.Sprintf("failed to find pvc %s request quantity", pvc.Name)}
 	}
 
-	klog.Infof("starting schedule namespace(%s) name(%s)", pod.Namespace, pod.Name)
+	klog.Infof("starting filter namespace(%s) name(%s)", pod.Namespace, pod.Name)
 	localstorageMap, err := storageutil.GetLocalStorageMap(p.lsLister)
 	if err != nil {
 		return &extenderv1.ExtenderFilterResult{Error: err.Error()}
@@ -89,7 +89,7 @@ func (p *Predicate) Filter(args extenderv1.ExtenderArgs) *extenderv1.ExtenderFil
 		scheduleNodes = append(scheduleNodes, nodeName)
 	}
 
-	klog.Infof("schedule localstorage pods on nodes: %v", scheduleNodes)
+	klog.Infof("filter localstorage pods on nodes: %v", scheduleNodes)
 	return &extenderv1.ExtenderFilterResult{
 		NodeNames:   &scheduleNodes,
 		Nodes:       args.Nodes,

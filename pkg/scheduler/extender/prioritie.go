@@ -83,5 +83,9 @@ func (p *Prioritize) score(ls *localstoragev1.LocalStorage) int64 {
 	allocatable := localstorage.Status.Allocatable
 	capacity := localstorage.Status.Capacity
 
-	return allocatable.Value() * allocatable.Value() / capacity.Value()
+	// TODO optimise score algorithm
+	// 临时处理，后续优化
+	score := 100 * allocatable.AsApproximateFloat64() / capacity.AsApproximateFloat64()
+	klog.V(2).Infof("ls %s get %v score", ls.Name, score)
+	return int64(score)
 }
