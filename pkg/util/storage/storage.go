@@ -203,7 +203,7 @@ func TryUpdateLocalStorage(client versioned.Interface, ls *localstoragev1.LocalS
 
 func GetPathDirFromLocalStorage(ls *localstoragev1.LocalStorage) (string, error) {
 	if ls.Spec.Path != nil {
-		return ls.Spec.Path.Path, nil
+		return ls.Spec.Path.VolumeDir, nil
 	}
 
 	return "", fmt.Errorf("spec.path is nil")
