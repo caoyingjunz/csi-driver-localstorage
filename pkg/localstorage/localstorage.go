@@ -173,8 +173,8 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 		}
 
 		// setup volume base dir
-		if err = makeVolumeDir(l.Spec.Path.Path); err != nil {
-			klog.Errorf("failed to create volume path: %v", l.Spec.Path.Path)
+		if err = makeVolumeDir(l.Spec.Path.VolumeDir); err != nil {
+			klog.Errorf("failed to create volume path: %v", l.Spec.Path.VolumeDir)
 			return err
 		}
 	}
