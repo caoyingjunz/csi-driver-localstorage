@@ -75,7 +75,7 @@ spec:
               path:
                 description: Path localstorage hostPath volume spec
                 properties:
-                  path:
+                  volumeDir:
                     type: string
                 type: object
             type: object
@@ -95,6 +95,8 @@ spec:
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               conditions:
+                type: string
+              mode:
                 type: string
               phase:
                 description: Localstorage phase

@@ -72,7 +72,7 @@ type LocalStorageSpec struct {
 }
 
 type PathSpec struct {
-	Path string `json:"path,omitempty"`
+	VolumeDir string `json:"volumeDir,omitempty"`
 }
 
 type LvmSpec struct {

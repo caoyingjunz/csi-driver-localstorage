@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"google.golang.org/grpc"
@@ -59,4 +60,9 @@ func makeVolumeDir(volDir string) error {
 	}
 
 	return nil
+}
+
+// parseVolumePath returns the canonical path for volume
+func parseVolumePath(baseDir, volID string) string {
+	return filepath.Join(baseDir, volID)
 }

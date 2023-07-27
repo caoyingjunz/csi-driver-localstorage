@@ -38,6 +38,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 const (
@@ -158,10 +159,9 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 
 	// Handler deletion event
 	if !ls.DeletionTimestamp.IsZero() {
-		// TODO: to delete some external localstorage object
 		if !util.LocalStorageIsTerminating(ls) {
 			util.SetLocalStoragePhase(ls, localstoragev1.LocalStorageTerminating)
-			return util.TryUpdateLocalStorage(s.client, ls)
+			return storageutil.TryUpdateLocalStorage(s.client, ls)
 		}
 		return nil
 	}
@@ -169,7 +169,7 @@ func (s *StorageController) syncStorage(ctx context.Context, dKey string) error 
 	// Handler initialize Phase
 	if util.LocalStorageIsPending(ls) {
 		util.SetLocalStoragePhase(ls, localstoragev1.LocalStorageInitiating)
-		if err = util.TryUpdateLocalStorage(s.client, ls); err != nil {
+		if err = storageutil.TryUpdateLocalStorage(s.client, ls); err != nil {
 			return err
 		}
 		s.eventRecorder.Eventf(ls, v1core.EventTypeNormal, "initialize", fmt.Sprintf("waiting for plugin to initialize %s localstorage", ls.Name))

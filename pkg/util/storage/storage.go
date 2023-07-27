@@ -19,6 +19,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -75,7 +76,6 @@ func GetLocalStorageMap(lsLister localstorage.LocalStorageLister) (map[string]*l
 
 // CreateLocalStorage create localstorage if not present
 func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versioned.Interface) error {
-	// TODO: need to optimise
 	// Get all exists kubernetes nodes
 	nodes, err := kubeClientSet.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -83,12 +83,12 @@ func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versione
 	}
 
 	// Get all exist localstorage object
-	localstorages, err := lsClientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
+	localStorages, err := lsClientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	localstorageMap := make(map[string]localstoragev1.LocalStorage)
-	for _, localstorage := range localstorages.Items {
+	for _, localstorage := range localStorages.Items {
 		localstorageMap[localstorage.Spec.Node] = localstorage
 	}
 
@@ -106,13 +106,9 @@ func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versione
 				continue
 			}
 
-			// TODO: to optimise
 			if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "ls-" + node.Name,
-					Annotations: map[string]string{
-						"volume.caoyingjunz.io/node-size": "500Gi",
-					},
 				},
 				Spec: localstoragev1.LocalStorageSpec{
 					Node: node.Name,
@@ -195,4 +191,40 @@ func PodIsUseLocalStorage(pod *v1.Pod, pvcLister corelisters.PersistentVolumeCla
 	}
 
 	return pvc != nil, nil
+}
+
+func TryUpdateLocalStorage(client versioned.Interface, ls *localstoragev1.LocalStorage) error {
+	_, err := client.
+		StorageV1().
+		LocalStorages().
+		Update(context.TODO(), ls, metav1.UpdateOptions{})
+	return err
+}
+
+func GetPathDirFromLocalStorage(ls *localstoragev1.LocalStorage) (string, error) {
+	if ls.Spec.Path != nil {
+		return ls.Spec.Path.VolumeDir, nil
+	}
+
+	return "", fmt.Errorf("spec.path is nil")
+}
+
+func CreateVolumeDir(path string) error {
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		return err
+	}
+	// 给目录赋权限（目录在创建时由于umask原因，即使是给满权限，也有可能会把你的权限给降低，所以采用后置赋权）
+	if err := os.Chmod(path, os.ModePerm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteVolumeDir(path string) error {
+	if err := os.RemoveAll(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
 }

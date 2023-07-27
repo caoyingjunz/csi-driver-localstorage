@@ -184,7 +184,7 @@ func (v *LocalstorageValidator) validateStorageBackend(ctx context.Context, old,
 func (v *LocalstorageValidator) validatePath(ctx context.Context, old, cur *localstoragev1.LocalStorage, op admissionv1.Operation) error {
 	pathSpec := cur.Spec.Path
 	pathValidator := func(p *localstoragev1.PathSpec) error {
-		if len(p.Path) == 0 {
+		if len(p.VolumeDir) == 0 {
 			return fmt.Errorf("spec.path.path may not be empty when use path")
 		}
 		return nil
