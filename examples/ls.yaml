@@ -9,7 +9,7 @@ spec:
   node: pixiu-node
   # 指定 path 模式时的 volume 文件夹
   path:
-    path: /data
+    volumeDir: /data
   # 指定 vlm 模式时的磁盘配置
   lvm:
     volumeGroup: pixiu

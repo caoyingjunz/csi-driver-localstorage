@@ -67,6 +67,7 @@ type Config struct {
 	Endpoint      string
 	VendorVersion string
 	NodeId        string
+	VolumeDir     string
 }
 
 func NewLocalStorage(ctx context.Context, cfg Config, lsInformer v1.LocalStorageInformer, lsClientSet versioned.Interface, kubeClientSet kubernetes.Interface) (*localStorage, error) {
@@ -173,6 +174,7 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 		// setup volume base dir
 		if err = makeVolumeDir(l.Spec.Path.Path); err != nil {
+			klog.Errorf("failed to create volume path: %v", l.Spec.Path.Path)
 			return err
 		}
 	}

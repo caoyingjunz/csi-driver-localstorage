@@ -61,13 +61,8 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	// TODO: Deep-copy only when needed.
 	s := localstorage.DeepCopy()
 
-	baseDir, err := storageutil.GetPathDirFromLocalStorage(s)
-	if err != nil {
-		return nil, err
-	}
 	volumeID := uuid.New().String()
-
-	volPath := parseVolumePath(baseDir, volumeID)
+	volPath := parseVolumePath(ls.config.VolumeDir, volumeID)
 	if err = storageutil.CreateVolumeDir(volPath); err != nil {
 		return nil, err
 	}
@@ -121,10 +116,6 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 	// TODO: Deep-copy only when needed.
 	s := localstorage.DeepCopy()
 
-	baseDir, err := storageutil.GetPathDirFromLocalStorage(s)
-	if err != nil {
-		return nil, err
-	}
 	volId := req.GetVolumeId()
 
 	vol := util.RemoveVolume(s, volId)
@@ -135,7 +126,7 @@ func (ls *localStorage) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeR
 		return nil, err
 	}
 
-	volPath := parseVolumePath(baseDir, volId)
+	volPath := parseVolumePath(ls.config.VolumeDir, volId)
 	if err = storageutil.DeleteVolumeDir(volPath); err != nil {
 		return nil, err
 	}

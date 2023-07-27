@@ -36,6 +36,7 @@ var (
 	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
 	nodeId     = flag.String("nodeid", "", "node id")
+	volumeDir  = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
 
 	kubeconfig   = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
 	kubeAPIQPS   = flag.Int("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5")
@@ -63,6 +64,7 @@ func main() {
 		Endpoint:      *endpoint,
 		VendorVersion: version,
 		NodeId:        *nodeId,
+		VolumeDir:     *volumeDir,
 	}
 	if len(cfg.NodeId) == 0 {
 		klog.V(2).Infof("Get node name from env")
