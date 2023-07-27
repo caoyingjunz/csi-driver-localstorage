@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 	"net/http"
 	"os"
 	"time"
@@ -37,6 +38,8 @@ var (
 	driverName = flag.String("drivername", localstorage.DefaultDriverName, "name of the driver")
 	nodeId     = flag.String("nodeid", "", "node id")
 	volumeDir  = flag.String("volume-dir", "/tmp", "directory for storing state information across driver volumes")
+
+	createLocalstorage = flag.Bool("create-localstorage", false, "Create localstorage object if not present")
 
 	kubeconfig   = flag.String("kubeconfig", "", "paths to a kubeconfig. Only required if out-of-cluster.")
 	kubeAPIQPS   = flag.Int("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5")
@@ -94,6 +97,13 @@ func main() {
 	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
 	if err != nil {
 		klog.Fatal("failed to build clientSets: %v", err)
+	}
+
+	if *createLocalstorage {
+		klog.Infof("Creating localstorage cr when localstorage plugin started")
+		if err = storageutil.CreateLocalStorage(lsClientSet, cfg.NodeId); err != nil {
+			klog.Warningf("Failed to create localstorage cr: %v", err)
+		}
 	}
 
 	sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)

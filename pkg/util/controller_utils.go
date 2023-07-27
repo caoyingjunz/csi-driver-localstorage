@@ -25,7 +25,7 @@ func AssignedLocalstorage(ls *localstoragev1.LocalStorage, nodeId string) bool {
 	if ls.Spec.Node != nodeId {
 		return false
 	}
-	return LocalStorageIsInitiating(ls)
+	return LocalStorageIsInitiating(ls) || LocalStorageIsPending(ls)
 }
 
 func LocalStorageIsPending(ls *localstoragev1.LocalStorage) bool {
