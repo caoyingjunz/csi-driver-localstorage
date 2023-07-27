@@ -150,6 +150,11 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 	// Deep copy otherwise we are mutating the cache.
 	l := localstorage.DeepCopy()
 
+	// Set localstorage status to Init
+	if util.LocalStorageIsPending(l) {
+		return storageutil.UpdateLocalStoragePhase(ls.client, l, localstoragev1.LocalStorageInitiating)
+	}
+
 	if l.Spec.Path == nil && l.Spec.Lvm == nil {
 		klog.Infof("Waiting for localstorage backend setup")
 		return nil
@@ -187,9 +192,7 @@ func (ls *localStorage) sync(ctx context.Context, dKey string) error {
 
 	l.Status.Capacity = &quantity
 	l.Status.Allocatable = &quantity
-	util.SetLocalStoragePhase(l, localstoragev1.LocalStorageReady)
-
-	return storageutil.TryUpdateLocalStorage(ls.client, l)
+	return storageutil.UpdateLocalStoragePhase(ls.client, l, localstoragev1.LocalStorageReady)
 }
 
 func (ls *localStorage) updateStorage(old, cur interface{}) {
