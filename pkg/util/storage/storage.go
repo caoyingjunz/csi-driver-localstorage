@@ -25,7 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	storagelisters "k8s.io/client-go/listers/storage/v1"
 
@@ -75,48 +74,32 @@ func GetLocalStorageMap(lsLister localstorage.LocalStorageLister) (map[string]*l
 }
 
 // CreateLocalStorage create localstorage if not present
-func CreateLocalStorage(kubeClientSet kubernetes.Interface, lsClientSet versioned.Interface) error {
-	// Get all exists kubernetes nodes
-	nodes, err := kubeClientSet.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
+func CreateLocalStorage(lsClientSet versioned.Interface, nodeName string) error {
 	// Get all exist localstorage object
 	localStorages, err := lsClientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-	localstorageMap := make(map[string]localstoragev1.LocalStorage)
-	for _, localstorage := range localStorages.Items {
-		localstorageMap[localstorage.Spec.Node] = localstorage
+	for _, ls := range localStorages.Items {
+		// do nothing if the localstorage present
+		if ls.Spec.Node == nodeName {
+			return nil
+		}
 	}
 
-	for _, node := range nodes.Items {
-		labels := node.GetLabels()
-		if labels == nil {
-			continue
-		}
-
-		// check whether need to created
-		_, exists := labels[types.LabelStorageNode]
-		if exists {
-			_, found := localstorageMap[node.Name]
-			if found {
-				continue
-			}
-
-			if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ls-" + node.Name,
-				},
-				Spec: localstoragev1.LocalStorageSpec{
-					Node: node.Name,
-				},
-			}, metav1.CreateOptions{}); err != nil {
-				return err
-			}
-		}
+	if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ls-" + nodeName,
+		},
+		Spec: localstoragev1.LocalStorageSpec{
+			Node: nodeName,
+			// TODO: 先阶段仅支持 path 模式
+			Path: &localstoragev1.PathSpec{
+				VolumeDir: "/data",
+			},
+		},
+	}, metav1.CreateOptions{}); err != nil {
+		return err
 	}
 
 	return nil
@@ -201,7 +184,12 @@ func TryUpdateLocalStorage(client versioned.Interface, ls *localstoragev1.LocalS
 	return err
 }
 
-func GetPathDirFromLocalStorage(ls *localstoragev1.LocalStorage) (string, error) {
+func UpdateLocalStoragePhase(client versioned.Interface, ls *localstoragev1.LocalStorage, Phase localstoragev1.LocalStoragePhase) error {
+	ls.Status.Phase = Phase
+	return TryUpdateLocalStorage(client, ls)
+}
+
+func GetVolumeDirFromLocalStorage(ls *localstoragev1.LocalStorage) (string, error) {
 	if ls.Spec.Path != nil {
 		return ls.Spec.Path.VolumeDir, nil
 	}
