@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 	"net/http"
 	"os"
 	"time"
@@ -31,6 +30,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
+	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 )
 
 var (
