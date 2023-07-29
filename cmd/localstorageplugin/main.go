@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
