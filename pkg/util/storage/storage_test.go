@@ -27,7 +27,6 @@ import (
 
 	clientsetfake "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned/fake"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
 	"github.com/caoyingjunz/csi-driver-localstorage/testing/wrapper"
 )
 
@@ -68,7 +67,7 @@ func TestCreateLocalStorage(t *testing.T) {
 	informerFactory.WaitForCacheSync(ctx.Done())
 
 	for _, test := range tests {
-		if err := storage.CreateLocalStorage(lsClient, test.nodeName); err != nil {
+		if err := CreateLocalStorage(lsClient, test.nodeName); err != nil {
 			t.Errorf("case name: %s, create localstorage failed, err: %v\n", test.name, err)
 		}
 
