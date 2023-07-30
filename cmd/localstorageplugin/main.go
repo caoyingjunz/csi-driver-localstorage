@@ -25,10 +25,8 @@ import (
 	// import pprof for performance diagnosed
 	_ "net/http/pprof"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/localstorage"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
@@ -53,44 +51,18 @@ var (
 	pprofPort   = flag.String("pprof-port", "6060", "The port of pprof to listen on")
 )
 
+func init() {
+	_ = flag.Set("logtostderr", "true")
+}
+
 var (
 	version = "v1.0.0"
 )
 
-var (
-	kubeClient  kubernetes.Interface
-	lsClientSet versioned.Interface
-)
-
-func init() {
-	_ = flag.Set("logtostderr", "true")
-
+func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
-	if err != nil {
-		klog.Fatalf("Failed to build kube config: %v", err)
-	}
-
-	kubeConfig.QPS = float32(*kubeAPIQPS)
-	kubeConfig.Burst = *kubeAPIBurst
-
-	kubeClient, lsClientSet, err = util.NewClientSets(kubeConfig)
-	if err != nil {
-		klog.Fatal("failed to build clientSets: %v", err)
-	}
-
-	// Create localstorage object if not present
-	if *createLocalstorage {
-		klog.Infof("Creating localstorage cr when localstorage plugin started")
-		if err := storageutil.CreateLocalStorage(lsClientSet, *nodeId); err != nil {
-			klog.Warningf("Failed to create localstorage cr: %v", err)
-		}
-	}
-}
-
-func main() {
 	cfg := localstorage.Config{
 		DriverName:    *driverName,
 		Endpoint:      *endpoint,
@@ -115,6 +87,25 @@ func main() {
 
 	// set up signals so we handle the shutdown signal gracefully
 	ctx := signals.SetupSignalHandler()
+
+	kubeConfig, err := util.BuildClientConfig(*kubeconfig)
+	if err != nil {
+		klog.Fatalf("Failed to build kube config: %v", err)
+	}
+	kubeConfig.QPS = float32(*kubeAPIQPS)
+	kubeConfig.Burst = *kubeAPIBurst
+
+	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
+	if err != nil {
+		klog.Fatal("failed to build clientSets: %v", err)
+	}
+
+	if *createLocalstorage {
+		klog.Infof("Creating localstorage cr when localstorage plugin started")
+		if err = storageutil.CreateLocalStorage(lsClientSet, cfg.NodeId); err != nil {
+			klog.Warningf("Failed to create localstorage cr: %v", err)
+		}
+	}
 
 	sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 	driver, err := localstorage.NewLocalStorage(ctx, cfg,

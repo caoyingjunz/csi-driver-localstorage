@@ -23,6 +23,7 @@ import (
 
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -35,7 +36,7 @@ import (
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
-	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
+	v1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions/localstorage/v1"
 	localstorage "github.com/caoyingjunz/csi-driver-localstorage/pkg/client/listers/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
 	storageutil "github.com/caoyingjunz/csi-driver-localstorage/pkg/util/storage"
@@ -264,4 +265,34 @@ func (s *StorageController) enqueueAfter(ls *localstoragev1.LocalStorage, after 
 	}
 
 	s.queue.AddAfter(key, after)
+}
+
+// 检查环境中的 localstorage 是否和 node 一一对应，缺少的 localstorage 自动创建
+func (s *StorageController) EnsureLocalstorage(ctx context.Context) {
+	// 获取环境中的 localstorage
+	lsMap, err := storageutil.GetLocalStorageMap(s.lsLister)
+	if err != nil {
+		klog.V(2).InfoS("get localstorage map failed, err: %v", err)
+		return
+	}
+
+	// 获取环境中的 node
+	nodeList, err := s.kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		klog.V(2).InfoS("get node list failed, err: %v", err)
+		return
+	}
+
+	var errList []error
+	for _, node := range nodeList.Items {
+		if _, ok := lsMap[node.Name]; !ok {
+			if err := storageutil.CreateLocalStorage(s.client, node.Name); err != nil {
+				errList = append(errList, fmt.Errorf("create localstorage for node: %s failed, err: %v", node.Name, err))
+			}
+		}
+	}
+
+	if len(errList) != 0 {
+		klog.V(2).InfoS(fmt.Errorf("meet errors in create localstorage, errors: %v", errList).Error())
+	}
 }

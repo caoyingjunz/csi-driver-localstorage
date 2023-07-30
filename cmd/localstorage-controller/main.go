@@ -145,6 +145,7 @@ func main() {
 
 		klog.Infof("Starting localstorage controller")
 		go sc.Run(ctx, workers)
+		go wait.UntilWithContext(ctx, sc.EnsureLocalstorage, time.Second)
 
 		sharedInformer.Start(ctx.Done())
 		sharedInformer.WaitForCacheSync(ctx.Done())
