@@ -39,6 +39,20 @@ func (n *NodeWrapper) WithName(name string) *NodeWrapper {
 	return n
 }
 
+// 为 node 设置 annotations
+func (n *NodeWrapper) WithDefaultAnnots(annot string) *NodeWrapper {
+	if n.Annotations == nil {
+		n.Annotations = make(map[string]string)
+	}
+	n.Annotations["default"] = annot
+	return n
+}
+
+func (n *NodeWrapper) WithCsiDriverNodeIDAnnots(csiDriverNodeID string) *NodeWrapper {
+	n.Annotations["csi.volume.caoyingjunz.io/nodeid"] = csiDriverNodeID
+	return n
+}
+
 type LocalStorageWrapper struct{ localstoragev1.LocalStorage }
 
 func MakeLocalStorage() *LocalStorageWrapper {
