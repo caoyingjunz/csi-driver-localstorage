@@ -12,7 +12,15 @@ env:
   GO_VERSION: '1.17.3'
 
 jobs:
-  misspell-check:
+  yaml-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: lint YAML files
+        run: yamllint -s .
+
+  markdown-lint:
     runs-on: ubuntu-latest
     container: pouchcontainer/pouchlinter:v0.1.2
     steps:
