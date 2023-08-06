@@ -18,7 +18,6 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 - 安装 `localstorage` 组件
   ```shell
   kubectl apply -f deploy/crds
-
   kubectl apply -f deploy/latest
 
   # 验证
