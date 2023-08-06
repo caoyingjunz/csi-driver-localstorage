@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pixiu-ls-controller
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pixiu-ls-controller
+  template:
+    metadata:
+      labels:
+        app: pixiu-ls-controller
+    spec:
+      serviceAccountName: csi-ls-node-sa
+      containers:
+        - args:
+            - -v=2
+            # port's value equals 0 means health check func disabled
+            - --healthz-port=10258
+            - --cert-dir=/tmp/cert
+            - --port=8443
+          image: pixiuio/localstorage-controller:v1.0.3
+          imagePullPolicy: Always
+          name: ls-controller
+          volumeMounts:
+            - mountPath: /tmp/cert
+              name: cert
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10258
+            failureThreshold: 5
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 5
+      dnsPolicy: Default
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: Always
+      volumes:
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: pixiu-localstorage-cert

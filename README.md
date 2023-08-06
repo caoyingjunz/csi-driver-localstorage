@@ -12,12 +12,13 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 ### Installation
 - 选择运行 `localstorage` 的 `kubernetes` 节点
   ```shell
-  kubectl  label node <node-name> storage.caoyingjunz.io/node=
+  kubectl label node <node-name> storage.caoyingjunz.io/node=
   ```
 
 - 安装 `localstorage` 组件
   ```shell
   kubectl apply -f deploy/crds
+
   kubectl apply -f deploy/latest
 
   # 验证
