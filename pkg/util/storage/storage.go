@@ -80,12 +80,12 @@ func CreateLocalStorages(lsClientSet versioned.Interface, nodeNames ...string) e
 	if len(nodeNames) == 0 {
 		return nil
 	}
+
 	// Get all exist localstorage object
 	localStorages, err := lsClientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-
 	lsNodeNames := sets.NewString()
 	for _, ls := range localStorages.Items {
 		// do nothing if the localstorage present
@@ -96,7 +96,6 @@ func CreateLocalStorages(lsClientSet versioned.Interface, nodeNames ...string) e
 		if lsNodeNames.Has(nodeName) {
 			continue
 		}
-
 		if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "ls-" + nodeName,
