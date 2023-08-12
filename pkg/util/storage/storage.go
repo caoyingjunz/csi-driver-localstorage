@@ -75,7 +75,7 @@ func GetLocalStorageMap(lsLister localstorage.LocalStorageLister) (map[string]*l
 	return lsMap, nil
 }
 
-// CreateLocalStorages create localstorage if not present
+// CreateLocalStorages create localstorage by node if not present
 func CreateLocalStorages(lsClientSet versioned.Interface, nodeNames ...string) error {
 	if len(nodeNames) == 0 {
 		return nil

@@ -31,6 +31,10 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
 
 - 创建 `localstorage` 资源
   ```shell
+  # 自动创建
+  kubectl apply -f deploy/ls-job.yaml
+
+  # 手动创建
   # 修改 examples/ls.yaml, 多个 node 节点需要多次创建
   kubectl apply -f examples/ls.yaml
 

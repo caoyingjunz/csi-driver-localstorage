@@ -55,4 +55,6 @@ func main() {
 	if err = storageutil.CreateLocalStorages(lsClientSet, nodeNames...); err != nil {
 		klog.Fatalf("Failed to create localstorage nodes: %v", err)
 	}
+
+	klog.Infof("localstorage job has been completed")
 }

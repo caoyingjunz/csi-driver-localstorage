@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pixiu-ls-job
+  namespace: kube-system
+spec:
+  backoffLimit: 6
+  completions: 1
+  parallelism: 1
+  suspend: false
+  template:
+    metadata:
+      labels:
+        app: pixiu-ls-job
+      name: pixiu-ls-job
+    spec:
+      containers:
+      - args:
+        - --create-localstorage
+        image: harbor.powerlaw.club/pixiuio/localstorage-job:latest
+        imagePullPolicy: IfNotPresent
+        name: pixiu-ls-job
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/os: linux
+      restartPolicy: OnFailure
+      serviceAccountName:  csi-ls-node-sa
+      terminationGracePeriodSeconds: 30
