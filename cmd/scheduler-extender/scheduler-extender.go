@@ -49,7 +49,7 @@ func main() {
 	}
 	kubeClient, lsClientSet, err := util.NewClientSets(kubeConfig)
 	if err != nil {
-		klog.Fatal("failed to build clientSets: %v", err)
+		klog.Fatalf("Failed to build clientSets: %v", err)
 	}
 
 	kubeInformer := informers.NewSharedInformerFactory(kubeClient, 300*time.Second)
