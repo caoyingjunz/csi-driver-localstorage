@@ -74,6 +74,15 @@ func NewClientSets(kubeConfig *restclient.Config) (kubernetes.Interface, version
 	return kubeClient, lsClientSet, nil
 }
 
+func NewClientSetsFromConfig(configFile string) (kubernetes.Interface, versioned.Interface, error) {
+	kubeConfig, err := BuildClientConfig(configFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return NewClientSets(kubeConfig)
+}
+
 func CreateRecorder(kubeClient kubernetes.Interface) record.EventRecorder {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
