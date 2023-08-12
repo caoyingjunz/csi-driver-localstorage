@@ -25,8 +25,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	storagelisters "k8s.io/client-go/listers/storage/v1"
+	"k8s.io/klog/v2"
 
 	localstoragev1 "github.com/caoyingjunz/csi-driver-localstorage/pkg/apis/localstorage/v1"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
@@ -73,33 +75,44 @@ func GetLocalStorageMap(lsLister localstorage.LocalStorageLister) (map[string]*l
 	return lsMap, nil
 }
 
-// CreateLocalStorage create localstorage if not present
-func CreateLocalStorage(lsClientSet versioned.Interface, nodeName string) error {
+// CreateLocalStorages create localstorage if not present
+func CreateLocalStorages(lsClientSet versioned.Interface, nodeNames ...string) error {
+	if len(nodeNames) == 0 {
+		return nil
+	}
 	// Get all exist localstorage object
 	localStorages, err := lsClientSet.StorageV1().LocalStorages().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
+
+	lsNodeNames := sets.NewString()
 	for _, ls := range localStorages.Items {
 		// do nothing if the localstorage present
-		if ls.Spec.Node == nodeName {
-			return nil
-		}
+		lsNodeNames.Insert(ls.Spec.Node)
 	}
 
-	if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "ls-" + nodeName,
-		},
-		Spec: localstoragev1.LocalStorageSpec{
-			Node: nodeName,
-			// TODO: 先阶段仅支持 path 模式
-			Path: &localstoragev1.PathSpec{
-				VolumeDir: "/data",
+	for _, nodeName := range nodeNames {
+		if lsNodeNames.Has(nodeName) {
+			continue
+		}
+
+		if _, err = lsClientSet.StorageV1().LocalStorages().Create(context.TODO(), &localstoragev1.LocalStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ls-" + nodeName,
 			},
-		},
-	}, metav1.CreateOptions{}); err != nil {
-		return err
+			Spec: localstoragev1.LocalStorageSpec{
+				Node: nodeName,
+				// TODO: 先阶段仅支持 path 模式
+				Path: &localstoragev1.PathSpec{
+					VolumeDir: "/data",
+				},
+			},
+		}, metav1.CreateOptions{}); err != nil {
+			return err
+		}
+
+		klog.Infof("Create %s localstorage success", nodeName)
 	}
 
 	return nil

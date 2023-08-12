@@ -41,13 +41,18 @@ func main() {
 		klog.Fatalf("Failed to build clientSets: %v", err)
 	}
 
-	nodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: ""})
+	nodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "storage.caoyingjunz.io/node",
+	})
 	if err != nil {
 		klog.Fatalf("Failed to get localstorage nodes: %v", err)
 	}
+
+	var nodeNames []string
 	for _, node := range nodes.Items {
-		if err = storageutil.CreateLocalStorage(lsClientSet, node.Name); err != nil {
-			klog.Fatalf("Failed to create localstorage nodes: %v", err)
-		}
+		nodeNames = append(nodeNames, node.Name)
+	}
+	if err = storageutil.CreateLocalStorages(lsClientSet, nodeNames...); err != nil {
+		klog.Fatalf("Failed to create localstorage nodes: %v", err)
 	}
 }
