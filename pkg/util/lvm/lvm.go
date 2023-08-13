@@ -18,6 +18,14 @@ package lvm
 
 import "sync"
 
+const (
+	cmdPhysicalVolumeCreate string = "pvcreate"
+	cmdPhysicalVolumeDelete string = "pvmove"
+
+	cmdVolumeGroupCreate string = "vgcreate"
+	cmdVolumeGroupExtend string = "vgextend"
+)
+
 type Interface interface {
 	EnsureVolumeGroup(vg string) (bool, error)
 	DeleteVolumeGroup(vg string) error
