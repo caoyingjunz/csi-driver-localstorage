@@ -7,7 +7,6 @@ spec:
   backoffLimit: 6
   completions: 1
   parallelism: 1
-  suspend: false
   template:
     metadata:
       labels:
