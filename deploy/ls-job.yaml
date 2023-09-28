@@ -16,7 +16,7 @@ spec:
       containers:
       - args:
         - --create-localstorage
-        image: harbor.powerlaw.club/pixiuio/localstorage-job:latest
+        image: harbor.cloud.pixiuio.com/pixiuio/localstorage-job:latest
         imagePullPolicy: IfNotPresent
         name: pixiu-ls-job
       dnsPolicy: ClusterFirst
