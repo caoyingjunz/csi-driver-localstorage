@@ -1,45 +1,42 @@
-.PHONY: run image push vendor client-gen clean
+.PHONY: run build image push vendor client-gen clean
 
 dockerhubUser = harbor.cloud.pixiuio.com/pixiuio
 tag = latest
-apps ?= $(shell ls cmd)
-appName ?= $(app)
+app ?=
+ifeq ($(app),)
+apps = $(shell ls cmd)
+else
+apps = $(app)
+endif
+targetDir ?= dist
 
 # check if app name is valid
 check:
-	@if [ ! -d "cmd/$(appName)" ]; then \
-		echo "cmd/$(appName) not exist"; \
-		echo "Please check your app name"; \
-		for app in $(apps); do \
-			echo "Example: make xxx app=$$app"; \
-			break; \
-		done; \
-		exit 1; \
-	fi
+	@$(foreach app, $(apps), \
+		if [ ! -d "cmd/$(app)" ]; then \
+			echo "cmd/$(app) does not exist"; \
+			echo "Please check your app name"; \
+			exit 1; \
+		fi;)
+
+# build all apps
+build: check
+	@$(foreach app, $(apps), \
+		echo "Building $(app)"; \
+		CGO_ENABLED=0 go build -ldflags "-s -w" -o $(targetDir)/$(app) ./cmd/$(app);)
 
 # build all images
 image: check
-	@if [ -z "$(appName)" ]; then \
-		for app in $(apps); do \
-          	echo "Building $$app"; \
-        	docker build -t $(dockerhubUser)/$$app:$(tag) --no-cache --build-arg APP=$$app .; \
-    	done \
-    else \
-		echo "Building $(appName)"; \
-		docker build -t $(dockerhubUser)/$(appName):$(tag) --no-cache --build-arg APP=$(appName) .; \
-	fi
+	@$(foreach app, $(apps), \
+		echo "Building $(app) image"; \
+		docker build -t $(dockerhubUser)/$(app):$(tag) --no-cache --build-arg APP=$(app) \
+		.;)
 
 # push all images
 push: image
-	@if [ -z "$(appName)" ]; then \
-		for app in $(apps); do \
-			echo "Pushing $$app"; \
-			docker push $(dockerhubUser)/$$app:$(tag); \
-		done \
-    else \
-		echo "Pushing $(appName)"; \
-		docker push $(dockerhubUser)/$(appName):$(tag); \
-    fi
+	@$(foreach app, $(apps), \
+		echo "Pushing $(app) image"; \
+		docker push $(dockerhubUser)/$(app):$(tag);)
 
 # install vendor
 vendor:
