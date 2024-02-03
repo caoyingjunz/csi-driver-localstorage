@@ -9,6 +9,8 @@ else
 apps = $(app)
 endif
 targetDir ?= dist
+buildx ?= false
+dualPlatform ?= linux/amd64,linux/arm64
 
 # check if app name is valid
 check:
@@ -27,10 +29,17 @@ build: check
 
 # build all images
 image: check
+ifeq ($(buildx), false)
 	@$(foreach app, $(apps), \
 		echo "Building $(app) image"; \
 		docker build -t $(dockerhubUser)/$(app):$(tag) --no-cache --build-arg APP=$(app) \
 		.;)
+else ifeq ($(buildx), true)
+	@$(foreach app, $(apps), \
+		echo "Building $(app) multi-arch image"; \
+		docker buildx build -t $(dockerhubUser)/$(app):$(tag) --no-cache --platform $(dualPlatform) --push --build-arg APP=$(app) \
+		.;)
+endif
 
 # push all images
 push: image
