@@ -38,6 +38,7 @@ import (
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/clientset/versioned"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/client/informers/externalversions"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/controller/storage"
+	"github.com/caoyingjunz/csi-driver-localstorage/pkg/metrics"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/runtime"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/signals"
 	"github.com/caoyingjunz/csi-driver-localstorage/pkg/util"
@@ -79,6 +80,10 @@ var (
 	resourceNamespace = flag.String("leader-elect-resource-namespace", ResourceNamespace, "The namespace of resource object that is used for locking during leader election.")
 	leaseDuration     = flag.Int("leader-elect-lease-duration", LeaseDuration, "The duration that non-leader candidates will wait")
 	renewDeadline     = flag.Int("leader-elect-renew-deadline", RenewDeadline, "The interval between attempts by the acting master to renew a leadership slot before it stops leading.")
+
+	// metrics
+	metricsPort = flag.Int("metrics-port", 0, "metricsPort is the port of the localhost metrics endpoint (set to 0 to disable)")
+	interval    = flag.Duration("metrics-interval", 10, "metricsInterval is the interval of the metrics collection, in seconds (default 10s)")
 )
 
 func init() {
@@ -127,12 +132,13 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed to build kube clientSet: %v", err)
 	}
-	run := func(ctx context.Context) {
-		lsClientSet, err := versioned.NewForConfig(kubeConfig)
-		if err != nil {
-			klog.Fatalf("Failed to new localstorage clientSet: %v", err)
-		}
 
+	lsClientSet, err := versioned.NewForConfig(kubeConfig)
+	if err != nil {
+		klog.Fatalf("Failed to new localstorage clientSet: %v", err)
+	}
+
+	run := func(ctx context.Context) {
 		sharedInformer := externalversions.NewSharedInformerFactory(lsClientSet, 300*time.Second)
 		sc, err := storage.NewStorageController(ctx,
 			sharedInformer.Storage().V1().LocalStorages(),
@@ -162,6 +168,17 @@ func main() {
 				klog.ErrorS(err, "Failed to start healthz server")
 			}
 		}, 5*time.Second, wait.NeverStop)
+	}
+
+	if *metricsPort > 0 {
+		mux := http.NewServeMux()
+		metrics.InstallHandler(mux, "/metrics")
+		metrics.TimingAcquisition(ctx, lsClientSet, *interval*time.Second)
+		go func() {
+			if err = http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(*metricsPort)), mux); err != nil {
+				klog.ErrorS(err, "Failed to start metrics server")
+			}
+		}()
 	}
 
 	if !*leaderElect {

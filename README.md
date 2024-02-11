@@ -64,6 +64,9 @@ This driver allows Kubernetes to access LocalStorage on Linux node.
   test-pvc             Bound    pvc-2b2c809f-33b5-437f-a4b8-61906c10a3e1   1Mi        RWX            pixiu-localstorage        5s
   ```
 
+## Metrics
+- [metrics](./docs/metrics.md)
+
 ## Feature
 - Schedule with volume status
 - Volume metrics

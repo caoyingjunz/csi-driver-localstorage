@@ -19,6 +19,9 @@ spec:
             - -v=2
             # port's value equals 0 means health check func disabled
             - --healthz-port=10258
+            - --metrics-port=10259
+            # default metrics interval is 10s
+            - --metrics-interval=10
             - --cert-dir=/tmp/cert
             - --port=8443
           image: harbor.cloud.pixiuio.com/pixiuio/localstorage-controller:latest
