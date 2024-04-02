@@ -87,7 +87,7 @@ func (ls *localStorage) CreateVolume(ctx context.Context, req *csi.CreateVolumeR
 	}
 	volumeContext["localPath.caoyingjunz.io"] = volPath
 
-	klog.Infof("pvc %v volume %v successfully deleted", name, volumeID)
+	klog.Infof("pvc %v volume %v successfully created", name, volumeID)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:           volumeID,
