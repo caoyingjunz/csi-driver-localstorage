@@ -109,7 +109,6 @@ spec:
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --volume-dir=/data
-            - --create-localstorage
             - -v=5
           env:
             - name: NODE_NAME
