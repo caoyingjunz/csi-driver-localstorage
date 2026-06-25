@@ -31,7 +31,7 @@ spec:
         - operator: "Exists"
       containers:
         - name: liveness-probe
-          image: pixiuio/livenessprobe:v2.8.0
+          image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/pixiukit/livenessprobe:v2.8.0
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
@@ -48,7 +48,7 @@ spec:
               memory: 20Mi
 
         - name: node-driver-registrar
-          image: pixiuio/csi-node-driver-registrar:v2.6.2
+          image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/pixiukit/csi-node-driver-registrar:v2.6.2 
           args:
             - --v=2
             - --csi-address=/csi/csi.sock
@@ -81,7 +81,7 @@ spec:
               memory: 20Mi
 
         - name: csi-provisioner
-          image: jacky06/csi-provisioner:v0.1
+          image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/pixiukit/csi-provisioner:v0.1
           args:
             - -v=5
             - --csi-address=/csi/csi.sock
@@ -105,10 +105,11 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: harbor.cloud.pixiuio.com/pixiuio/localstorageplugin:latest
+          image: swr.cn-north-4.myhuaweicloud.com/pixiu-public/pixiukit/localstorageplugin:latest 
           args:
             - --endpoint=$(CSI_ENDPOINT)
             - --volume-dir=/data
+            - --create-localstorage
             - -v=5
           env:
             - name: NODE_NAME
