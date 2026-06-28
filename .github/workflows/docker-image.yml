@@ -2,7 +2,7 @@ name: Build localstorage image
 
 on:
   push:
-    branches: [ "master", "caoyingjunz-patch-1" ]
+    branches: [ "master" ]
 
 env:
   # Use docker.io for Docker Hub if empty
