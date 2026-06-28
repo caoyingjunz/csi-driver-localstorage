@@ -1,6 +1,6 @@
 .PHONY: run build image push vendor client-gen clean
 
-dockerhubUser = harbor.cloud.pixiuio.com/pixiuio
+dockerhubUser = crpi-0ecikjs9ylb2hqyo.cn-hangzhou.personal.cr.aliyuncs.com/pixiu-public
 tag = latest
 app ?=
 ifeq ($(app),)
